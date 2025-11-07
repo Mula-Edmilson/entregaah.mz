@@ -1,5 +1,5 @@
 /* --- Configuração Global --- */
-const API_URL = 'https://entregaah-mz.onrender.com';
+const API_URL = 'https://seu-servidor-de-entregas.onrender.com';
 
 let socket = null;
 let myServicesChart = null;
