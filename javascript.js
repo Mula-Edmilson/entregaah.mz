@@ -1,5 +1,5 @@
 /* --- Configuração Global --- */
-const API_URL = 'http://localhost:3000';
+const API_URL = 'https://entregaah-mz.onrender.com';
 
 let socket = null;
 let myServicesChart = null;
