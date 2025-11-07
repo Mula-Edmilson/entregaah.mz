@@ -1,0 +1,12 @@
+# Ficheiro: .gitignore
+
+# Ignora o ficheiro que contém os nossos segredos
+.env
+
+# Ficheiro: backend/.gitignore
+
+# Ignora o ficheiro que contém os nossos segredos
+.env
+
+# Ignora a pasta de pacotes (que o Render irá instalar sozinho)
+/node_modules
