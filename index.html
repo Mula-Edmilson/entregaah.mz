@@ -38,9 +38,7 @@
             </li>
             <li class="menu-item" id="nav-entregas"><a href="#"><i class="fas fa-tasks"></i> Entregas Activas</a></li>
             <li class="menu-item" id="nav-motoristas"><a href="#"><i class="fas fa-motorcycle"></i> Motoristas</a></li>
-            
             <li class="menu-item" id="nav-clientes"><a href="#"><i class="fas fa-users"></i> Clientes</a></li>
-
             <li class="menu-item" id="nav-historico"><a href="#"><i class="fas fa-history"></i> Histórico</a></li>
             <li class="menu-item" id="nav-mapa"><a href="#"><i class="fas fa-map-marked-alt"></i> Mapa em Tempo Real</a></li>
             <li class="menu-item" id="nav-config"><a href="#" onclick="showServiceForm('config')"><i class="fas fa-cog"></i> Configurações</a></li>
@@ -76,12 +74,25 @@
             <div id="form-nova-entrega" class="content-page hidden">
                 <form id="delivery-form">
                     <input type="hidden" id="service-type" name="service_type">
+                    
+                    <input type="hidden" id="delivery-client-id" name="clientId">
+                    
+                    <h3>Cliente</h3>
+                    
+                    <div class="form-group form-group-large">
+                        <label for="delivery-client-select">Cliente Registado (Opcional)</label>
+                        <select id="delivery-client-select">
+                            <option value="">-- Ou digite manualmente abaixo --</option>
+                            </select>
+                    </div>
+                    
                     <h3>Dados do Cliente/Destinatário</h3>
                     <div class="form-row">
                         <div class="form-group"><label for="client-name">Nome Completo</label><input type="text" id="client-name" name="client_name" required></div>
                         <div class="form-group"><label for="client-phone1">Número Principal</label><input type="tel" id="client-phone1" name="client_phone1" required></div>
                         <div class="form-group"><label for="client-phone2">Número Alternativo</label><input type="tel" id="client-phone2" name="client_phone2"></div>
                     </div>
+                    
                     <h3>Detalhes da Encomenda</h3>
                     <div class="form-row">
                         <div class="form-group">
@@ -159,7 +170,8 @@
                 </form>
 
                 <h3>Clientes Registados</h3>
-                <table class="table-motoristas"> <thead>
+                <table class="table-motoristas">
+                    <thead>
                         <tr>
                             <th>Nome</th>
                             <th>Telefone</th>
@@ -168,9 +180,12 @@
                         </tr>
                     </thead>
                     <tbody id="clients-table-body">
-                        </tbody>
+                    </tbody>
                 </table>
-            </div> <div id="entregas-activas" class="content-page hidden">
+            </div> 
+
+
+            <div id="entregas-activas" class="content-page hidden">
                 <h3>Gestão de Encomendas Activas</h3>
                 <table class="table-pedidos">
                     <thead><tr><th>ID Pedido</th><th>Cliente</th><th>Telefone</th><th>Estado</th><th>Motorista</th><th>Acção</th></tr></thead>
@@ -192,7 +207,7 @@
 
             <div id="mapa-tempo-real" class="content-page hidden">
                 <div id="live-map-container" style="width: 100%; height: 75vh; border-radius: 8px; border: 1px solid var(--gray-color);">
-                    </div>
+                </div>
             </div>
 
             
@@ -200,7 +215,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3>Atribuir Encomenda <span id="modal-order-id"></span></h3>
-                        <button class="modal-close-btn" onclick="closeAssignModal()">&times;</button>
+                        <button class="modal-close-btn" onclick="closeAssignModal()">×</button>
                     </div>
                     <div class="modal-body">
                         <p>Selecione um motorista disponível:</p>
@@ -217,7 +232,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3>Editar Motorista</h3>
-                        <button class="modal-close-btn" onclick="closeEditDriverModal()">&times;</button>
+                        <button class="modal-close-btn" onclick="closeEditDriverModal()">×</button>
                     </div>
                     <form id="form-edit-motorista">
                         <div class="modal-body">
@@ -246,7 +261,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3>Detalhes da Encomenda <span id="history-modal-id"></span></h3>
-                        <button class="modal-close-btn" onclick="closeHistoryDetailModal()">&times;</button>
+                        <button class="modal-close-btn" onclick="closeHistoryDetailModal()">×</button>
                     </div>
                     <div class="modal-body" id="history-modal-body">
                         <p>A carregar detalhes...</p>
@@ -261,7 +276,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3>Resetar Estatísticas</h3>
-                        <button class="modal-close-btn" onclick="closeChartResetModal()">&times;</button>
+                        <button class="modal-close-btn" onclick="closeChartResetModal()">×</button>
                     </div>
                     <div class="modal-body">
                         <p>Esta ação é irreversível. Digite a senha de reset para confirmar:</p>
@@ -281,7 +296,7 @@
                 <div class="modal-content modal-alert">
                     <div class="modal-header">
                         <h3 id="custom-alert-title"></h3>
-                        <button class="modal-close-btn" onclick="closeCustomAlert()">&times;</button>
+                        <button class="modal-close-btn" onclick="closeCustomAlert()">×</button>
                     </div>
                     <div class="modal-body">
                         <p id="custom-alert-message"></p>
@@ -296,7 +311,7 @@
                 <div class="modal-content modal-large">
                     <div class="modal-header">
                         <h3 id="driver-report-title">Relatório do Motorista</h3>
-                        <button class="modal-close-btn" onclick="closeDriverReportModal()">&times;</button>
+                        <button class="modal-close-btn" onclick="closeDriverReportModal()">×</button>
                     </div>
                     <div class="modal-body">
                         <div class="report-summary">
@@ -321,7 +336,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3>Editar Cliente</h3>
-                        <button class="modal-close-btn" onclick="closeEditClientModal()">&times;</button>
+                        <button class="modal-close-btn" onclick="closeEditClientModal()">×</button>
                     </div>
                     <form id="form-edit-cliente">
                         <div class="modal-body">
@@ -340,7 +355,8 @@
                     </form>
                 </div>
             </div>
-            </div>
+            
+        </div>
     </main>
 
     <script src="javascript.js"></script>
