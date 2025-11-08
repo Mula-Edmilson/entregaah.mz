@@ -1,6 +1,10 @@
-// Ficheiro: backend/server.js (PRONTO PARA PRODUÇÃO com .env e CORS CORRIGIDO)
+// Ficheiro: backend/server.js (Completo e Pronto para Produção)
 
+// --- (NOVO) ---
+// Carrega as variáveis do ficheiro .env para process.env
+// Faça disto a PRIMEIRA linha do seu ficheiro.
 require('dotenv').config();
+// --- FIM DO NOVO ---
 
 const express = require('express');
 const http = require('http');
@@ -19,7 +23,7 @@ const server = http.createServer(app);
 // --- (ALTERAÇÃO PRINCIPAL: Regras de CORS) ---
 // 1. Defina as suas origens (lidas do .env)
 const allowedOrigins = [
-    process.env.FRONTEND_URL,       // O seu GitHub Pages
+    process.env.FRONTEND_URL,       // O seu GitHub Pages (ex: https://mula-edmilson.github.io)
     process.env.FRONTEND_URL_DEV, // O seu teste local (http://127.0.0.1:5500)
     "null"                          // Para testes locais (file://)
 ];
@@ -50,8 +54,13 @@ app.set('socketio', io);
 
 // --- Declarações ÚNICAS ---
 const PORT = process.env.PORT || 3000;
+
+// --- (ALTERAÇÃO) ---
+// Lê os segredos das variáveis de ambiente (carregadas do .env)
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET;
+// --- FIM DA ALTERAÇÃO ---
+
 const ADMIN_ROOM = 'admin_room';
 
 // --- Middlewares ---
@@ -66,9 +75,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static('uploads'));
 
 // --- Conexão ao MongoDB ---
+// Verifica se o MONGO_URI foi carregado
 if (!MONGO_URI) {
     console.error("ERRO: MONGO_URI não foi definido. Verifique o seu ficheiro .env ou as Environment Variables no Render.");
-    process.exit(1); 
+    process.exit(1); // Para a aplicação se a BD não estiver configurada
 }
 mongoose.connect(MONGO_URI)
     .then(() => console.log("Conectado ao MongoDB com sucesso!"))
@@ -79,6 +89,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/drivers', require('./routes/driverRoutes'));
 app.use('/api/stats', require('./routes/statsRoutes'));
+app.use('/api/clients', require('./routes/clientRoutes')); // <-- (NOVA ROTA DE CLIENTES)
 
 // Rota de teste
 app.get('/', (req, res) => {
@@ -87,7 +98,9 @@ app.get('/', (req, res) => {
 
 
 // --- LÓGICA DO SOCKET.IO (Completa) ---
+
 const socketUserMap = new Map();
+
 io.on('connection', (socket) => {
     console.log('Um utilizador conectou-se:', socket.id);
     let userId, userRole, userName; 
@@ -95,6 +108,7 @@ io.on('connection', (socket) => {
     try {
         const token = socket.handshake.auth.token;
         if (token) {
+            // Verifica se o JWT_SECRET foi carregado
             if (!JWT_SECRET) {
                 throw new Error("JWT_SECRET não está configurado no servidor.");
             }
@@ -109,6 +123,7 @@ io.on('connection', (socket) => {
                 socket.join(ADMIN_ROOM);
                 console.log(`Admin ${userName} (${userId}) entrou na sala ${ADMIN_ROOM}`);
 
+                // (LÓGICA DO REFRESH) Envia o backlog de motoristas
                 for (const [id, data] of socketUserMap.entries()) {
                     if (data.userRole === 'driver' && data.lastLocation) {
                         socket.emit('driver_location_broadcast', {
@@ -121,6 +136,7 @@ io.on('connection', (socket) => {
                     }
                 }
 
+                // (LÓGICA DA NAVEGAÇÃO) Ouve o pedido do admin
                 socket.on('admin_request_all_locations', () => {
                     console.log(`Admin ${userName} (${socket.id}) pediu um refresh dos pins.`);
                     for (const [id, data] of socketUserMap.entries()) {
@@ -151,6 +167,7 @@ io.on('connection', (socket) => {
         return; 
     }
 
+    // --- LÓGICA DE RASTREAMENTO ---
     if (userRole === 'driver') {
         socket.on('driver_location_update', async (data) => {
             const { lat, lng } = data;
@@ -172,6 +189,7 @@ io.on('connection', (socket) => {
         });
     }
 
+    // Quando o utilizador desconecta (fecha a aba)
     socket.on('disconnect', () => {
         console.log('Utilizador desconectado:', socket.id);
         
