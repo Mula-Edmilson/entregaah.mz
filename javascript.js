@@ -1,14 +1,43 @@
 /* --- Configuração Global --- */
-const API_URL = 'https://entregaah-mz.onrender.com';
+
+// --- (ALTERAÇÃO PARA PRODUÇÃO) ---
+const API_URL = 'https://entregaah-mz.onrender.com'; // O seu URL real do Render
+// --- FIM DA ALTERAÇÃO ---
 
 let socket = null;
 let myServicesChart = null;
 let map = null; // Variável global para o mapa do formulário
 let mapMarker = null; // Variável global para o pin do formulário
 
-// (NOVO) Variáveis para o mapa de rastreamento em tempo real
 let liveMap = null; // Variável global para o mapa em tempo real
 let driverMarkers = {}; // Objeto para guardar os marcadores dos motoristas { driverId: marker }
+
+// --- (NOVO) ÍCONES PERSONALIZADOS PARA O MAPA ---
+// Estes são os ícones que serão usados no mapa em tempo real
+
+const iconShadowUrl = 'https://i.postimg.cc/VNb0bBsw/marker-shadow.png';
+
+// Ícone para Motorista LIVRE (Verde)
+const freeIcon = L.icon({
+    iconUrl: 'https://i.postimg.cc/kXq0K1Gz/marker-free.png', // Ícone Verde
+    shadowUrl: iconShadowUrl,
+    iconSize: [25, 41], // Tamanho do ícone
+    iconAnchor: [12, 41], // Ponto do ícone que corresponde à localização
+    popupAnchor: [1, -34], // Onde o popup deve abrir
+    shadowSize: [41, 41] // Tamanho da sombra
+});
+
+// Ícone para Motorista OCUPADO (Laranja)
+const busyIcon = L.icon({
+    iconUrl: 'https://i.postimg.cc/J0bJ0fJj/marker-busy.png', // Ícone Laranja
+    shadowUrl: iconShadowUrl,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+// --- FIM DOS ÍCONES ---
+
 
 const serviceNames = {
     'doc': 'Doc.',
@@ -56,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('nav-entregas').addEventListener('click', (e) => { e.preventDefault(); showPage('entregas-activas', 'nav-entregas', 'Entregas Activas'); });
         document.getElementById('nav-historico').addEventListener('click', (e) => { e.preventDefault(); showPage('historico', 'nav-historico', 'Histórico'); });
         
-        // (NOVO) Event listener para o novo item de menu
         document.getElementById('nav-mapa').addEventListener('click', (e) => { e.preventDefault(); showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real'); });
 
         document.getElementById('admin-logout').addEventListener('click', (e) => { e.preventDefault(); handleLogout('admin'); });
@@ -72,7 +100,6 @@ document.addEventListener('DOMContentLoaded', () => {
         connectSocket();
         loadMyDeliveries();
         
-        // (NOVO) Inicia o rastreamento de geolocalização
         startLocationTracking(); 
         
         document.getElementById('driver-logout').addEventListener('click', (e) => { e.preventDefault(); handleLogout('driver'); });
@@ -134,6 +161,7 @@ function closeCustomAlert() {
 function connectSocket() {
     const token = getAuthToken();
     if (!token) return;
+    
     socket = io(API_URL, { auth: { token: token } });
     
     socket.on('connect', () => {
@@ -163,13 +191,11 @@ function connectSocket() {
              if (activePage() === 'visao-geral') loadOverviewStats();
         });
 
-        // (NOVO) Começa a ouvir os eventos de localização para o mapa
         listenForDriverUpdates();
     }
 }
 
 async function handleNewDelivery(e) {
-    // ... (Função original sem alterações) ...
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
@@ -193,7 +219,6 @@ async function handleNewDelivery(e) {
 }
 
 async function handleAddDriver(e) {
-    // ... (Função original sem alterações) ...
     e.preventDefault();
     const name = document.getElementById('driver-name').value;
     const phone = document.getElementById('driver-phone').value;
@@ -223,7 +248,6 @@ async function handleAddDriver(e) {
 }
 
 async function loadDrivers() {
-    // ... (Função original sem alterações) ...
     try {
         const response = await fetch(`${API_URL}/api/drivers`, { method: 'GET', headers: getAuthHeaders() });
         const data = await response.json();
@@ -255,7 +279,6 @@ async function loadDrivers() {
 }
 
 async function loadActiveDeliveries() {
-    // ... (Função original sem alterações) ...
     try {
         const response = await fetch(`${API_URL}/api/orders/active`, { headers: getAuthHeaders() });
         const data = await response.json();
@@ -285,7 +308,6 @@ async function loadActiveDeliveries() {
 }
 
 async function loadHistory() {
-    // ... (Função original sem alterações) ...
     try {
         const response = await fetch(`${API_URL}/api/orders/history`, { headers: getAuthHeaders() });
         const data = await response.json();
@@ -315,7 +337,6 @@ async function loadHistory() {
 }
 
 function filterHistoryTable(event) {
-    // ... (Função original sem alterações) ...
     const searchTerm = event.target.value.toLowerCase();
     const tableBody = document.getElementById('history-orders-table-body');
     const rows = tableBody.getElementsByTagName('tr');
@@ -326,17 +347,10 @@ function filterHistoryTable(event) {
         }
     }
 }
-function formatDuration(start, end) { 
-    // ... (Função original sem alterações) ...
-    if (!start || !end) return 'N/D'; const diffMs = new Date(end) - new Date(start); if (diffMs < 0) return 'N/D'; const minutes = Math.floor(diffMs / 60000); const seconds = Math.floor((diffMs % 60000) / 1000); return `${minutes} min ${seconds} s`; 
-}
-function formatTotalDuration(totalMs) { 
-    // ... (Função original sem alterações) ...
-    if (totalMs < 0) return 'N/D'; const totalMinutes = Math.floor(totalMs / 60000); const hours = Math.floor(totalMinutes / 60); const minutes = totalMinutes % 60; return `${hours} h ${minutes} min`; 
-}
+function formatDuration(start, end) { if (!start || !end) return 'N/D'; const diffMs = new Date(end) - new Date(start); if (diffMs < 0) return 'N/D'; const minutes = Math.floor(diffMs / 60000); const seconds = Math.floor((diffMs % 60000) / 1000); return `${minutes} min ${seconds} s`; }
+function formatTotalDuration(totalMs) { if (totalMs < 0) return 'N/D'; const totalMinutes = Math.floor(totalMs / 60000); const hours = Math.floor(totalMinutes / 60); const minutes = totalMinutes % 60; return `${hours} h ${minutes} min`; }
 
 async function loadOverviewStats() {
-    // ... (Função original sem alterações) ...
     try {
         const response = await fetch(`${API_URL}/api/stats/overview`, { headers: getAuthHeaders() });
         const data = await response.json();
@@ -349,7 +363,6 @@ async function loadOverviewStats() {
 }
 
 async function openAssignModal(orderId) {
-    // ... (Função original sem alterações) ...
     const modal = document.getElementById('assign-modal');
     modal.classList.remove('hidden');
     document.getElementById('modal-order-id').innerText = `#${orderId.slice(-6)}`;
@@ -370,7 +383,6 @@ async function openAssignModal(orderId) {
     } catch (error) { console.error('Falha ao carregar motoristas disponíveis:', error); select.innerHTML = '<option value="">Erro ao carregar</option>'; }
 }
 async function confirmAssign(orderId, driverId) {
-    // ... (Função original sem alterações) ...
     try {
         const response = await fetch(`${API_URL}/api/orders/${orderId}/assign`, { method: 'PUT', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ driverId }) });
         const data = await response.json();
@@ -380,12 +392,8 @@ async function confirmAssign(orderId, driverId) {
         loadActiveDeliveries();
     } catch (error) { console.error('Falha ao atribuir encomenda:', error); showCustomAlert('Erro', error.message, 'error'); }
 }
-function closeAssignModal() { 
-    // ... (Função original sem alterações) ...
-    document.getElementById('assign-modal').classList.add('hidden'); 
-}
+function closeAssignModal() { document.getElementById('assign-modal').classList.add('hidden'); }
 function showAddDriverForm(show) {
-    // ... (Função original sem alterações) ...
     const form = document.getElementById('form-add-motorista');
     const button = document.getElementById('btn-show-driver-form');
     if (!form || !button) return;
@@ -393,7 +401,6 @@ function showAddDriverForm(show) {
     else { form.classList.add('hidden'); button.classList.remove('hidden'); form.reset(); }
 }
 async function openEditDriverModal(driverUserId) {
-    // ... (Função original sem alterações) ...
     const modal = document.getElementById('edit-driver-modal');
     modal.classList.remove('hidden');
     document.getElementById('edit-driver-id').value = driverUserId;
@@ -409,12 +416,8 @@ async function openEditDriverModal(driverUserId) {
         document.getElementById('edit-driver-status').value = profile.status || 'offline';
     } catch (error) { console.error('Falha ao carregar dados do motorista:', error); showCustomAlert('Erro', 'Erro ao carregar dados do motorista.', 'error'); closeEditDriverModal(); }
 }
-function closeEditDriverModal() { 
-    // ... (Função original sem alterações) ...
-    document.getElementById('edit-driver-modal').classList.add('hidden'); document.getElementById('form-edit-motorista').reset(); 
-}
+function closeEditDriverModal() { document.getElementById('edit-driver-modal').classList.add('hidden'); document.getElementById('form-edit-motorista').reset(); }
 async function handleUpdateDriver(event) {
-    // ... (Função original sem alterações) ...
     event.preventDefault();
     const userId = document.getElementById('edit-driver-id').value;
     const updatedData = {
@@ -433,7 +436,6 @@ async function handleUpdateDriver(event) {
     } catch (error) { console.error('Falha ao atualizar motorista:', error); showCustomAlert('Erro', error.message, 'error'); }
 }
 async function openHistoryDetailModal(orderId) {
-    // ... (Função original sem alterações) ...
     const modal = document.getElementById('history-detail-modal');
     const body = document.getElementById('history-modal-body');
     modal.classList.remove('hidden');
@@ -470,20 +472,10 @@ async function openHistoryDetailModal(orderId) {
         `;
     } catch (error) { console.error('Falha ao carregar detalhes do histórico:', error); body.innerHTML = '<p>Erro ao carregar detalhes.</p>'; }
 }
-function closeHistoryDetailModal() { 
-    // ... (Função original sem alterações) ...
-    document.getElementById('history-detail-modal').classList.add('hidden'); 
-}
-function openChartResetModal() { 
-    // ... (Função original sem alterações) ...
-    document.getElementById('chart-reset-modal').classList.remove('hidden'); 
-}
-function closeChartResetModal() { 
-    // ... (Função original sem alterações) ...
-    document.getElementById('chart-reset-modal').classList.add('hidden'); document.getElementById('chart-reset-password').value = ''; 
-}
+function closeHistoryDetailModal() { document.getElementById('history-detail-modal').classList.add('hidden'); }
+function openChartResetModal() { document.getElementById('chart-reset-modal').classList.remove('hidden'); }
+function closeChartResetModal() { document.getElementById('chart-reset-modal').classList.add('hidden'); document.getElementById('chart-reset-password').value = ''; }
 function handleChartReset() {
-    // ... (Função original sem alterações) ...
     const password = document.getElementById('chart-reset-password').value;
     if (password === 'Entregaah.wipe') {
         console.log('SIMULAÇÃO: A chamar API para resetar estatísticas...');
@@ -493,7 +485,6 @@ function handleChartReset() {
     } else { showCustomAlert('Erro', 'Senha de reset incorreta.', 'error'); }
 }
 async function openDriverReportModal(driverUserId, driverName) {
-    // ... (Função original sem alterações) ...
     const modal = document.getElementById('driver-report-modal');
     modal.classList.remove('hidden');
     document.getElementById('driver-report-title').innerText = `Relatório de ${driverName}`;
@@ -533,14 +524,10 @@ async function openDriverReportModal(driverUserId, driverName) {
         });
     } catch (error) { console.error('Falha ao carregar relatório do motorista:', error); tableBody.innerHTML = '<tr><td colspan="5">Erro ao carregar relatório.</td></tr>'; }
 }
-function closeDriverReportModal() { 
-    // ... (Função original sem alterações) ...
-    document.getElementById('driver-report-modal').classList.add('hidden'); 
-}
+function closeDriverReportModal() { document.getElementById('driver-report-modal').classList.add('hidden'); }
 
 /* --- Funções de Navegação e UI --- */
 function showPage(pageId, navId, title) {
-    // (ATUALIZADO) Destrói o mapa do formulário E o mapa em tempo real ao navegar
     if (map) destroyMap();
     if (liveMap && pageId !== 'mapa-tempo-real') {
         liveMap.remove();
@@ -564,7 +551,6 @@ function showPage(pageId, navId, title) {
         loadOverviewStats();
         initServicesChart(false);
     }
-    // (NOVO) Inicializa o mapa em tempo real se for a página correta
     if (pageId === 'mapa-tempo-real') {
         if (!liveMap) { // Só inicializa se não existir
             initializeLiveMap();
@@ -572,7 +558,6 @@ function showPage(pageId, navId, title) {
     }
 }
 function showServiceForm(serviceType) {
-    // ... (Função original sem alterações) ...
     const titles = { 'doc': 'Nova Tramitação de Documentos', 'farma': 'Novo Pedido Farmacêutico', 'carga': 'Novo Transporte de Carga', 'rapido': 'Novo Delivery Rápido', 'outros': 'Outros Serviços', 'config': 'Configurações' };
     document.querySelectorAll('.content-page').forEach(page => page.classList.add('hidden'));
     document.getElementById('form-nova-entrega').classList.remove('hidden');
@@ -582,16 +567,9 @@ function showServiceForm(serviceType) {
     removeImage();
     setTimeout(initializeMap, 100);
 }
-function handleImageUpload(event) { 
-    // ... (Função original sem alterações) ...
-    const file = event.target.files[0]; if (!file) return; const previewContainer = document.getElementById('image-preview'); const previewImg = previewContainer.querySelector('.preview-img'); const reader = new FileReader(); reader.onload = function(e) { previewImg.src = e.target.result; }; reader.readAsDataURL(file); previewContainer.classList.remove('hidden'); 
-}
-function removeImage() { 
-    // ... (Função original sem alterações) ...
-    const previewContainer = document.getElementById('image-preview'); if (!previewContainer) return; previewContainer.querySelector('.preview-img').src = ''; previewContainer.classList.add('hidden'); document.getElementById('delivery-image').value = ''; 
-}
+function handleImageUpload(event) { const file = event.target.files[0]; if (!file) return; const previewContainer = document.getElementById('image-preview'); const previewImg = previewContainer.querySelector('.preview-img'); const reader = new FileReader(); reader.onload = function(e) { previewImg.src = e.target.result; }; reader.readAsDataURL(file); previewContainer.classList.remove('hidden'); }
+function removeImage() { const previewContainer = document.getElementById('image-preview'); if (!previewContainer) return; previewContainer.querySelector('.preview-img').src = ''; previewContainer.classList.add('hidden'); document.getElementById('delivery-image').value = ''; }
 async function initServicesChart(reset = false) {
-    // ... (Função original sem alterações) ...
     const ctx = document.getElementById('servicesChart');
     if (!ctx) return;
     if (myServicesChart) myServicesChart.destroy();
@@ -639,7 +617,6 @@ async function initServicesChart(reset = false) {
 
 /* --- Funções do Mapa (Leaflet.js) --- */
 function initializeMap() {
-    // ... (Função original sem alterações - este é o mapa do formulário) ...
     const maputoCoords = [-25.965, 32.589];
     if (map) destroyMap();
     try {
@@ -663,7 +640,6 @@ function initializeMap() {
     }
 }
 function destroyMap() {
-    // ... (Função original sem alterações - este é o mapa do formulário) ...
     if (map) {
         map.remove();
         map = null;
@@ -675,7 +651,6 @@ function destroyMap() {
 
 /* --- Funções do Painel do Motorista --- */
 async function loadMyDeliveries() {
-    // ... (Função original sem alterações) ...
     try {
         const response = await fetch(`${API_URL}/api/orders/my-deliveries`, {
             method: 'GET',
@@ -710,7 +685,6 @@ async function loadMyDeliveries() {
 }
 
 function showDetalheEntrega(order) {
-    // ... (Função original com a correção do bug do Google Maps) ...
     document.getElementById('lista-entregas').classList.add('hidden');
     const detalheSection = document.getElementById('detalhe-entrega');
     detalheSection.querySelector('#detalhe-entrega-title').innerText = `Detalhes do Pedido #${order._id.slice(-6)}`;
@@ -719,7 +693,8 @@ function showDetalheEntrega(order) {
     const img = detalheSection.querySelector('#encomenda-imagem');
     const noImg = detalheSection.querySelector('#no-image-placeholder');
     if (order.image_url) {
-        img.src = `${API_URL}${order.image_url}`;
+        // (ATUALIZADO) Garante que a imagem usa o API_URL
+        img.src = `${API_URL}${order.image_url}`; 
         img.classList.remove('hidden');
         noImg.classList.add('hidden');
     } else {
@@ -738,15 +713,13 @@ function showDetalheEntrega(order) {
     
     // (CORRIGIDO) Verifica as coordenadas e mostra-as
     if (order.address_coords && order.address_coords.lat) {
-        // 1. Mostra as coordenadas em texto
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
         
-        // 2. (CORRIGIDO) Cria o link correto do Google Maps e mostra o botão
+        // (CORRIGIDO) Link correto do Google Maps
         mapButton.href = `https://maps.google.com/?q=${order.address_coords.lat},${order.address_coords.lng}`;
         mapButton.classList.remove('hidden');
     } else {
-        // Esconde as coordenadas e o botão se não existirem
         coordsP.classList.add('hidden');
         mapButton.classList.add('hidden');
     }
@@ -769,13 +742,11 @@ function showDetalheEntrega(order) {
 }
 
 function showListaEntregas() {
-    // ... (Função original sem alterações) ...
     document.getElementById('lista-entregas').classList.remove('hidden');
     document.getElementById('detalhe-entrega').classList.add('hidden');
     loadMyDeliveries();
 }
 async function handleStartDelivery(orderId) {
-    // ... (Função original sem alterações) ...
     try {
         const response = await fetch(`${API_URL}/api/orders/${orderId}/start`, {
             method: 'POST',
@@ -792,7 +763,6 @@ async function handleStartDelivery(orderId) {
     }
 }
 async function handleCompleteDelivery(event, orderId) {
-    // ... (Função original sem alterações) ...
     event.preventDefault();
     const form = event.target;
     const verification_code = form.querySelector('#codigo-finalizacao').value.toUpperCase();
@@ -819,9 +789,6 @@ async function handleCompleteDelivery(event, orderId) {
 
 /* --- (NOVAS FUNÇÕES) Rastreamento em Tempo Real --- */
 
-/**
- * (NOVO) Inicializa o mapa principal de rastreamento no painel do admin.
- */
 function initializeLiveMap() {
     try {
         const maputoCoords = [-25.965, 32.589];
@@ -832,14 +799,10 @@ function initializeLiveMap() {
         
         console.log('Mapa em tempo real inicializado.');
 
-        // --- (CORREÇÃO DO BUG DE NAVEGAÇÃO) ---
-        // Pede ao servidor as localizações de todos os motoristas ATIVOS
-        // AGORA MESMO, porque acabámos de (re)criar o mapa ao navegar para esta página.
         if (socket) {
             socket.emit('admin_request_all_locations'); 
             console.log('A pedir ao servidor as localizações ativas...');
         }
-        // --- FIM DA CORREÇÃO ---
 
     } catch (error) {
         console.error("Erro ao inicializar o mapa em tempo real:", error);
@@ -848,8 +811,8 @@ function initializeLiveMap() {
 }
 
 /**
- * (NOVO) Ouve os eventos do socket para atualizar as localizações dos motoristas.
- * Esta função é chamada uma vez quando o admin conecta o socket.
+ * (FUNÇÃO ATUALIZADA COM ÍCONES)
+ * Ouve os eventos do socket para atualizar as localizações dos motoristas.
  */
 function listenForDriverUpdates() {
     if (!socket) return;
@@ -859,25 +822,29 @@ function listenForDriverUpdates() {
     socket.on('driver_location_broadcast', (data) => {
         const { driverId, driverName, status, lat, lng } = data;
         
-        // Se o mapa não estiver visível (nulo), não faz nada
         if (!liveMap) return;
 
         const newLatLng = [lat, lng];
         const popupContent = `<strong>${driverName}</strong><br>Status: ${status.replace('_', ' ')}`;
+        
+        // --- (NOVA LÓGICA DE ÍCONES) ---
+        // Escolhe o ícone com base no status vindo do servidor
+        const iconToUse = (status === 'online_ocupado') ? busyIcon : freeIcon;
+        // --- FIM DA NOVA LÓGICA ---
 
         if (driverMarkers[driverId]) {
-            // Se o marcador já existe, atualiza a posição e o popup
+            // Se o marcador já existe, atualiza a posição, o popup e o ícone
             driverMarkers[driverId].setLatLng(newLatLng);
             driverMarkers[driverId].setPopupContent(popupContent);
+            driverMarkers[driverId].setIcon(iconToUse); // <-- ATUALIZA O ÍCONE
         } else {
-            // Se é um novo motorista, cria o marcador
-            driverMarkers[driverId] = L.marker(newLatLng).addTo(liveMap);
+            // Se é um novo motorista, cria o marcador JÁ COM O ÍCONE CORRETO
+            driverMarkers[driverId] = L.marker(newLatLng, { icon: iconToUse }).addTo(liveMap);
             driverMarkers[driverId].bindPopup(popupContent).openPopup();
             console.log(`Adicionando novo marcador para ${driverName}`);
         }
     });
 
-    // (NOVO) Ouve quando um motorista desconecta para removê-lo do mapa
     socket.on('driver_disconnected_broadcast', (data) => {
         const { driverId, driverName } = data;
         
@@ -891,14 +858,9 @@ function listenForDriverUpdates() {
     });
 }
 
-/**
- * (NOVO) Inicia o rastreamento de geolocalização no painel do motorista.
- */
 function startLocationTracking() {
     if (!navigator.geolocation) {
         console.error('Geolocalização não é suportada neste browser.');
-        // Opcional: mostrar um alerta ao motorista
-        // showCustomAlert('Erro', 'Geolocalização não é suportada.', 'error');
         return;
     }
 
@@ -908,9 +870,7 @@ function startLocationTracking() {
         (position) => {
             const { latitude, longitude } = position.coords;
             
-            // Envia a localização para o servidor via socket
             if (socket) {
-                // console.log(`Enviando localização: ${latitude}, ${longitude}`); // (Descomente para depurar)
                 socket.emit('driver_location_update', { 
                     lat: latitude, 
                     lng: longitude 
@@ -919,14 +879,12 @@ function startLocationTracking() {
         },
         (error) => {
             console.error("Erro ao obter localização:", error.message);
-            // Opcional: alertar o motorista que o rastreamento falhou
-            // if (error.code === 1) showCustomAlert('Atenção', 'Precisa de ativar a permissão de localização.', 'error');
         },
         {
-            enableHighAccuracy: true, // Mais preciso, gasta mais bateria
-            timeout: 10000,           // 10 segundos para obter a localização
-            maximumAge: 0,            // Não usar localizações em cache
-            distanceFilter: 10        // (NOVO) Atualiza apenas se mover 10 metros
+            enableHighAccuracy: true, 
+            timeout: 10000,           
+            maximumAge: 0,            
+            distanceFilter: 10        
         }
     );
 }
