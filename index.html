@@ -38,10 +38,11 @@
             </li>
             <li class="menu-item" id="nav-entregas"><a href="#"><i class="fas fa-tasks"></i> Entregas Activas</a></li>
             <li class="menu-item" id="nav-motoristas"><a href="#"><i class="fas fa-motorcycle"></i> Motoristas</a></li>
+            
+            <li class="menu-item" id="nav-clientes"><a href="#"><i class="fas fa-users"></i> Clientes</a></li>
+
             <li class="menu-item" id="nav-historico"><a href="#"><i class="fas fa-history"></i> Histórico</a></li>
-            
             <li class="menu-item" id="nav-mapa"><a href="#"><i class="fas fa-map-marked-alt"></i> Mapa em Tempo Real</a></li>
-            
             <li class="menu-item" id="nav-config"><a href="#" onclick="showServiceForm('config')"><i class="fas fa-cog"></i> Configurações</a></li>
             <li class="menu-item menu-item-logout" id="admin-logout"><a href="#"><i class="fas fa-sign-out-alt"></i> Sair (Logout)</a></li>
         </ul>
@@ -134,7 +135,42 @@
                 </table>
             </div>
 
-            <div id="entregas-activas" class="content-page hidden">
+            <div id="gestao-clientes" class="content-page hidden">
+                <button class="btn-submit" onclick="showAddClientForm(true)" id="btn-show-client-form">
+                    <i class="fas fa-plus"></i> Adicionar Novo Cliente
+                </button>
+
+                <form id="form-add-cliente" class="hidden">
+                    <h3>Dados do Novo Cliente</h3>
+                    <div class="form-row">
+                        <div class="form-group"><label for="client-nome">Nome Completo</label><input type="text" id="client-nome" required></div>
+                        <div class="form-group"><label for="client-telefone">Telefone (Obrigatório)</label><input type="tel" id="client-telefone" required></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="client-empresa">Empresa (Opcional)</label><input type="text" id="client-empresa"></div>
+                        <div class="form-group"><label for="client-email">Email (Opcional)</label><input type="email" id="client-email"></div>
+                    </div>
+                    <div class="form-row">
+                         <div class="form-group"><label for="client-nuit">NUIT (Opcional)</label><input type="text" id="client-nuit"></div>
+                         <div class="form-group"><label for="client-endereco">Endereço (Opcional)</label><input type="text" id="client-endereco"></div>
+                    </div>
+                    <button type="submit" class="btn-submit">Salvar Cliente</button>
+                    <button type="button" class="btn-cancel" onclick="showAddClientForm(false)">Cancelar</button>
+                </form>
+
+                <h3>Clientes Registados</h3>
+                <table class="table-motoristas"> <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Telefone</th>
+                            <th>Empresa</th>
+                            <th>Acções</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clients-table-body">
+                        </tbody>
+                </table>
+            </div> <div id="entregas-activas" class="content-page hidden">
                 <h3>Gestão de Encomendas Activas</h3>
                 <table class="table-pedidos">
                     <thead><tr><th>ID Pedido</th><th>Cliente</th><th>Telefone</th><th>Estado</th><th>Motorista</th><th>Acção</th></tr></thead>
@@ -159,7 +195,7 @@
                     </div>
             </div>
 
-
+            
             <div id="assign-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -193,7 +229,7 @@
                                 <label for="edit-driver-status">Estado</label>
                                 <select id="edit-driver-status" required>
                                     <option value="online_livre">Online (Livre)</option>
-                                    <option value="online_ocupado">Online (Ocupado)</foption>
+                                    <option value="online_ocupado">Online (Ocupado)</option>
                                     <option value="offline">Offline</option>
                                 </select>
                             </div>
@@ -280,8 +316,31 @@
                     </div>
                 </div>
             </div>
-            
-        </div>
+
+            <div id="edit-client-modal" class="modal-backdrop hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Editar Cliente</h3>
+                        <button class="modal-close-btn" onclick="closeEditClientModal()">&times;</button>
+                    </div>
+                    <form id="form-edit-cliente">
+                        <div class="modal-body">
+                            <input type="hidden" id="edit-client-id">
+                            <div class="form-group"><label for="edit-client-nome">Nome Completo</label><input type="text" id="edit-client-nome" required></div>
+                            <div class="form-group"><label for="edit-client-telefone">Telefone</label><input type="tel" id="edit-client-telefone" required></div>
+                            <div class="form-group"><label for="edit-client-empresa">Empresa</label><input type="text" id="edit-client-empresa"></div>
+                            <div class="form-group"><label for="edit-client-email">Email</label><input type="email" id="edit-client-email"></div>
+                            <div class="form-group"><label for="edit-client-nuit">NUIT</label><input type="text" id="edit-client-nuit"></div>
+                            <div class="form-group"><label for="edit-client-endereco">Endereço</label><input type="text" id="edit-client-endereco"></div>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="submit" class="btn-submit">Salvar Alterações</button>
+                            <button type="button" class="btn-cancel" onclick="closeEditClientModal()">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            </div>
     </main>
 
     <script src="javascript.js"></script>
