@@ -1,4 +1,4 @@
-// Ficheiro: backend/controllers/orderController.js (CORRIGIDO)
+// Ficheiro: backend/controllers/orderController.js (Completo e Atualizado)
 const Order = require('../models/Order');
 const DriverProfile = require('../models/DriverProfile');
 
@@ -17,8 +17,10 @@ function generateVerificationCode() {
  */
 exports.createOrder = async (req, res) => {
     try {
-        // --- (CORREÇÃO 1: Ler 'lat' e 'lng' do formulário) ---
-        const { service_type, client_name, client_phone1, client_phone2, address_text, price, lat, lng } = req.body;
+        // --- (ATUALIZADO) ---
+        // Agora também lemos o 'clientId' (se existir)
+        const { service_type, client_name, client_phone1, client_phone2, address_text, price, lat, lng, clientId } = req.body;
+        // --- FIM DA ATUALIZAÇÃO ---
 
         let imageUrl = null;
         if (req.file) {
@@ -35,16 +37,13 @@ exports.createOrder = async (req, res) => {
             orderStatus = 'atribuido'; 
         }
 
-        // --- (CORREÇÃO 2: Criar o objeto de coordenadas) ---
-        // Verifica se lat e lng foram enviados (se o admin usou o mapa)
         let coordinates = null;
         if (lat && lng) {
             coordinates = {
-                lat: parseFloat(lat), // Converte o texto para número
-                lng: parseFloat(lng)  // Converte o texto para número
+                lat: parseFloat(lat),
+                lng: parseFloat(lng) 
             };
         }
-        // --- FIM DA CORREÇÃO ---
 
         const newOrder = new Order({
             service_type, 
@@ -53,7 +52,14 @@ exports.createOrder = async (req, res) => {
             client_phone1, 
             client_phone2,
             address_text, 
-            address_coords: coordinates, // <-- (CORREÇÃO 3: Guardar as coordenadas)
+            address_coords: coordinates,
+            
+            // --- (ATUALIZADO) ---
+            // Guarda o ID do cliente registado, se foi enviado
+            // Se 'clientId' for uma string vazia ou null, ele guarda 'null'
+            client: clientId || null,
+            // --- FIM DA ATUALIZAÇÃO ---
+
             image_url: imageUrl, 
             verification_code: verification_code,
             created_by_admin: req.user._id, 

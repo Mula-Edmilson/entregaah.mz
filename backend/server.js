@@ -1,4 +1,4 @@
-// Ficheiro: backend/server.js (PRONTO PARA PRODUÇÃO com .env)
+// Ficheiro: backend/server.js (Completo e Pronto para Produção)
 
 // --- (NOVO) ---
 // Carrega as variáveis do ficheiro .env para process.env
@@ -10,7 +10,7 @@ const express = require('express');
 const http = require('http');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
-const cors = require('cors');
+const cors = require('cors'); // <--- Importamos o CORS
 const jwt = require('jsonwebtoken'); 
 
 const DriverProfile = require('./models/DriverProfile');
@@ -19,19 +19,36 @@ const DriverProfile = require('./models/DriverProfile');
 const app = express();
 const server = http.createServer(app);
 
-// --- (ALTERAÇÃO) ---
-// Agora lê os URLs diretamente do ficheiro .env
-const FRONTEND_URL = process.env.FRONTEND_URL;
-const FRONTEND_URL_DEV = process.env.FRONTEND_URL_DEV;
+
+// --- (ALTERAÇÃO PRINCIPAL: Regras de CORS) ---
+// 1. Defina as suas origens (lidas do .env)
+const allowedOrigins = [
+    process.env.FRONTEND_URL,       // O seu GitHub Pages (ex: https://mula-edmilson.github.io)
+    process.env.FRONTEND_URL_DEV, // O seu teste local (http://127.0.0.1:5500)
+    "null"                          // Para testes locais (file://)
+];
+
+// 2. Crie as opções de CORS
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Permite pedidos sem 'origin' (como Postman) ou que estejam na lista
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            // Se a origem não estiver na lista, rejeita o pedido
+            console.error(`CORS Bloqueado para a origem: ${origin}`);
+            callback(new Error('Não permitido pela política de CORS'));
+        }
+    },
+    methods: ["GET", "POST", "PUT"] // Métodos que o seu frontend usa
+};
+
+// 3. Configure o Socket.io com as opções
+const io = new Server(server, {
+    cors: corsOptions // <--- Usamos as opções aqui
+});
 // --- FIM DA ALTERAÇÃO ---
 
-const io = new Server(server, {
-    cors: {
-        // Aceita o seu site oficial, o live server e 'null'
-        origin: [FRONTEND_URL, FRONTEND_URL_DEV, "null"],
-        methods: ["GET", "POST", "PUT"]
-    }
-});
 
 app.set('socketio', io);
 
@@ -47,7 +64,12 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const ADMIN_ROOM = 'admin_room';
 
 // --- Middlewares ---
-app.use(cors());
+
+// --- (A CORREÇÃO PRINCIPAL ESTÁ AQUI) ---
+// 4. Use as MESMAS opções de CORS para o Express (API)
+app.use(cors(corsOptions));
+// --- FIM DA CORREÇÃO ---
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static('uploads'));
@@ -55,7 +77,7 @@ app.use('/uploads', express.static('uploads'));
 // --- Conexão ao MongoDB ---
 // Verifica se o MONGO_URI foi carregado
 if (!MONGO_URI) {
-    console.error("ERRO: MONGO_URI não foi definido. Verifique o seu ficheiro .env");
+    console.error("ERRO: MONGO_URI não foi definido. Verifique o seu ficheiro .env ou as Environment Variables no Render.");
     process.exit(1); // Para a aplicação se a BD não estiver configurada
 }
 mongoose.connect(MONGO_URI)
@@ -67,6 +89,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/drivers', require('./routes/driverRoutes'));
 app.use('/api/stats', require('./routes/statsRoutes'));
+app.use('/api/clients', require('./routes/clientRoutes')); // <-- (NOVA ROTA DE CLIENTES)
 
 // Rota de teste
 app.get('/', (req, res) => {
