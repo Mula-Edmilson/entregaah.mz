@@ -1,20 +1,19 @@
 /* --- Configuração Global --- */
 
-// --- (ALTERAÇÃO PARA PRODUÇÃO) ---
 const API_URL = 'https://entregaah-mz.onrender.com'; // O seu URL real do Render
-// --- FIM DA ALTERAÇÃO ---
 
 let socket = null;
 let myServicesChart = null;
-let map = null; // Variável global para o mapa do formulário
-let mapMarker = null; // Variável global para o pin do formulário
+let map = null; 
+let mapMarker = null; 
 
-// --- (CORREÇÃO) Movidos de fora para aqui ---
 let liveMap = null; 
 let driverMarkers = {}; 
-let freeIcon = null; // Será definido apenas no dashboard
-let busyIcon = null; // Será definido apenas no dashboard
-// --- FIM DA CORREÇÃO ---
+let freeIcon = null; 
+let busyIcon = null; 
+
+// (NOVO) Guarda os dados dos clientes carregados para o auto-fill
+let clientCache = [];
 
 const serviceNames = {
     'doc': 'Doc.',
@@ -49,8 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminDashboard = document.body.classList.contains('dashboard-body');
     if (adminDashboard) {
         
-        // --- (CORREÇÃO) Definições de Mapa movidas para aqui ---
-        // Só define os ícones se estivermos no admin (onde 'L' existe)
         const iconShadowUrl = 'https://i.postimg.cc/VNb0bBsw/marker-shadow.png';
         freeIcon = L.icon({
             iconUrl: 'https://i.postimg.cc/kXq0K1Gz/marker-free.png',
@@ -64,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Funções que dependem de 'L' (Leaflet)
-        // São definidas aqui dentro para não existirem noutras páginas
         function initializeLiveMap() {
             try {
                 const maputoCoords = [-25.965, 32.589];
@@ -125,8 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         checkAuth('admin');
-        connectSocket(); // Conecta o socket
-        listenForDriverUpdates(); // (CORREÇÃO) Ouve os eventos DEPOIS de conectar
+        connectSocket(); 
+        listenForDriverUpdates(); 
         
         showPage('visao-geral', 'nav-visao-geral', 'Visão Geral');
         
@@ -145,12 +141,16 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('nav-entregas').addEventListener('click', (e) => { e.preventDefault(); showPage('entregas-activas', 'nav-entregas', 'Entregas Activas'); });
         document.getElementById('nav-historico').addEventListener('click', (e) => { e.preventDefault(); showPage('historico', 'nav-historico', 'Histórico'); });
         
+        // (ATUALIZADO) Passa a função de callback para o showPage
         document.getElementById('nav-mapa').addEventListener('click', (e) => { e.preventDefault(); showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real', initializeLiveMap); });
 
         document.getElementById('admin-logout').addEventListener('click', (e) => { e.preventDefault(); handleLogout('admin'); });
         document.getElementById('btn-reset-chart').addEventListener('click', openChartResetModal);
         document.getElementById('btn-confirm-chart-reset').addEventListener('click', handleChartReset);
         document.getElementById('history-search-input').addEventListener('input', filterHistoryTable);
+
+        // (NOVO) Listener para o dropdown de clientes no formulário de entrega
+        document.getElementById('delivery-client-select').addEventListener('change', handleClientSelect);
     }
 
     // --- Lógica do PAINEL DO MOTORISTA ---
@@ -229,7 +229,6 @@ function connectSocket() {
         }
     });
 
-    // (CORREÇÃO) Movida a lógica de escuta para dentro do 'if (adminDashboard)'
     if (document.body.classList.contains('dashboard-body')) {
         const activePage = () => {
             const page = document.querySelector('.content-page:not(.hidden)');
@@ -256,6 +255,13 @@ async function handleNewDelivery(e) {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
+
+    // (ATUALIZADO) Adiciona o clientId (do input escondido) ao FormData
+    const clientId = document.getElementById('delivery-client-id').value;
+    if (clientId) {
+        formData.append('clientId', clientId);
+    }
+    
     try {
         const response = await fetch(`${API_URL}/api/orders`, {
             method: 'POST',
@@ -584,7 +590,7 @@ async function openDriverReportModal(driverUserId, driverName) {
 function closeDriverReportModal() { document.getElementById('driver-report-modal').classList.add('hidden'); }
 
 /* --- Funções de Navegação e UI --- */
-function showPage(pageId, navId, title, callback) { // (CORREÇÃO) Adicionado 'callback'
+function showPage(pageId, navId, title, callback) { 
     if (map) destroyMap();
     if (liveMap && pageId !== 'mapa-tempo-real') {
         liveMap.remove();
@@ -611,22 +617,28 @@ function showPage(pageId, navId, title, callback) { // (CORREÇÃO) Adicionado '
         initServicesChart(false);
     }
     
-    // (CORREÇÃO) Verifica se a função 'callback' existe (ex: initializeLiveMap)
-    // e se o mapa não foi já inicializado.
     if (pageId === 'mapa-tempo-real' && !liveMap && typeof callback === 'function') {
         callback();
     }
 }
+
+// (ATUALIZADO)
 function showServiceForm(serviceType) {
     const titles = { 'doc': 'Nova Tramitação de Documentos', 'farma': 'Novo Pedido Farmacêutico', 'carga': 'Novo Transporte de Carga', 'rapido': 'Novo Delivery Rápido', 'outros': 'Outros Serviços', 'config': 'Configurações' };
-    document.querySelectorAll('.content-page').forEach(page => page.classList.add('hidden'));
-    document.getElementById('form-nova-entrega').classList.remove('hidden');
-    document.querySelectorAll('.sidebar-menu .menu-item').forEach(item => item.classList.remove('active'));
-    document.getElementById('main-title').innerText = titles[serviceType] || 'Nova Entrega';
+    
+    // Mostra a página
+    showPage('form-nova-entrega', null, titles[serviceType] || 'Nova Entrega');
+    
     document.getElementById('service-type').value = serviceType;
     removeImage();
+    
+    // (NOVO) Reseta o formulário e carrega os clientes no dropdown
+    resetDeliveryForm();
+    loadClientsIntoDropdown(); 
+    
     setTimeout(initializeMap, 100);
 }
+
 function handleImageUpload(event) { const file = event.target.files[0]; if (!file) return; const previewContainer = document.getElementById('image-preview'); const previewImg = previewContainer.querySelector('.preview-img'); const reader = new FileReader(); reader.onload = function(e) { previewImg.src = e.target.result; }; reader.readAsDataURL(file); previewContainer.classList.remove('hidden'); }
 function removeImage() { const previewContainer = document.getElementById('image-preview'); if (!previewContainer) return; previewContainer.querySelector('.preview-img').src = ''; previewContainer.classList.add('hidden'); document.getElementById('delivery-image').value = ''; }
 async function initServicesChart(reset = false) {
@@ -771,7 +783,7 @@ function showDetalheEntrega(order) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
         
-        mapButton.href = `https://maps.google.com/?q=${order.address_coords.lat},${order.address_coords.lng}`;
+        mapButton.href = `http://googleusercontent.com/maps/google.com/0{order.address_coords.lat},${order.address_coords.lng}`;
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
@@ -842,7 +854,7 @@ async function handleCompleteDelivery(event, orderId) {
 
 /* --- Funções de Rastreamento em Tempo Real (Apenas Admin) --- */
 
-// (Nota: Estas funções só existem se 'adminDashboard' for verdadeiro)
+// (Nota: Estas funções só são definidas e usadas se 'adminDashboard' for verdadeiro)
 
 
 /**
@@ -879,7 +891,7 @@ function startLocationTracking() {
     );
 }
 
-/* --- (NOVO) Funções de Gestão de Clientes --- */
+/* --- Funções de Gestão de Clientes --- */
 
 async function loadClients() {
     try {
@@ -1052,4 +1064,82 @@ async function handleDeleteClient(clientId, clientName) {
         console.error('Falha ao apagar cliente:', error);
         showCustomAlert('Erro', error.message, 'error');
     }
+}
+
+
+/* --- (NOVO) Funções de Auto-fill do Formulário de Entrega --- */
+
+/**
+ * Carrega os clientes para o dropdown no formulário de Nova Entrega
+ */
+async function loadClientsIntoDropdown() {
+    const select = document.getElementById('delivery-client-select');
+    select.innerHTML = '<option value="">A carregar clientes...</option>';
+    
+    try {
+        const response = await fetch(`${API_URL}/api/clients`, { headers: getAuthHeaders() });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        
+        // Guarda os clientes em cache para o auto-fill
+        clientCache = data.clients; 
+        
+        select.innerHTML = '<option value="">-- Selecione um cliente ou digite manualmente --</option>';
+        
+        if (clientCache.length === 0) {
+            select.innerHTML = '<option value="">-- Nenhum cliente registado --</option>';
+            return;
+        }
+        
+        clientCache.forEach(client => {
+            const option = document.createElement('option');
+            option.value = client._id;
+            option.textContent = `${client.nome} (${client.empresa || client.telefone})`;
+            select.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('Falha ao carregar clientes para o dropdown:', error);
+        select.innerHTML = '<option value="">-- Erro ao carregar clientes --</option>';
+    }
+}
+
+/**
+ * Chamado quando um cliente é selecionado no dropdown de Nova Entrega
+ */
+function handleClientSelect(e) {
+    const selectedClientId = e.target.value;
+    
+    // Encontra o cliente no cache
+    const client = clientCache.find(c => c._id === selectedClientId);
+    
+    if (client) {
+        // Auto-preenche os campos
+        document.getElementById('client-name').value = client.nome;
+        document.getElementById('client-phone1').value = client.telefone;
+        document.getElementById('client-phone2').value = ''; // Limpa o telefone 2
+        
+        // Guarda o ID do cliente no input escondido
+        document.getElementById('delivery-client-id').value = client._id;
+        
+        // (Opcional) Desativa os campos para evitar edição
+        document.getElementById('client-name').readOnly = true;
+        document.getElementById('client-phone1').readOnly = true;
+        
+    } else {
+        // Se o admin selecionou "-- Selecione..." (valor vazio)
+        resetDeliveryForm();
+    }
+}
+
+/**
+ * (NOVO) Reseta o formulário de entrega, limpando o auto-fill
+ */
+function resetDeliveryForm() {
+    document.getElementById('delivery-form').reset();
+    document.getElementById('delivery-client-id').value = ''; // Limpa o ID escondido
+    
+    // (Opcional) Re-ativa os campos
+    document.getElementById('client-name').readOnly = false;
+    document.getElementById('client-phone1').readOnly = false;
 }
