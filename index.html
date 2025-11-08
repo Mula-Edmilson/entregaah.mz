@@ -19,7 +19,10 @@
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.socket.io/4.7.0/socket.io.min.js"></script>
-</head>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    </head>
 <body class="dashboard-body">
 
     <nav class="sidebar">
@@ -74,16 +77,14 @@
             <div id="form-nova-entrega" class="content-page hidden">
                 <form id="delivery-form">
                     <input type="hidden" id="service-type" name="service_type">
-                    
                     <input type="hidden" id="delivery-client-id" name="clientId">
                     
                     <h3>Cliente</h3>
-                    
                     <div class="form-group form-group-large">
                         <label for="delivery-client-select">Cliente Registado (Opcional)</label>
                         <select id="delivery-client-select">
                             <option value="">-- Ou digite manualmente abaixo --</option>
-                            </select>
+                        </select>
                     </div>
                     
                     <h3>Dados do Cliente/Destinatário</h3>
@@ -206,7 +207,7 @@
             </div>
 
             <div id="mapa-tempo-real" class="content-page hidden">
-                <div id="live-map-container" style="width: 100%; height: 75vh; border-radius: 8px; border: 1px solid var(--gray-color);">
+                <div id="live-map-container">
                 </div>
             </div>
 
@@ -355,8 +356,76 @@
                     </form>
                 </div>
             </div>
-            
-        </div>
+
+            <div id="statement-modal" class="modal-backdrop hidden">
+                <div class="modal-content modal-large">
+                    <div class="modal-header">
+                        <h3 id="statement-client-name">Extrato do Cliente</h3>
+                        <button class="modal-close-btn" onclick="closeStatementModal()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="statement-client-id">
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="statement-start-date">De:</label>
+                                <input type="date" id="statement-start-date">
+                            </div>
+                            <div class="form-group">
+                                <label for="statement-end-date">Até:</label>
+                                <input type="date" id="statement-end-date">
+                            </div>
+                        </div>
+                        <div class="form-group" style="display: flex; gap: 1rem; margin-top: -0.5rem;">
+                            <button type="button" class="btn-action-small" onclick="setStatementDates('this_week')">Esta Semana</button>
+                            <button type="button" class="btn-action-small" onclick="setStatementDates('this_month')">Este Mês</button>
+                        </div>
+                        
+                        <button type="button" class="btn-submit" onclick="handleGenerateStatement()">
+                            <i class="fas fa-search"></i> Gerar Extrato
+                        </button>
+                        
+                        <div id="statement-results" class="hidden" style="margin-top: 2rem;">
+                            <hr>
+                            <div class="report-summary">
+                                <div class="summary-card">
+                                    <span>Total Gasto (MZN)</span>
+                                    <strong id="statement-total-value">...</strong>
+                                </div>
+                                <div class="summary-card">
+                                    <span>Total de Pedidos</span>
+                                    <strong id="statement-total-orders">...</strong>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h4 id="statement-date-range">Pedidos Concluídos</h4>
+                                <button type="button" class="btn-action-small" id="btn-download-pdf" onclick="handleDownloadPDF()">
+                                    <i class="fas fa-file-pdf"></i> Baixar PDF
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table-pedidos">
+                                    <thead>
+                                        <tr>
+                                            <th>Data Conclusão</th>
+                                            <th>ID Pedido</th>
+                                            <th>Natureza</th>
+                                            <th>Valor (MZN)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="statement-table-body">
+                                        </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeStatementModal()">Fechar</button>
+                    </div>
+                </div>
+            </div>
+            </div>
     </main>
 
     <script src="javascript.js"></script>
