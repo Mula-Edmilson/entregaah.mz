@@ -12,8 +12,7 @@ let driverMarkers = {};
 let freeIcon = null; 
 let busyIcon = null; 
 
-// (NOVO) Guarda os dados dos clientes carregados para o auto-fill
-let clientCache = [];
+let clientCache = []; // Guarda os dados dos clientes carregados para o auto-fill
 
 const serviceNames = {
     'doc': 'Doc.',
@@ -119,7 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // --- Fim das funções de mapa ---
 
-
         checkAuth('admin');
         connectSocket(); 
         listenForDriverUpdates(); 
@@ -141,7 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('nav-entregas').addEventListener('click', (e) => { e.preventDefault(); showPage('entregas-activas', 'nav-entregas', 'Entregas Activas'); });
         document.getElementById('nav-historico').addEventListener('click', (e) => { e.preventDefault(); showPage('historico', 'nav-historico', 'Histórico'); });
         
-        // (ATUALIZADO) Passa a função de callback para o showPage
         document.getElementById('nav-mapa').addEventListener('click', (e) => { e.preventDefault(); showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real', initializeLiveMap); });
 
         document.getElementById('admin-logout').addEventListener('click', (e) => { e.preventDefault(); handleLogout('admin'); });
@@ -149,7 +146,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btn-confirm-chart-reset').addEventListener('click', handleChartReset);
         document.getElementById('history-search-input').addEventListener('input', filterHistoryTable);
 
-        // (NOVO) Listener para o dropdown de clientes no formulário de entrega
         document.getElementById('delivery-client-select').addEventListener('change', handleClientSelect);
     }
 
@@ -256,7 +252,6 @@ async function handleNewDelivery(e) {
     const form = e.target;
     const formData = new FormData(form);
 
-    // (ATUALIZADO) Adiciona o clientId (do input escondido) ao FormData
     const clientId = document.getElementById('delivery-client-id').value;
     if (clientId) {
         formData.append('clientId', clientId);
@@ -622,17 +617,14 @@ function showPage(pageId, navId, title, callback) {
     }
 }
 
-// (ATUALIZADO)
 function showServiceForm(serviceType) {
     const titles = { 'doc': 'Nova Tramitação de Documentos', 'farma': 'Novo Pedido Farmacêutico', 'carga': 'Novo Transporte de Carga', 'rapido': 'Novo Delivery Rápido', 'outros': 'Outros Serviços', 'config': 'Configurações' };
     
-    // Mostra a página
     showPage('form-nova-entrega', null, titles[serviceType] || 'Nova Entrega');
     
     document.getElementById('service-type').value = serviceType;
     removeImage();
     
-    // (NOVO) Reseta o formulário e carrega os clientes no dropdown
     resetDeliveryForm();
     loadClientsIntoDropdown(); 
     
@@ -915,6 +907,7 @@ async function loadClients() {
                     <td>${client.empresa || 'N/D'}</td>
                     <td>
                         <button class="btn-action btn-action-small" onclick="openEditClientModal('${client._id}')" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn-action-small btn-action-report" onclick="openStatementModal('${client._id}', '${client.nome}')" title="Ver Extrato"><i class="fas fa-file-invoice-dollar"></i></button>
                         <button class="btn-action-small btn-danger" onclick="handleDeleteClient('${client._id}', '${client.nome}')" title="Apagar"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
@@ -1067,11 +1060,8 @@ async function handleDeleteClient(clientId, clientName) {
 }
 
 
-/* --- (NOVO) Funções de Auto-fill do Formulário de Entrega --- */
+/* --- Funções de Auto-fill do Formulário de Entrega --- */
 
-/**
- * Carrega os clientes para o dropdown no formulário de Nova Entrega
- */
 async function loadClientsIntoDropdown() {
     const select = document.getElementById('delivery-client-select');
     select.innerHTML = '<option value="">A carregar clientes...</option>';
@@ -1081,7 +1071,6 @@ async function loadClientsIntoDropdown() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
-        // Guarda os clientes em cache para o auto-fill
         clientCache = data.clients; 
         
         select.innerHTML = '<option value="">-- Selecione um cliente ou digite manualmente --</option>';
@@ -1104,42 +1093,197 @@ async function loadClientsIntoDropdown() {
     }
 }
 
-/**
- * Chamado quando um cliente é selecionado no dropdown de Nova Entrega
- */
 function handleClientSelect(e) {
     const selectedClientId = e.target.value;
-    
-    // Encontra o cliente no cache
     const client = clientCache.find(c => c._id === selectedClientId);
     
     if (client) {
-        // Auto-preenche os campos
         document.getElementById('client-name').value = client.nome;
         document.getElementById('client-phone1').value = client.telefone;
-        document.getElementById('client-phone2').value = ''; // Limpa o telefone 2
-        
-        // Guarda o ID do cliente no input escondido
+        document.getElementById('client-phone2').value = ''; 
         document.getElementById('delivery-client-id').value = client._id;
         
-        // (Opcional) Desativa os campos para evitar edição
         document.getElementById('client-name').readOnly = true;
         document.getElementById('client-phone1').readOnly = true;
         
     } else {
-        // Se o admin selecionou "-- Selecione..." (valor vazio)
         resetDeliveryForm();
     }
 }
 
-/**
- * (NOVO) Reseta o formulário de entrega, limpando o auto-fill
- */
 function resetDeliveryForm() {
     document.getElementById('delivery-form').reset();
-    document.getElementById('delivery-client-id').value = ''; // Limpa o ID escondido
+    document.getElementById('delivery-client-id').value = ''; 
     
-    // (Opcional) Re-ativa os campos
     document.getElementById('client-name').readOnly = false;
     document.getElementById('client-phone1').readOnly = false;
+}
+
+/* --- (NOVAS FUNÇÕES PARA EXTRATO DE CLIENTE) --- */
+
+/**
+ * Abre o Modal de Extrato e guarda o ID/Nome do cliente
+ */
+function openStatementModal(clientId, clientName) {
+    const modal = document.getElementById('statement-modal');
+    document.getElementById('statement-client-name').textContent = `Extrato de ${clientName}`;
+    document.getElementById('statement-client-id').value = clientId;
+    
+    // Limpa resultados anteriores
+    document.getElementById('statement-results').classList.add('hidden');
+    document.getElementById('statement-table-body').innerHTML = '';
+    document.getElementById('statement-start-date').value = '';
+    document.getElementById('statement-end-date').value = '';
+    
+    modal.classList.remove('hidden');
+}
+
+/**
+ * Fecha o Modal de Extrato
+ */
+function closeStatementModal() {
+    document.getElementById('statement-modal').classList.add('hidden');
+}
+
+/**
+ * Define as datas nos inputs com base nos atalhos (semana/mês)
+ */
+function setStatementDates(range) {
+    const today = new Date();
+    const endDate = new Date(); // Hoje
+    let startDate = new Date();
+
+    if (range === 'this_week') {
+        // Encontra o último Domingo
+        const dayOfWeek = today.getDay();
+        startDate.setDate(today.getDate() - dayOfWeek);
+    } else if (range === 'this_month') {
+        // Primeiro dia do mês atual
+        startDate.setDate(1);
+    }
+    
+    // Formata para 'YYYY-MM-DD' (o formato que o input type="date" precisa)
+    document.getElementById('statement-start-date').value = startDate.toISOString().split('T')[0];
+    document.getElementById('statement-end-date').value = endDate.toISOString().split('T')[0];
+}
+
+/**
+ * Botão "Gerar Extrato": Busca os dados na API
+ */
+async function handleGenerateStatement() {
+    const clientId = document.getElementById('statement-client-id').value;
+    const startDate = document.getElementById('statement-start-date').value;
+    const endDate = document.getElementById('statement-end-date').value;
+
+    if (!startDate || !endDate) {
+        showCustomAlert('Erro', 'Por favor, selecione uma data de início e uma data de fim.', 'error');
+        return;
+    }
+
+    const resultsDiv = document.getElementById('statement-results');
+    resultsDiv.classList.add('hidden');
+    
+    try {
+        const response = await fetch(`${API_URL}/api/clients/${clientId}/statement?startDate=${startDate}&endDate=${endDate}`, {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        
+        // Se a busca foi bem-sucedida, preenche o modal com os dados
+        populateStatementModal(data, startDate, endDate);
+
+    } catch (error) {
+        console.error('Falha ao gerar extrato:', error);
+        showCustomAlert('Erro', error.message, 'error');
+    }
+}
+
+/**
+ * Preenche o modal com os resultados vindos da API
+ */
+function populateStatementModal(data, startDate, endDate) {
+    const { totalValue, totalOrders, ordersList } = data;
+    
+    // Formata os totais
+    const formattedTotal = new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(totalValue);
+    document.getElementById('statement-total-value').textContent = formattedTotal;
+    document.getElementById('statement-total-orders').textContent = `${totalOrders} Pedidos`;
+    
+    // Formata o período
+    const start = new Date(startDate).toLocaleDateString('pt-MZ');
+    const end = new Date(endDate).toLocaleDateString('pt-MZ');
+    document.getElementById('statement-date-range').textContent = `Pedidos Concluídos de ${start} a ${end}`;
+
+    // Preenche a tabela
+    const tableBody = document.getElementById('statement-table-body');
+    tableBody.innerHTML = '';
+    
+    if (ordersList.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="4">Nenhum pedido concluído neste período.</td></tr>';
+    } else {
+        ordersList.forEach(order => {
+            tableBody.innerHTML += `
+                <tr>
+                    <td>${new Date(order.timestamp_completed).toLocaleDateString('pt-MZ')}</td>
+                    <td>#${order._id.slice(-6)}</td>
+                    <td>${serviceNames[order.service_type] || order.service_type}</td>
+                    <td>${order.price.toFixed(2)} MZN</td>
+                </tr>
+            `;
+        });
+    }
+    
+    // Mostra a área de resultados
+    document.getElementById('statement-results').classList.remove('hidden');
+}
+
+/**
+ * Gera e baixa o PDF do extrato
+ */
+function handleDownloadPDF() {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Pega os dados do modal
+        const clientName = document.getElementById('statement-client-name').textContent; // "Extrato de NOME"
+        const cleanClientName = clientName.replace('Extrato de ', '');
+        const dateRange = document.getElementById('statement-date-range').textContent;
+        const totalValue = document.getElementById('statement-total-value').textContent;
+        const totalOrders = document.getElementById('statement-total-orders').textContent;
+
+        // Título
+        doc.setFontSize(18);
+        doc.text('Extrato de Conta de Cliente', 14, 22);
+        
+        // Informações
+        doc.setFontSize(11);
+        doc.setTextColor(100); // Cinzento
+        doc.text(`Cliente: ${cleanClientName}`, 14, 32);
+        doc.text(`Período: ${dateRange}`, 14, 38);
+        
+        // Totais
+        doc.setFontSize(12);
+        doc.setTextColor(0); // Preto
+        doc.text(`Total de Pedidos: ${totalOrders}`, 14, 50);
+        doc.text(`Valor Total Gasto: ${totalValue}`, 14, 56);
+
+        // Tabela
+        // A função autoTable lê a tabela que já está no HTML
+        doc.autoTable({
+            html: '#statement-results .table-pedidos', // Seletor da tabela
+            startY: 65,
+            theme: 'grid',
+            styles: { fontSize: 9 },
+            headStyles: { fillColor: [44, 62, 80] } // Cor --dark-color
+        });
+        
+        // Salva o ficheiro
+        doc.save(`Extrato_${cleanClientName.replace(/ /g, '_')}.pdf`);
+
+    } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        showCustomAlert('Erro', 'Não foi possível gerar o PDF. Tente novamente.', 'error');
+    }
 }
