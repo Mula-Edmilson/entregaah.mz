@@ -22,8 +22,14 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({ storage: storage, fileFilter: fileFilter, limits: { fileSize: 1024 * 1024 * 5 } });
 // ------------------------------
 
+// --- (A CORREÇÃO ESTÁ AQUI) ---
+// Trocámos upload.single('deliveryImage') por upload.any()
+// upload.any() irá SEMPRE analisar o formulário (req.body) para nós,
+// mesmo que nenhuma imagem seja enviada.
+//
 // @route   POST api/orders (Admin cria encomenda)
-router.post('/', protect, admin, upload.single('deliveryImage'), orderController.createOrder);
+router.post('/', protect, admin, upload.any(), orderController.createOrder);
+// --- FIM DA CORREÇÃO ---
 
 // @route   GET api/orders/my-deliveries (Motorista vê as suas)
 router.get('/my-deliveries', protect, driver, orderController.getMyDeliveries);
@@ -37,31 +43,17 @@ router.post('/:id/complete', protect, driver, orderController.completeDelivery);
 // @route   PUT api/orders/:orderId/assign (Admin atribui)
 router.put('/:orderId/assign', protect, admin, orderController.assignOrder);
 
-
-// --- ### A CORREÇÃO ESTÁ AQUI ### ---
-// As rotas 'GET' específicas têm de vir ANTES da rota genérica 'GET /:id'.
-
 // @route   GET api/orders/active
-// @desc    Admin obtém encomendas ativas
-// @access  Privado (Admin)
 router.get('/active', protect, admin, orderController.getActiveOrders);
 
 // @route   GET api/orders/history
-// @desc    Admin obtém o histórico de encomendas
-// @access  Privado (Admin)
 router.get('/history', protect, admin, orderController.getHistoryOrders);
 
-// @route   GET api/orders (Isto também é específico, mas menos que os outros)
-// @desc    Admin obtém TODAS as encomendas
-// @access  Privado (Admin)
+// @route   GET api/orders (TODAS)
 router.get('/', protect, admin, orderController.getAllOrders);
 
-// @route   GET api/orders/:id
-// @desc    Admin obtém UMA encomenda por ID
-// @access  Privado (Admin)
-// (Esta rota genérica tem de ser a ÚLTIMA rota 'GET')
+// @route   GET api/orders/:id (UMA)
 router.get('/:id', protect, admin, orderController.getOrderById);
-// --- ### FIM DA CORREÇÃO ### ---
 
 
 module.exports = router;

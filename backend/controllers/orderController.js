@@ -1,4 +1,4 @@
-// Ficheiro: backend/controllers/orderController.js (Completo e Atualizado)
+// Ficheiro: backend/controllers/orderController.js (Completo e Corrigido)
 const Order = require('../models/Order');
 const DriverProfile = require('../models/DriverProfile');
 
@@ -17,15 +17,17 @@ function generateVerificationCode() {
  */
 exports.createOrder = async (req, res) => {
     try {
-        // --- (ATUALIZADO) ---
-        // Agora também lemos o 'clientId' (se existir)
         const { service_type, client_name, client_phone1, client_phone2, address_text, price, lat, lng, clientId } = req.body;
-        // --- FIM DA ATUALIZAÇÃO ---
 
+        // --- (A CORREÇÃO ESTÁ AQUI) ---
+        // Como estamos a usar upload.any(), a imagem está em req.files (um array)
         let imageUrl = null;
-        if (req.file) {
-            imageUrl = `/uploads/${req.file.filename}`;
+        if (req.files && req.files.length > 0) {
+            // Pega no primeiro ficheiro que foi enviado
+            imageUrl = `/uploads/${req.files[0].filename}`;
         }
+        // --- FIM DA CORREÇÃO ---
+        
         const verification_code = generateVerificationCode();
         const availableDriver = await DriverProfile.findOne({ status: 'online_livre' });
         
@@ -53,13 +55,7 @@ exports.createOrder = async (req, res) => {
             client_phone2,
             address_text, 
             address_coords: coordinates,
-            
-            // --- (ATUALIZADO) ---
-            // Guarda o ID do cliente registado, se foi enviado
-            // Se 'clientId' for uma string vazia ou null, ele guarda 'null'
-            client: clientId || null,
-            // --- FIM DA ATUALIZAÇÃO ---
-
+            client: clientId || null, // O clientId agora será lido corretamente do req.body
             image_url: imageUrl, 
             verification_code: verification_code,
             created_by_admin: req.user._id, 
@@ -250,7 +246,7 @@ exports.getOrderById = async (req, res) => {
             });
 
         if (!order) {
-            return res.status(404).json({ message: 'Encomenda não encontrada' });
+            return res.status(4404).json({ message: 'Encomenda não encontrada' });
         }
         
         res.status(200).json({ order });
