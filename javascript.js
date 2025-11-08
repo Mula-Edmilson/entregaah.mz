@@ -1263,7 +1263,6 @@ function handleDownloadPDF() {
     }
 }
 
-{
 type: uploaded file
 fileName: javascript.js
 fullContent:
