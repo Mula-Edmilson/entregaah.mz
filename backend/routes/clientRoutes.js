@@ -27,4 +27,19 @@ router.put('/:id', protect, admin, clientController.updateClient);
 // @desc    Admin apaga um cliente
 router.delete('/:id', protect, admin, clientController.deleteClient);
 
+// Ficheiro: backend/routes/clientRoutes.js
+
+const express = require('express');
+const router = express.Router();
+const clientController = require('../controllers/clientController');
+const { protect, admin } = require('../middleware/authMiddleware');
+
+// ... (as suas rotas existentes de GET, POST, PUT, DELETE) ...
+
+// --- (ADICIONE ESTA NOVA ROTA) ---
+// @route   GET /api/clients/:id/statement
+// @desc    Admin obtém o extrato de um cliente
+router.get('/:id/statement', protect, admin, clientController.getStatement);
+// --- FIM DA ADIÇÃO ---
+
 module.exports = router;
