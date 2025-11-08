@@ -246,7 +246,7 @@ exports.getOrderById = async (req, res) => {
             });
 
         if (!order) {
-            return res.status(4404).json({ message: 'Encomenda não encontrada' });
+            return res.status(404).json({ message: 'Encomenda não encontrada' });
         }
         
         res.status(200).json({ order });
