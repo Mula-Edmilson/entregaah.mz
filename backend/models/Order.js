@@ -4,14 +4,11 @@ const mongoose = require('mongoose');
 const orderSchema = new mongoose.Schema({
     // --- Detalhes do Serviço ---
     service_type: { type: String, required: true }, // 'doc', 'farma', etc.
-    
-    // --- (NOVA ADIÇÃO) ---
     price: {
         type: Number,
         required: true,
         default: 0
     },
-    // --- FIM DA ADIÇÃO ---
 
     // --- Detalhes do Destinatário ---
     client_name: { type: String, required: true },
@@ -20,11 +17,17 @@ const orderSchema = new mongoose.Schema({
 
     // --- Detalhes do Local ---
     address_text: { type: String },
-    // address_coords: { lat: Number, lng: Number }, // Futuramente, para o mapa
+    
+    // --- (CAMPO ATIVADO) ---
+    address_coords: { 
+        lat: { type: Number }, 
+        lng: { type: Number }
+    },
+    // --- FIM DA ATIVAÇÃO ---
 
     // --- Identificação ---
-    image_url: { type: String }, // O URL da imagem (após upload com Multer)
-    verification_code: { type: String, required: true }, // O código de 5 dígitos
+    image_url: { type: String }, 
+    verification_code: { type: String, required: true }, 
 
     // --- Atores (Quem fez o quê) ---
     created_by_admin: { 
@@ -36,15 +39,27 @@ const orderSchema = new mongoose.Schema({
         ref: 'DriverProfile' 
     },
 
-    // --- O IMPORTANTE: Status e o Timer ---
+    // --- (CAMPO NOVO) ---
+    // Ligação ao Cliente Registado
+    client: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Client',
+        required: false 
+    },
+    // --- FIM DO CAMPO NOVO ---
+
+    // --- Status e Timestamps ---
     status: {
         type: String,
         enum: ['pendente', 'atribuido', 'em_progresso', 'concluido', 'cancelado'],
         default: 'pendente'
     },
-    timestamp_created: { type: Date, default: Date.now }, // Quando o admin criou
-    timestamp_started: { type: Date }, // Quando o motorista clicou em "Iniciar"
-    timestamp_completed: { type: Date } // Quando o motorista inseriu o código
+    timestamp_started: { type: Date }, 
+    timestamp_completed: { type: Date } 
+
+}, {
+    // Usa os timestamps automáticos (createdAt e updatedAt)
+    timestamps: true 
 });
 
 const Order = mongoose.model('Order', orderSchema);
