@@ -1,7 +1,7 @@
-// Ficheiro: backend/controllers/clientController.js (Completo e Atualizado)
+// Ficheiro: backend/controllers/clientController.js (Completo e Corrigido)
 
 const Client = require('../models/Client');
-const Order = require('../models/Order'); // <-- (IMPORTANTE) Precisamos disto
+const Order = require('../models/Order'); 
 const mongoose = require('mongoose');
 
 // @desc    Admin cria um novo cliente
@@ -103,42 +103,49 @@ exports.deleteClient = async (req, res) => {
 };
 
 
-// --- (FUNÇÃO TOTALMENTE NOVA PARA O EXTRATO) ---
+// --- (FUNÇÃO DO EXTRATO CORRIGIDA) ---
 // @desc    Admin obtém o extrato de um cliente
 exports.getStatement = async (req, res) => {
     try {
         const { id } = req.params; // ID do Cliente
-        const { startDate, endDate } = req.query; // Datas (ex: '2025-10-01')
+        const { startDate, endDate } = req.query; // Datas (ex: '2025-11-08')
 
         if (!startDate || !endDate) {
             return res.status(400).json({ message: 'Datas de início e fim são obrigatórias' });
         }
 
-        // Converte o ID do cliente para um ObjectId válido
+        // --- (A CORREÇÃO ESTÁ AQUI) ---
+        
+        // 1. Cria a data de início (ex: '2025-11-08' -> 8 de Nov, 00:00:00)
+        const start = new Date(startDate);
+        start.setUTCHours(0, 0, 0, 0); // Define para a meia-noite UTC
+
+        // 2. Cria a data de fim (ex: '2025-11-08' -> 8 de Nov, 23:59:59)
+        const end = new Date(endDate);
+        end.setUTCHours(23, 59, 59, 999); // Define para o FIM do dia UTC
+        
+        // --- FIM DA CORREÇÃO ---
+
         const clientId = new mongoose.Types.ObjectId(id);
 
-        // 1. Encontra todas as encomendas concluídas para este cliente
-        //    dentro do intervalo de datas.
         const orders = await Order.find({
             client: clientId,
             status: 'concluido',
             timestamp_completed: { // Filtra pela data de conclusão
-                $gte: new Date(startDate), // Maior ou igual a...
-                $lte: new Date(endDate)    // Menor ou igual a...
+                $gte: start, // Usa a data de início (00:00:00)
+                $lte: end    // Usa a data de fim (23:59:59)
             }
         }).sort({ timestamp_completed: 1 }); // Ordena pela mais antiga primeiro
 
-        // 2. Calcula os totais
         let totalValue = 0;
         orders.forEach(order => {
-            totalValue += order.price; // Soma o preço de cada encomenda
+            totalValue += order.price; 
         });
 
-        // 3. Envia os dados de volta para o frontend
         res.status(200).json({
             totalValue: totalValue,
             totalOrders: orders.length,
-            ordersList: orders // Envia a lista completa de pedidos
+            ordersList: orders 
         });
 
     } catch (error) {
@@ -146,4 +153,4 @@ exports.getStatement = async (req, res) => {
         res.status(500).json({ message: 'Erro do servidor' });
     }
 };
-// --- FIM DA NOVA FUNÇÃO ---
+// --- FIM DA FUNÇÃO CORRIGIDA ---
