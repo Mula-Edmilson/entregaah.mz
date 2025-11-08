@@ -1262,7 +1262,6 @@ function handleDownloadPDF() {
         showCustomAlert('Erro', 'Não foi possível gerar o PDF. Tente novamente.', 'error');
     }
 }
-}
 
 {
 type: uploaded file
