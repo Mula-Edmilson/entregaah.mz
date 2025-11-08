@@ -12,9 +12,7 @@ let mapMarker = null; // Variável global para o pin do formulário
 let liveMap = null; // Variável global para o mapa em tempo real
 let driverMarkers = {}; // Objeto para guardar os marcadores dos motoristas { driverId: marker }
 
-// --- (NOVO) ÍCONES PERSONALIZADOS PARA O MAPA ---
-// Estes são os ícones que serão usados no mapa em tempo real
-
+// --- ÍCONES PERSONALIZADOS PARA O MAPA ---
 const iconShadowUrl = 'https://i.postimg.cc/VNb0bBsw/marker-shadow.png';
 
 // Ícone para Motorista LIVRE (Verde)
@@ -37,7 +35,6 @@ const busyIcon = L.icon({
     shadowSize: [41, 41]
 });
 // --- FIM DOS ÍCONES ---
-
 
 const serviceNames = {
     'doc': 'Doc.',
@@ -78,6 +75,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('delivery-form').addEventListener('submit', handleNewDelivery);
         document.getElementById('form-add-motorista').addEventListener('submit', handleAddDriver);
         document.getElementById('form-edit-motorista').addEventListener('submit', handleUpdateDriver);
+        
+        // --- (NOVO) Listeners de Clientes ---
+        document.getElementById('form-add-cliente').addEventListener('submit', handleAddClient);
+        document.getElementById('form-edit-cliente').addEventListener('submit', handleUpdateClient);
+        document.getElementById('nav-clientes').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-clientes', 'nav-clientes', 'Gestão de Clientes'); });
+        // --- FIM DA ADIÇÃO ---
+        
         document.getElementById('delivery-image').addEventListener('change', handleImageUpload);
 
         document.getElementById('nav-visao-geral').addEventListener('click', (e) => { e.preventDefault(); showPage('visao-geral', 'nav-visao-geral', 'Visão Geral'); });
@@ -547,6 +551,11 @@ function showPage(pageId, navId, title) {
     if (pageId === 'gestao-motoristas') loadDrivers();
     if (pageId === 'entregas-activas') loadActiveDeliveries();
     if (pageId === 'historico') loadHistory();
+    
+    // --- (NOVO) Carrega os clientes ---
+    if (pageId === 'gestao-clientes') loadClients();
+    // --- FIM DA ADIÇÃO ---
+
     if (pageId === 'visao-geral') {
         loadOverviewStats();
         initServicesChart(false);
@@ -693,8 +702,7 @@ function showDetalheEntrega(order) {
     const img = detalheSection.querySelector('#encomenda-imagem');
     const noImg = detalheSection.querySelector('#no-image-placeholder');
     if (order.image_url) {
-        // (ATUALIZADO) Garante que a imagem usa o API_URL
-        img.src = `${API_URL}${order.image_url}`; 
+        img.src = `${API_URL}${order.image_url}`;
         img.classList.remove('hidden');
         noImg.classList.add('hidden');
     } else {
@@ -711,12 +719,10 @@ function showDetalheEntrega(order) {
     const coordsP = document.getElementById('detalhe-cliente-coords');
     const mapButton = document.getElementById('btn-google-maps');
     
-    // (CORRIGIDO) Verifica as coordenadas e mostra-as
     if (order.address_coords && order.address_coords.lat) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
         
-        // (CORRIGIDO) Link correto do Google Maps
         mapButton.href = `https://maps.google.com/?q=${order.address_coords.lat},${order.address_coords.lng}`;
         mapButton.classList.remove('hidden');
     } else {
@@ -787,7 +793,7 @@ async function handleCompleteDelivery(event, orderId) {
 }
 
 
-/* --- (NOVAS FUNÇÕES) Rastreamento em Tempo Real --- */
+/* --- Funções de Rastreamento em Tempo Real --- */
 
 function initializeLiveMap() {
     try {
@@ -828,17 +834,14 @@ function listenForDriverUpdates() {
         const popupContent = `<strong>${driverName}</strong><br>Status: ${status.replace('_', ' ')}`;
         
         // --- (NOVA LÓGICA DE ÍCONES) ---
-        // Escolhe o ícone com base no status vindo do servidor
         const iconToUse = (status === 'online_ocupado') ? busyIcon : freeIcon;
         // --- FIM DA NOVA LÓGICA ---
 
         if (driverMarkers[driverId]) {
-            // Se o marcador já existe, atualiza a posição, o popup e o ícone
             driverMarkers[driverId].setLatLng(newLatLng);
             driverMarkers[driverId].setPopupContent(popupContent);
             driverMarkers[driverId].setIcon(iconToUse); // <-- ATUALIZA O ÍCONE
         } else {
-            // Se é um novo motorista, cria o marcador JÁ COM O ÍCONE CORRETO
             driverMarkers[driverId] = L.marker(newLatLng, { icon: iconToUse }).addTo(liveMap);
             driverMarkers[driverId].bindPopup(popupContent).openPopup();
             console.log(`Adicionando novo marcador para ${driverName}`);
@@ -887,4 +890,202 @@ function startLocationTracking() {
             distanceFilter: 10        
         }
     );
+}
+
+/* --- (NOVO) Funções de Gestão de Clientes --- */
+
+/**
+ * Carrega a lista de clientes e preenche a tabela
+ */
+async function loadClients() {
+    try {
+        const response = await fetch(`${API_URL}/api/clients`, { method: 'GET', headers: getAuthHeaders() });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        
+        const tableBody = document.getElementById('clients-table-body');
+        tableBody.innerHTML = '';
+        
+        if (data.clients.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4">Nenhum cliente registado.</td></tr>';
+            return;
+        }
+        
+        data.clients.forEach(client => {
+            tableBody.innerHTML += `
+                <tr>
+                    <td>${client.nome}</td>
+                    <td>${client.telefone}</td>
+                    <td>${client.empresa || 'N/D'}</td>
+                    <td>
+                        <button class="btn-action btn-action-small" onclick="openEditClientModal('${client._id}')" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn-action-small btn-danger" onclick="handleDeleteClient('${client._id}', '${client.nome}')" title="Apagar"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+    } catch (error) { 
+        console.error('Falha ao carregar clientes:', error);
+        document.getElementById('clients-table-body').innerHTML = '<tr><td colspan="4">Erro ao carregar clientes.</td></tr>';
+    }
+}
+
+/**
+ * Mostra ou esconde o formulário de adicionar cliente
+ */
+function showAddClientForm(show) {
+    const form = document.getElementById('form-add-cliente');
+    const button = document.getElementById('btn-show-client-form');
+    if (!form || !button) return;
+    
+    if (show) { 
+        form.classList.remove('hidden'); 
+        button.classList.add('hidden'); 
+    } else { 
+        form.classList.add('hidden'); 
+        button.classList.remove('hidden'); 
+        form.reset(); 
+    }
+}
+
+/**
+ * Manipula a submissão do formulário de novo cliente
+ */
+async function handleAddClient(e) {
+    e.preventDefault();
+    
+    const clientData = {
+        nome: document.getElementById('client-nome').value,
+        telefone: document.getElementById('client-telefone').value,
+        empresa: document.getElementById('client-empresa').value,
+        email: document.getElementById('client-email').value,
+        nuit: document.getElementById('client-nuit').value,
+        endereco: document.getElementById('client-endereco').value
+    };
+
+    if (!clientData.nome || !clientData.telefone) {
+        showCustomAlert('Atenção', 'Nome e Telefone são obrigatórios.', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/api/clients`, {
+            method: 'POST',
+            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(clientData)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        
+        showCustomAlert('Sucesso', 'Cliente adicionado com sucesso!', 'success');
+        showAddClientForm(false);
+        loadClients(); // Recarrega a tabela
+        
+    } catch (error) {
+        console.error('Falha ao adicionar cliente:', error);
+        showCustomAlert('Erro', error.message, 'error');
+    }
+}
+
+/**
+ * Abre o modal de edição de cliente
+ */
+async function openEditClientModal(clientId) {
+    const modal = document.getElementById('edit-client-modal');
+    modal.classList.remove('hidden');
+    
+    try {
+        // Busca os dados atuais do cliente
+        const response = await fetch(`${API_URL}/api/clients/${clientId}`, { headers: getAuthHeaders() });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        
+        const client = data.client;
+        document.getElementById('edit-client-id').value = client._id;
+        document.getElementById('edit-client-nome').value = client.nome;
+        document.getElementById('edit-client-telefone').value = client.telefone;
+        document.getElementById('edit-client-empresa').value = client.empresa || '';
+        document.getElementById('edit-client-email').value = client.email || '';
+        document.getElementById('edit-client-nuit').value = client.nuit || '';
+        document.getElementById('edit-client-endereco').value = client.endereco || '';
+        
+    } catch (error) {
+        console.error('Falha ao carregar dados do cliente:', error);
+        showCustomAlert('Erro', 'Erro ao carregar dados do cliente.', 'error');
+        closeEditClientModal();
+    }
+}
+
+/**
+ * Fecha o modal de edição de cliente
+ */
+function closeEditClientModal() {
+    document.getElementById('edit-client-modal').classList.add('hidden');
+    document.getElementById('form-edit-cliente').reset();
+}
+
+/**
+ * Manipula a submissão do formulário de ATUALIZAÇÃO de cliente
+ */
+async function handleUpdateClient(e) {
+    e.preventDefault();
+    const clientId = document.getElementById('edit-client-id').value;
+    
+    const updatedData = {
+        nome: document.getElementById('edit-client-nome').value,
+        telefone: document.getElementById('edit-client-telefone').value,
+        empresa: document.getElementById('edit-client-empresa').value,
+        email: document.getElementById('edit-client-email').value,
+        nuit: document.getElementById('edit-client-nuit').value,
+        endereco: document.getElementById('edit-client-endereco').value
+    };
+
+    if (!updatedData.nome || !updatedData.telefone) {
+        showCustomAlert('Atenção', 'Nome e Telefone são obrigatórios.', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/api/clients/${clientId}`, {
+            method: 'PUT',
+            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedData)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        
+        showCustomAlert('Sucesso', 'Cliente atualizado com sucesso!', 'success');
+        closeEditClientModal();
+        loadClients(); // Recarrega a tabela
+        
+    } catch (error) {
+        console.error('Falha ao atualizar cliente:', error);
+        showCustomAlert('Erro', error.message, 'error');
+    }
+}
+
+/**
+ * Manipula o clique no botão de apagar cliente
+ */
+async function handleDeleteClient(clientId, clientName) {
+    // Simples confirmação do browser
+    if (!confirm(`Tem a certeza que quer apagar o cliente "${clientName}"?\nEsta ação não pode ser revertida.`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/api/clients/${clientId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        
+        showCustomAlert('Sucesso', data.message, 'success');
+        loadClients(); // Recarrega a tabela
+        
+    } catch (error) {
+        console.error('Falha ao apagar cliente:', error);
+        showCustomAlert('Erro', error.message, 'error');
+    }
 }
