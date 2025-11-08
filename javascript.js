@@ -9,32 +9,12 @@ let myServicesChart = null;
 let map = null; // Variável global para o mapa do formulário
 let mapMarker = null; // Variável global para o pin do formulário
 
-let liveMap = null; // Variável global para o mapa em tempo real
-let driverMarkers = {}; // Objeto para guardar os marcadores dos motoristas { driverId: marker }
-
-// --- ÍCONES PERSONALIZADOS PARA O MAPA ---
-const iconShadowUrl = 'https://i.postimg.cc/VNb0bBsw/marker-shadow.png';
-
-// Ícone para Motorista LIVRE (Verde)
-const freeIcon = L.icon({
-    iconUrl: 'https://i.postimg.cc/kXq0K1Gz/marker-free.png', // Ícone Verde
-    shadowUrl: iconShadowUrl,
-    iconSize: [25, 41], // Tamanho do ícone
-    iconAnchor: [12, 41], // Ponto do ícone que corresponde à localização
-    popupAnchor: [1, -34], // Onde o popup deve abrir
-    shadowSize: [41, 41] // Tamanho da sombra
-});
-
-// Ícone para Motorista OCUPADO (Laranja)
-const busyIcon = L.icon({
-    iconUrl: 'https://i.postimg.cc/J0bJ0fJj/marker-busy.png', // Ícone Laranja
-    shadowUrl: iconShadowUrl,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
-});
-// --- FIM DOS ÍCONES ---
+// --- (CORREÇÃO) Movidos de fora para aqui ---
+let liveMap = null; 
+let driverMarkers = {}; 
+let freeIcon = null; // Será definido apenas no dashboard
+let busyIcon = null; // Será definido apenas no dashboard
+// --- FIM DA CORREÇÃO ---
 
 const serviceNames = {
     'doc': 'Doc.',
@@ -68,19 +48,95 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Lógica do PAINEL DO ADMIN ---
     const adminDashboard = document.body.classList.contains('dashboard-body');
     if (adminDashboard) {
+        
+        // --- (CORREÇÃO) Definições de Mapa movidas para aqui ---
+        // Só define os ícones se estivermos no admin (onde 'L' existe)
+        const iconShadowUrl = 'https://i.postimg.cc/VNb0bBsw/marker-shadow.png';
+        freeIcon = L.icon({
+            iconUrl: 'https://i.postimg.cc/kXq0K1Gz/marker-free.png',
+            shadowUrl: iconShadowUrl,
+            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+        });
+        busyIcon = L.icon({
+            iconUrl: 'https://i.postimg.cc/J0bJ0fJj/marker-busy.png',
+            shadowUrl: iconShadowUrl,
+            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+        });
+
+        // Funções que dependem de 'L' (Leaflet)
+        // São definidas aqui dentro para não existirem noutras páginas
+        function initializeLiveMap() {
+            try {
+                const maputoCoords = [-25.965, 32.589];
+                liveMap = L.map('live-map-container').setView(maputoCoords, 12);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(liveMap);
+                
+                console.log('Mapa em tempo real inicializado.');
+        
+                if (socket) {
+                    socket.emit('admin_request_all_locations'); 
+                    console.log('A pedir ao servidor as localizações ativas...');
+                }
+        
+            } catch (error) {
+                console.error("Erro ao inicializar o mapa em tempo real:", error);
+                document.getElementById('live-map-container').innerHTML = '<p>Erro ao carregar o mapa.</p>';
+            }
+        }
+        
+        function listenForDriverUpdates() {
+            if (!socket) return;
+        
+            console.log('Admin a ouvir atualizações de localização...');
+        
+            socket.on('driver_location_broadcast', (data) => {
+                const { driverId, driverName, status, lat, lng } = data;
+                if (!liveMap) return;
+        
+                const newLatLng = [lat, lng];
+                const popupContent = `<strong>${driverName}</strong><br>Status: ${status.replace('_', ' ')}`;
+                const iconToUse = (status === 'online_ocupado') ? busyIcon : freeIcon;
+        
+                if (driverMarkers[driverId]) {
+                    driverMarkers[driverId].setLatLng(newLatLng);
+                    driverMarkers[driverId].setPopupContent(popupContent);
+                    driverMarkers[driverId].setIcon(iconToUse);
+                } else {
+                    driverMarkers[driverId] = L.marker(newLatLng, { icon: iconToUse }).addTo(liveMap);
+                    driverMarkers[driverId].bindPopup(popupContent).openPopup();
+                    console.log(`Adicionando novo marcador para ${driverName}`);
+                }
+            });
+        
+            socket.on('driver_disconnected_broadcast', (data) => {
+                const { driverId, driverName } = data;
+                if (!liveMap) return;
+        
+                if (driverMarkers[driverId]) {
+                    liveMap.removeLayer(driverMarkers[driverId]);
+                    delete driverMarkers[driverId];
+                    console.log(`Removido marcador para ${driverName} (desconectado)`);
+                }
+            });
+        }
+        // --- Fim das funções de mapa ---
+
+
         checkAuth('admin');
-        connectSocket();
+        connectSocket(); // Conecta o socket
+        listenForDriverUpdates(); // (CORREÇÃO) Ouve os eventos DEPOIS de conectar
+        
         showPage('visao-geral', 'nav-visao-geral', 'Visão Geral');
         
         document.getElementById('delivery-form').addEventListener('submit', handleNewDelivery);
         document.getElementById('form-add-motorista').addEventListener('submit', handleAddDriver);
         document.getElementById('form-edit-motorista').addEventListener('submit', handleUpdateDriver);
         
-        // --- (NOVO) Listeners de Clientes ---
         document.getElementById('form-add-cliente').addEventListener('submit', handleAddClient);
         document.getElementById('form-edit-cliente').addEventListener('submit', handleUpdateClient);
         document.getElementById('nav-clientes').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-clientes', 'nav-clientes', 'Gestão de Clientes'); });
-        // --- FIM DA ADIÇÃO ---
         
         document.getElementById('delivery-image').addEventListener('change', handleImageUpload);
 
@@ -89,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('nav-entregas').addEventListener('click', (e) => { e.preventDefault(); showPage('entregas-activas', 'nav-entregas', 'Entregas Activas'); });
         document.getElementById('nav-historico').addEventListener('click', (e) => { e.preventDefault(); showPage('historico', 'nav-historico', 'Histórico'); });
         
-        document.getElementById('nav-mapa').addEventListener('click', (e) => { e.preventDefault(); showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real'); });
+        document.getElementById('nav-mapa').addEventListener('click', (e) => { e.preventDefault(); showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real', initializeLiveMap); });
 
         document.getElementById('admin-logout').addEventListener('click', (e) => { e.preventDefault(); handleLogout('admin'); });
         document.getElementById('btn-reset-chart').addEventListener('click', openChartResetModal);
@@ -103,9 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         checkAuth('driver');
         connectSocket();
         loadMyDeliveries();
-        
         startLocationTracking(); 
-        
         document.getElementById('driver-logout').addEventListener('click', (e) => { e.preventDefault(); handleLogout('driver'); });
     }
 });
@@ -142,7 +196,7 @@ function handleLogout(role) {
 }
 
 /* --- Funções de Alerta Customizado --- */
-function showCustomAlert(title, message, type = 'info') { // type = 'info', 'success', 'error'
+function showCustomAlert(title, message, type = 'info') {
     const modal = document.getElementById('custom-alert-modal');
     if (!modal) { alert(`${title}: ${message}`); return; }
     
@@ -175,6 +229,7 @@ function connectSocket() {
         }
     });
 
+    // (CORREÇÃO) Movida a lógica de escuta para dentro do 'if (adminDashboard)'
     if (document.body.classList.contains('dashboard-body')) {
         const activePage = () => {
             const page = document.querySelector('.content-page:not(.hidden)');
@@ -194,8 +249,6 @@ function connectSocket() {
              if (activePage() === 'gestao-motoristas') loadDrivers();
              if (activePage() === 'visao-geral') loadOverviewStats();
         });
-
-        listenForDriverUpdates();
     }
 }
 
@@ -531,12 +584,12 @@ async function openDriverReportModal(driverUserId, driverName) {
 function closeDriverReportModal() { document.getElementById('driver-report-modal').classList.add('hidden'); }
 
 /* --- Funções de Navegação e UI --- */
-function showPage(pageId, navId, title) {
+function showPage(pageId, navId, title, callback) { // (CORREÇÃO) Adicionado 'callback'
     if (map) destroyMap();
     if (liveMap && pageId !== 'mapa-tempo-real') {
         liveMap.remove();
         liveMap = null;
-        driverMarkers = {}; // Limpa os marcadores
+        driverMarkers = {}; 
         console.log('Mapa em tempo real destruído.');
     }
 
@@ -551,19 +604,17 @@ function showPage(pageId, navId, title) {
     if (pageId === 'gestao-motoristas') loadDrivers();
     if (pageId === 'entregas-activas') loadActiveDeliveries();
     if (pageId === 'historico') loadHistory();
-    
-    // --- (NOVO) Carrega os clientes ---
     if (pageId === 'gestao-clientes') loadClients();
-    // --- FIM DA ADIÇÃO ---
-
+    
     if (pageId === 'visao-geral') {
         loadOverviewStats();
         initServicesChart(false);
     }
-    if (pageId === 'mapa-tempo-real') {
-        if (!liveMap) { // Só inicializa se não existir
-            initializeLiveMap();
-        }
+    
+    // (CORREÇÃO) Verifica se a função 'callback' existe (ex: initializeLiveMap)
+    // e se o mapa não foi já inicializado.
+    if (pageId === 'mapa-tempo-real' && !liveMap && typeof callback === 'function') {
+        callback();
     }
 }
 function showServiceForm(serviceType) {
@@ -698,7 +749,6 @@ function showDetalheEntrega(order) {
     const detalheSection = document.getElementById('detalhe-entrega');
     detalheSection.querySelector('#detalhe-entrega-title').innerText = `Detalhes do Pedido #${order._id.slice(-6)}`;
     
-    // Imagem
     const img = detalheSection.querySelector('#encomenda-imagem');
     const noImg = detalheSection.querySelector('#no-image-placeholder');
     if (order.image_url) {
@@ -710,11 +760,9 @@ function showDetalheEntrega(order) {
         noImg.classList.remove('hidden');
     }
 
-    // Detalhes do Cliente
     document.getElementById('detalhe-cliente-nome').innerHTML = `<strong>Nome:</strong> ${order.client_name}`;
     document.getElementById('detalhe-cliente-telefone').innerHTML = `<strong>Telefone:</strong> ${order.client_phone1}`;
     
-    // Detalhes do Endereço (Corrigido)
     document.getElementById('detalhe-cliente-endereco').innerHTML = `<strong>Endereço:</strong> ${order.address_text || 'N/D'}`;
     const coordsP = document.getElementById('detalhe-cliente-coords');
     const mapButton = document.getElementById('btn-google-maps');
@@ -730,7 +778,6 @@ function showDetalheEntrega(order) {
         mapButton.classList.add('hidden');
     }
 
-    // Lógica dos botões Iniciar/Finalizar
     const btnIniciar = detalheSection.querySelector('#btn-iniciar-entrega');
     const formFinalizacao = detalheSection.querySelector('#form-finalizacao');
     btnIniciar.dataset.orderId = order._id;
@@ -793,74 +840,14 @@ async function handleCompleteDelivery(event, orderId) {
 }
 
 
-/* --- Funções de Rastreamento em Tempo Real --- */
+/* --- Funções de Rastreamento em Tempo Real (Apenas Admin) --- */
 
-function initializeLiveMap() {
-    try {
-        const maputoCoords = [-25.965, 32.589];
-        liveMap = L.map('live-map-container').setView(maputoCoords, 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(liveMap);
-        
-        console.log('Mapa em tempo real inicializado.');
+// (Nota: Estas funções só existem se 'adminDashboard' for verdadeiro)
 
-        if (socket) {
-            socket.emit('admin_request_all_locations'); 
-            console.log('A pedir ao servidor as localizações ativas...');
-        }
-
-    } catch (error) {
-        console.error("Erro ao inicializar o mapa em tempo real:", error);
-        document.getElementById('live-map-container').innerHTML = '<p>Erro ao carregar o mapa.</p>';
-    }
-}
 
 /**
- * (FUNÇÃO ATUALIZADA COM ÍCONES)
- * Ouve os eventos do socket para atualizar as localizações dos motoristas.
+ * Inicia o rastreamento de geolocalização no painel do motorista.
  */
-function listenForDriverUpdates() {
-    if (!socket) return;
-
-    console.log('Admin a ouvir atualizações de localização...');
-
-    socket.on('driver_location_broadcast', (data) => {
-        const { driverId, driverName, status, lat, lng } = data;
-        
-        if (!liveMap) return;
-
-        const newLatLng = [lat, lng];
-        const popupContent = `<strong>${driverName}</strong><br>Status: ${status.replace('_', ' ')}`;
-        
-        // --- (NOVA LÓGICA DE ÍCONES) ---
-        const iconToUse = (status === 'online_ocupado') ? busyIcon : freeIcon;
-        // --- FIM DA NOVA LÓGICA ---
-
-        if (driverMarkers[driverId]) {
-            driverMarkers[driverId].setLatLng(newLatLng);
-            driverMarkers[driverId].setPopupContent(popupContent);
-            driverMarkers[driverId].setIcon(iconToUse); // <-- ATUALIZA O ÍCONE
-        } else {
-            driverMarkers[driverId] = L.marker(newLatLng, { icon: iconToUse }).addTo(liveMap);
-            driverMarkers[driverId].bindPopup(popupContent).openPopup();
-            console.log(`Adicionando novo marcador para ${driverName}`);
-        }
-    });
-
-    socket.on('driver_disconnected_broadcast', (data) => {
-        const { driverId, driverName } = data;
-        
-        if (!liveMap) return;
-
-        if (driverMarkers[driverId]) {
-            liveMap.removeLayer(driverMarkers[driverId]);
-            delete driverMarkers[driverId];
-            console.log(`Removido marcador para ${driverName} (desconectado)`);
-        }
-    });
-}
-
 function startLocationTracking() {
     if (!navigator.geolocation) {
         console.error('Geolocalização não é suportada neste browser.');
@@ -894,9 +881,6 @@ function startLocationTracking() {
 
 /* --- (NOVO) Funções de Gestão de Clientes --- */
 
-/**
- * Carrega a lista de clientes e preenche a tabela
- */
 async function loadClients() {
     try {
         const response = await fetch(`${API_URL}/api/clients`, { method: 'GET', headers: getAuthHeaders() });
@@ -930,9 +914,6 @@ async function loadClients() {
     }
 }
 
-/**
- * Mostra ou esconde o formulário de adicionar cliente
- */
 function showAddClientForm(show) {
     const form = document.getElementById('form-add-cliente');
     const button = document.getElementById('btn-show-client-form');
@@ -948,9 +929,6 @@ function showAddClientForm(show) {
     }
 }
 
-/**
- * Manipula a submissão do formulário de novo cliente
- */
 async function handleAddClient(e) {
     e.preventDefault();
     
@@ -979,7 +957,7 @@ async function handleAddClient(e) {
         
         showCustomAlert('Sucesso', 'Cliente adicionado com sucesso!', 'success');
         showAddClientForm(false);
-        loadClients(); // Recarrega a tabela
+        loadClients(); 
         
     } catch (error) {
         console.error('Falha ao adicionar cliente:', error);
@@ -987,15 +965,11 @@ async function handleAddClient(e) {
     }
 }
 
-/**
- * Abre o modal de edição de cliente
- */
 async function openEditClientModal(clientId) {
     const modal = document.getElementById('edit-client-modal');
     modal.classList.remove('hidden');
     
     try {
-        // Busca os dados atuais do cliente
         const response = await fetch(`${API_URL}/api/clients/${clientId}`, { headers: getAuthHeaders() });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
@@ -1016,17 +990,11 @@ async function openEditClientModal(clientId) {
     }
 }
 
-/**
- * Fecha o modal de edição de cliente
- */
 function closeEditClientModal() {
     document.getElementById('edit-client-modal').classList.add('hidden');
     document.getElementById('form-edit-cliente').reset();
 }
 
-/**
- * Manipula a submissão do formulário de ATUALIZAÇÃO de cliente
- */
 async function handleUpdateClient(e) {
     e.preventDefault();
     const clientId = document.getElementById('edit-client-id').value;
@@ -1056,7 +1024,7 @@ async function handleUpdateClient(e) {
         
         showCustomAlert('Sucesso', 'Cliente atualizado com sucesso!', 'success');
         closeEditClientModal();
-        loadClients(); // Recarrega a tabela
+        loadClients(); 
         
     } catch (error) {
         console.error('Falha ao atualizar cliente:', error);
@@ -1064,11 +1032,7 @@ async function handleUpdateClient(e) {
     }
 }
 
-/**
- * Manipula o clique no botão de apagar cliente
- */
 async function handleDeleteClient(clientId, clientName) {
-    // Simples confirmação do browser
     if (!confirm(`Tem a certeza que quer apagar o cliente "${clientName}"?\nEsta ação não pode ser revertida.`)) {
         return;
     }
@@ -1082,7 +1046,7 @@ async function handleDeleteClient(clientId, clientName) {
         if (!response.ok) throw new Error(data.message);
         
         showCustomAlert('Sucesso', data.message, 'success');
-        loadClients(); // Recarrega a tabela
+        loadClients(); 
         
     } catch (error) {
         console.error('Falha ao apagar cliente:', error);
