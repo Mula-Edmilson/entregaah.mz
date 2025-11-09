@@ -59,20 +59,31 @@
         <div class="content-area">
             
             <div id="visao-geral" class="content-page">
-                <div class="stats-cards">
-                    <div class="card"><h3>Pendentes</h3><p id="stats-pendentes">...</p></div>
-                    <div class="card"><h3>Em Trânsito</h3><p id="stats-em-transito">...</p></div>
-                    <div class="card"><h3>Concluídas (Hoje)</h3><p id="stats-concluidas-hoje">...</p></div>
-                    <div class="card"><h3>Motoristas Online</h3><p id="stats-motoristas-online">...</p></div>
-                </div>
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <h3>Desempenho dos Serviços</h3>
-                        <button class="btn-action-small btn-danger" id="btn-reset-chart"><i class="fas fa-sync"></i> Reset</button>
-                    </div>
-                    <canvas id="servicesChart"></canvas>
-                </div>
+    
+    <div class="stats-cards">
+        <div class="card"><h3>Pendentes</h3><p id="stats-pendentes">...</p></div>
+        <div class="card"><h3>Em Trânsito</h3><p id="stats-em-transito">...</p></div>
+        <div class="card"><h3>Concluídas (Hoje)</h3><p id="stats-concluidas-hoje">...</p></div>
+        <div class="card"><h3>Motoristas Online</h3><p id="stats-motoristas-online">...</p></div>
+    </div>
+
+    <div class="charts-grid">
+        
+        <div class="chart-container" id="main-chart-container">
+            <div class="chart-header">
+                <h3>Desempenho dos Serviços</h3>
+                <button class="btn-action-small btn-danger" id="btn-reset-chart"><i class="fas fa-sync"></i> Reset</button>
             </div>
+            <canvas id="servicesChart"></canvas>
+        </div>
+        
+        <div class="chart-container" id="deliveries-chart-container">
+            <h3>Entregas Ativas</h3>
+            <canvas id="deliveriesStatusChart"></canvas>
+        </div>
+
+    </div>
+</div>
 
             <div id="form-nova-entrega" class="content-page hidden">
                 <form id="delivery-form">
