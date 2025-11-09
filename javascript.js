@@ -60,6 +60,39 @@ document.addEventListener('DOMContentLoaded', () => {
             iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
         });
 
+
+        // --- (NOVO) LÓGICA DO MENU MOBILE ---
+        const menuToggle = document.getElementById('mobile-menu-toggle');
+        const mainContent = document.querySelector('.main-content');
+        
+        if (menuToggle) {
+            // 1. Abrir/Fechar com o botão
+            menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation(); // Impede o clique de fechar o menu
+                document.body.classList.toggle('mobile-menu-open');
+            });
+        }
+        
+        if (mainContent) {
+            // 2. Fechar o menu ao clicar fora (no conteúdo)
+            mainContent.addEventListener('click', () => {
+                if (document.body.classList.contains('mobile-menu-open')) {
+                    document.body.classList.remove('mobile-menu-open');
+                }
+            });
+        }
+
+        // 3. Fechar o menu ao clicar num item
+        document.querySelectorAll('.sidebar-menu .menu-item a').forEach(item => {
+            item.addEventListener('click', () => {
+                // Só fecha se estivermos em modo mobile
+                if (window.innerWidth < 992) {
+                    document.body.classList.remove('mobile-menu-open');
+                }
+            });
+        });
+        // --- FIM DA LÓGICA DO MENU MOBILE ---
+    }
         // Funções que dependem de 'L' (Leaflet)
         function initializeLiveMap() {
             try {
