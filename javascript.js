@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Usamos os links de ícones padrão do Leaflet para garantir que nunca falham
         const iconShadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
         
-        // O seu 'freeIcon' será o ícone azul padrão do Leaflet (fiável)
+        // O seu 'freeIcon' (kXq0K1Gz) estava partido. Substituímos pelo ícone azul padrão.
         freeIcon = L.icon({
             iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
             shadowUrl: iconShadowUrl,
@@ -900,7 +900,7 @@ function showDetalheEntrega(order) {
         coordsP.classList.remove('hidden');
         
         // (LINK CORRIGIDO)
-        mapButton.href = `http://googleusercontent.com/maps/google.com/4{order.address_coords.lat},${order.address_coords.lng}`;
+        mapButton.href = `http://googleusercontent.com/maps/google.com/5{order.address_coords.lat},${order.address_coords.lng}`;
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
