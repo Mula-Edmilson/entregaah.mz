@@ -339,13 +339,16 @@ async function loadActiveDeliveries() {
         const tableBody = document.getElementById('active-orders-table-body');
         tableBody.innerHTML = '';
         if (data.orders.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="6">Nenhuma encomenda ativa.</td></tr>';
+            // (ATUALIZADO) Colspan agora é 7
+            tableBody.innerHTML = '<tr><td colspan="7">Nenhuma encomenda ativa.</td></tr>';
             return;
         }
         data.orders.forEach(order => {
             const motoristaNome = order.assigned_to_driver ? order.assigned_to_driver.user.nome : 'N/D';
             const statusClass = `status-${order.status.replace('_', '-')}`;
             let acaoBotao = (order.status === 'pendente') ? `<button class="btn-action-assign" onclick="openAssignModal('${order._id}')">Atribuir</button>` : 'Em Curso';
+            
+            // (ATUALIZADA) Linha da tabela
             tableBody.innerHTML += `
                 <tr>
                     <td>#${order._id.slice(-6)}</td>
@@ -353,13 +356,12 @@ async function loadActiveDeliveries() {
                     <td>${order.client_phone1}</td>
                     <td><span class="status ${statusClass}">${order.status}</span></td>
                     <td>${motoristaNome}</td>
-                    <td>${acaoBotao}</td>
+                    <td class="verification-code">${order.verification_code}</td> <td>${acaoBotao}</td>
                 </tr>
             `;
         });
     } catch (error) { console.error('Falha ao carregar encomendas ativas:', error); }
 }
-
 async function loadHistory() {
     try {
         const response = await fetch(`${API_URL}/api/orders/history`, { headers: getAuthHeaders() });
@@ -368,13 +370,16 @@ async function loadHistory() {
         const tableBody = document.getElementById('history-orders-table-body');
         tableBody.innerHTML = '';
         if (data.orders.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="6">Nenhum histórico encontrado.</td></tr>';
+            // (ATUALIZADO) Colspan agora é 7
+            tableBody.innerHTML = '<tr><td colspan="7">Nenhum histórico encontrado.</td></tr>';
             return;
         }
         data.orders.forEach(order => {
             const motoristaNome = order.assigned_to_driver ? order.assigned_to_driver.user.nome : 'N/D';
             const duracao = formatDuration(order.timestamp_started, order.timestamp_completed);
             const serviceName = serviceNames[order.service_type] || order.service_type;
+            
+            // (ATUALIZADA) Linha da tabela
             tableBody.innerHTML += `
                 <tr class="history-row">
                     <td>#${order._id.slice(-6)}</td>
@@ -382,7 +387,7 @@ async function loadHistory() {
                     <td>${serviceName}</td>
                     <td>${motoristaNome}</td>
                     <td>${duracao}</td>
-                    <td><button class="btn-action-small" onclick="openHistoryDetailModal('${order._id}')"><i class="fas fa-eye"></i></button></td>
+                    <td class="verification-code">${order.verification_code}</td> <td><button class="btn-action-small" onclick="openHistoryDetailModal('${order._id}')"><i class="fas fa-eye"></i></button></td>
                 </tr>
             `;
         });
