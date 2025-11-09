@@ -4,6 +4,7 @@ const API_URL = 'https://entregaah-mz.onrender.com'; // O seu URL real do Render
 
 let socket = null;
 let myServicesChart = null;
+let myDeliveriesStatusChart = null;
 let map = null; 
 let mapMarker = null; 
 
@@ -413,11 +414,20 @@ async function loadOverviewStats() {
         const response = await fetch(`${API_URL}/api/stats/overview`, { headers: getAuthHeaders() });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
+        
         document.getElementById('stats-pendentes').innerText = data.pendentes;
         document.getElementById('stats-em-transito').innerText = data.emTransito;
         document.getElementById('stats-concluidas-hoje').innerText = data.concluidasHoje;
         document.getElementById('stats-motoristas-online').innerText = data.motoristasOnline;
-    } catch (error) { console.error('Falha ao carregar estatísticas:', error); }
+
+        // (NOVA CHAMADA) Chama a função para criar/atualizar o gráfico de donut
+        initDeliveriesStatusChart(data.pendentes, data.emTransito);
+
+    } catch (error) { 
+        console.error('Falha ao carregar estatísticas:', error); 
+        // Se falhar, desenha o gráfico com zeros
+        initDeliveriesStatusChart(0, 0);
+    }
 }
 
 async function openAssignModal(orderId) {
@@ -587,6 +597,8 @@ function closeDriverReportModal() { document.getElementById('driver-report-modal
 /* --- Funções de Navegação e UI --- */
 function showPage(pageId, navId, title, callback) { 
     if (map) destroyMap();
+    if (myServicesChart) { myServicesChart.destroy(); myServicesChart = null; }
+    if (myDeliveriesStatusChart) { myDeliveriesStatusChart.destroy(); myDeliveriesStatusChart = null; }
     if (liveMap && pageId !== 'mapa-tempo-real') {
         liveMap.remove();
         liveMap = null;
