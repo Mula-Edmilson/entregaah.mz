@@ -43,21 +43,11 @@ exports.createOrder = async (req, res) => {
             };
         }
         
-        // --- (A CORREÇÃO ESTÁ AQUI) ---
-        // Verificamos se 'price' é um número válido.
-        // Se 'price' for "" ou inválido, parseFloat(price) dará NaN (Not a Number).
         const numericPrice = parseFloat(price);
-        // --- FIM DA CORREÇÃO ---
-
 
         const newOrder = new Order({
             service_type, 
-            
-            // --- (A CORREÇÃO ESTÁ AQUI) ---
-            // Usamos o valor numérico verificado. Se for NaN, usamos 0.
             price: isNaN(numericPrice) ? 0 : numericPrice,
-            // --- FIM DA CORREÇÃO ---
-
             client_name, 
             client_phone1, 
             client_phone2,
@@ -74,7 +64,6 @@ exports.createOrder = async (req, res) => {
         
         res.status(201).json({ message: 'Encomenda criada com sucesso!', order: newOrder });
     } catch (error) {
-        // Agora, se houver um erro, o log no Render mostrará detalhes
         console.error('Erro ao criar encomenda:', error); 
         res.status(500).json({ message: 'Erro do servidor' });
     }
@@ -119,11 +108,23 @@ exports.startDelivery = async (req, res) => {
         await order.save();
         driverProfile.status = 'online_ocupado';
         await driverProfile.save();
+        
         const io = req.app.get('socketio'); 
+        
+        // --- (CORREÇÃO ADICIONADA AQUI) ---
+        // 1. Avisa o admin que a entrega começou (para atualizar a tabela de Entregas Ativas)
+        io.to('admin_room').emit('delivery_started', { id: order._id, driverName: req.user.nome });
+        
+        // 2. Avisa o admin que o status do motorista mudou
         io.to('admin_room').emit('driver_status_changed', { 
             driverId: driverProfile._id, 
             newStatus: driverProfile.status 
         });
+        
+        // 3. Envia a resposta de sucesso DE VOLTA ao motorista (para o pop-up funcionar)
+        res.status(200).json({ message: 'Entrega iniciada', order: order });
+        // --- FIM DA CORREÇÃO ---
+        
     } catch (error) {
         console.error('Erro ao iniciar entrega:', error);
         res.status(500).json({ message: 'Erro do servidor' });
@@ -153,11 +154,20 @@ exports.completeDelivery = async (req, res) => {
         await order.save();
         driverProfile.status = 'online_livre';
         await driverProfile.save();
+        
         const io = req.app.get('socketio');
+
+        // --- (CORREÇÃO ADICIONADA AQUI) ---
+        // 1. Avisa o admin que a entrega foi concluída
+        io.to('admin_room').emit('delivery_completed', { id: order._id });
+
+        // 2. Avisa o admin que o status do motorista mudou
         io.to('admin_room').emit('driver_status_changed', { 
             driverId: driverProfile._id, 
             newStatus: driverProfile.status 
         });
+        // --- FIM DA CORREÇÃO ---
+        
         res.status(200).json({ message: 'Entrega finalizada com sucesso!' });
     } catch (error) {
         console.error('Erro ao completar entrega:', error);
