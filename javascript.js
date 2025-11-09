@@ -690,6 +690,71 @@ async function initServicesChart(reset = false) {
     });
 }
 
+// Ficheiro: javascript.js (NOVA FUNÇÃO)
+
+/**
+ * Cria ou atualiza o gráfico de Donut para o estado das entregas ativas.
+ */
+function initDeliveriesStatusChart(pendentes, emTransito) {
+    const ctx = document.getElementById('deliveriesStatusChart');
+    if (!ctx) return; // Se a página não for a "visao-geral", sai
+
+    if (myDeliveriesStatusChart) {
+        myDeliveriesStatusChart.destroy();
+    }
+
+    const total = pendentes + emTransito;
+    const data = {
+        labels: [
+            `Pendentes (${pendentes})`,
+            `Em Trânsito (${emTransito})`
+        ],
+        datasets: [{
+            label: 'Entregas Ativas',
+            data: [pendentes, emTransito],
+            backgroundColor: [
+                'rgba(255, 102, 0, 0.7)', // Cor Primária (Laranja)
+                'rgba(52, 152, 219, 0.7)' // Cor Info (Azul)
+            ],
+            borderColor: [
+                'rgba(255, 102, 0, 1)',
+                'rgba(52, 152, 219, 1)'
+            ],
+            borderWidth: 1
+        }]
+    };
+
+    myDeliveriesStatusChart = new Chart(ctx, {
+        type: 'doughnut', // Tipo "pizza"
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom', // Legenda em baixo
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                // Mostra a percentagem
+                                const percentage = (context.parsed / total * 100).toFixed(1);
+                                label += `${percentage}%`;
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
 
 /* --- Funções do Mapa (Leaflet.js) --- */
 function initializeMap() {
