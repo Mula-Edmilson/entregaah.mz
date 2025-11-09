@@ -1,4 +1,4 @@
-// Ficheiro: backend/server.js (Correção Definitiva de CORS e Helmet)
+// Ficheiro: backend/server.js (Correção Definitiva de Helmet + Socket.IO)
 
 require('dotenv').config();
 
@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
-const helmet = require('helmet'); // Importado
+const helmet = require('helmet'); 
 
 const initSocketHandler = require('./socketHandler');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
@@ -18,7 +18,7 @@ const { ADMIN_ROOM } = require('./utils/constants');
 const app = express();
 const server = http.createServer(app);
 
-// --- Configuração de CORS (Permite OPTIONS) ---
+// --- Configuração de CORS (Sem alterações) ---
 const allowedOrigins = [
     process.env.FRONTEND_URL,
     process.env.FRONTEND_URL_DEV,
@@ -33,7 +33,7 @@ const corsOptions = {
             callback(new Error('Não permitido pela política de CORS'));
         }
     },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"] // Deve incluir OPTIONS
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 };
 const io = new Server(server, {
     cors: corsOptions
@@ -47,23 +47,26 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 // --- Middlewares ---
 
-// --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
-
 // 1. Aplicamos o CORS (com as nossas opções) GLOBALMENTE.
-//    Isto deve ser o primeiro middleware de segurança.
 app.use(cors(corsOptions));
 
-// 2. Aplicamos o Helmet (com as definições padrão)
-app.use(helmet());
+// 2. Aplicamos o Helmet com configurações específicas
+app.use(
+    helmet({
+        // (MELHORIA) Permite que a app carregue recursos de outros domínios (ex: imagens)
+        crossOriginResourcePolicy: { policy: "cross-origin" },
+        
+        // --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
+        // O Helmet por defeito bloqueia o Socket.IO (erro 400).
+        // Estas duas linhas relaxam essa política para
+        // permitir que o Socket.IO (que é cross-origin) funcione.
+        crossOriginEmbedderPolicy: false,
+        crossOriginOpenerPolicy: false,
+        // --- FIM DA CORREÇÃO ---
+    })
+);
 
-// 3. (IMPORTANTE) Dizemos ao Helmet para permitir que
-//    imagens e outros recursos sejam carregados por outros domínios
-//    (ex: github.io a carregar imagens do onrender.com)
-app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
-
-// --- FIM DA CORREÇÃO ---
-
-// 4. Aplicamos os parsers de body
+// 3. Aplicamos os parsers de body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -92,7 +95,7 @@ app.use('/api/stats', require('./routes/statsRoutes'));
 app.use('/api/clients', require('./routes/clientRoutes'));
 
 app.get('/', (req, res) => {
-    res.send('<h1>Servidor Backend da Entregaah Mz está no ar! (v2.4 - CORS/Helmet Fix)</h1>');
+    res.send('<h1>Servidor Backend da Entregaah Mz está no ar! (v2.5 - Helmet/Socket.IO Fix)</h1>');
 });
 
 // --- Lógica de Socket e Erros (Sem alterações) ---
