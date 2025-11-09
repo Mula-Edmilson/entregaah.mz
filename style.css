@@ -718,3 +718,12 @@ body {
     border-radius: 0; /* (NOVO) Remove o raio dentro do scroll */
 }
 .modal-large h4 { margin-top: 1rem; margin-bottom: 1rem; color: var(--dark-color); font-weight: 600; }
+
+/* (NOVO) Estilo para o código de verificação nas tabelas */
+.verification-code {
+    font-weight: 600;
+    color: var(--primary-color);
+    font-family: 'Courier New', Courier, monospace;
+    letter-spacing: 1px;
+    font-size: 0.95rem;
+}
