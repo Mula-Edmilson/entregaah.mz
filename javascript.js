@@ -4,7 +4,7 @@ const API_URL = 'https://entregaah-mz.onrender.com'; // O seu URL real do Render
 
 let socket = null;
 let myServicesChart = null;
-let myDeliveriesStatusChart = null; // (NOVO)
+let myDeliveriesStatusChart = null; // (AINDA NÃO EXISTIA)
 let map = null; 
 let mapMarker = null; 
 
@@ -153,37 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('delivery-client-select').addEventListener('change', handleClientSelect);
         
-        // --- LÓGICA DO MENU MOBILE ---
-        const menuToggle = document.getElementById('mobile-menu-toggle');
-        const mainContent = document.querySelector('.main-content');
-        
-        if (menuToggle) {
-            // 1. Abrir/Fechar com o botão
-            menuToggle.addEventListener('click', (e) => {
-                e.stopPropagation(); // Impede o clique de fechar o menu
-                document.body.classList.toggle('mobile-menu-open');
-            });
-        }
-        
-        if (mainContent) {
-            // 2. Fechar o menu ao clicar fora (no conteúdo)
-            mainContent.addEventListener('click', () => {
-                if (document.body.classList.contains('mobile-menu-open')) {
-                    document.body.classList.remove('mobile-menu-open');
-                }
-            });
-        }
-
-        // 3. Fechar o menu ao clicar num item
-        document.querySelectorAll('.sidebar-menu .menu-item a').forEach(item => {
-            item.addEventListener('click', () => {
-                // Só fecha se estivermos em modo mobile
-                if (window.innerWidth < 992) {
-                    document.body.classList.remove('mobile-menu-open');
-                }
-            });
-        });
-        // --- FIM DA LÓGICA DO MENU MOBILE ---
+        // --- A LÓGICA DO MENU MOBILE AINDA NÃO EXISTIA AQUI ---
     }
 
     // --- Lógica do PAINEL DO MOTORISTA ---
@@ -284,7 +254,7 @@ function connectSocket() {
     }
 }
 
-// (FUNÇÃO CORRIGIDA - clientId duplicado removido)
+// (FUNÇÃO CORRIGIDA - bug do price e clientId duplicado)
 async function handleNewDelivery(e) {
     e.preventDefault();
     const form = e.target;
@@ -377,7 +347,7 @@ async function loadDrivers() {
     } catch (error) { console.error('Falha ao carregar motoristas:', error); }
 }
 
-// (FUNÇÃO ATUALIZADA - Nova coluna de CÓDIGO)
+// (FUNÇÃO ATUALIZADA - A SUA MELHORIA DA COLUNA "CÓDIGO")
 async function loadActiveDeliveries() {
     try {
         const response = await fetch(`${API_URL}/api/orders/active`, { headers: getAuthHeaders() });
@@ -400,15 +370,14 @@ async function loadActiveDeliveries() {
                     <td>${order.client_phone1}</td>
                     <td><span class="status ${statusClass}">${order.status}</span></td>
                     <td>${motoristaNome}</td>
-                    <td class="verification-code">${order.verification_code}</td> 
-                    <td>${acaoBotao}</td>
+                    <td class="verification-code">${order.verification_code}</td> <td>${acaoBotao}</td>
                 </tr>
             `;
         });
     } catch (error) { console.error('Falha ao carregar encomendas ativas:', error); }
 }
 
-// (FUNÇÃO ATUALIZADA - Nova coluna de CÓDIGO)
+// (FUNÇÃO ATUALIZADA - A SUA MELHORIA DA COLUNA "CÓDIGO")
 async function loadHistory() {
     try {
         const response = await fetch(`${API_URL}/api/orders/history`, { headers: getAuthHeaders() });
@@ -431,8 +400,7 @@ async function loadHistory() {
                     <td>${serviceName}</td>
                     <td>${motoristaNome}</td>
                     <td>${duracao}</td>
-                    <td class="verification-code">${order.verification_code}</td> 
-                    <td><button class="btn-action-small" onclick="openHistoryDetailModal('${order._id}')"><i class="fas fa-eye"></i></button></td>
+                    <td class="verification-code">${order.verification_code}</td> <td><button class="btn-action-small" onclick="openHistoryDetailModal('${order._id}')"><i class="fas fa-eye"></i></button></td>
                 </tr>
             `;
         });
@@ -453,7 +421,7 @@ function filterHistoryTable(event) {
 function formatDuration(start, end) { if (!start || !end) return 'N/D'; const diffMs = new Date(end) - new Date(start); if (diffMs < 0) return 'N/D'; const minutes = Math.floor(diffMs / 60000); const seconds = Math.floor((diffMs % 60000) / 1000); return `${minutes} min ${seconds} s`; }
 function formatTotalDuration(totalMs) { if (totalMs < 0) return 'N/D'; const totalMinutes = Math.floor(totalMs / 60000); const hours = Math.floor(totalMinutes / 60); const minutes = totalMinutes % 60; return `${hours} h ${minutes} min`; }
 
-// (FUNÇÃO ATUALIZADA - Chama o novo gráfico de Donut)
+// (FUNÇÃO loadOverviewStats original, antes do gráfico Donut)
 async function loadOverviewStats() {
     try {
         const response = await fetch(`${API_URL}/api/stats/overview`, { headers: getAuthHeaders() });
@@ -464,13 +432,10 @@ async function loadOverviewStats() {
         document.getElementById('stats-concluidas-hoje').innerText = data.concluidasHoje;
         document.getElementById('stats-motoristas-online').innerText = data.motoristasOnline;
         
-        // (NOVA CHAMADA) Chama a função para criar/atualizar o gráfico de donut
-        initDeliveriesStatusChart(data.pendentes, data.emTransito);
+        // A chamada para o gráfico Donut ainda não existia aqui
 
     } catch (error) { 
         console.error('Falha ao carregar estatísticas:', error); 
-        // Se falhar, desenha o gráfico com zeros
-        initDeliveriesStatusChart(0, 0);
     }
 }
 
@@ -642,9 +607,9 @@ function closeDriverReportModal() { document.getElementById('driver-report-modal
 function showPage(pageId, navId, title, callback) { 
     if (map) destroyMap();
     
-    // (ATUALIZADO) Limpa os gráficos ao sair da página
+    // (ATUALIZADO) Limpa o gráfico de barras
     if (myServicesChart) { myServicesChart.destroy(); myServicesChart = null; }
-    if (myDeliveriesStatusChart) { myDeliveriesStatusChart.destroy(); myDeliveriesStatusChart = null; }
+    // O gráfico Donut (myDeliveriesStatusChart) ainda não existia
     
     if (liveMap && pageId !== 'mapa-tempo-real') {
         liveMap.remove();
@@ -737,66 +702,7 @@ async function initServicesChart(reset = false) {
     });
 }
 
-// (NOVA FUNÇÃO para o Gráfico de Donut)
-function initDeliveriesStatusChart(pendentes, emTransito) {
-    const ctx = document.getElementById('deliveriesStatusChart');
-    if (!ctx) return; // Se a página não for a "visao-geral", sai
-
-    if (myDeliveriesStatusChart) {
-        myDeliveriesStatusChart.destroy();
-    }
-
-    const total = pendentes + emTransito;
-    const data = {
-        labels: [
-            `Pendentes (${pendentes})`,
-            `Em Trânsito (${emTransito})`
-        ],
-        datasets: [{
-            label: 'Entregas Ativas',
-            data: [pendentes, emTransito],
-            backgroundColor: [
-                'rgba(255, 102, 0, 0.7)', // Cor Primária (Laranja)
-                'rgba(52, 152, 219, 0.7)' // Cor Info (Azul)
-            ],
-            borderColor: [
-                'rgba(255, 102, 0, 1)',
-                'rgba(52, 152, 219, 1)'
-            ],
-            borderWidth: 1
-        }]
-    };
-
-    myDeliveriesStatusChart = new Chart(ctx, {
-        type: 'doughnut', // Tipo "pizza"
-        data: data,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom', // Legenda em baixo
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed !== null) {
-                                // Mostra a percentagem
-                                const percentage = total > 0 ? (context.parsed / total * 100).toFixed(1) : 0;
-                                label += `${percentage}%`;
-                            }
-                            return label;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
+// A função initDeliveriesStatusChart AINDA NÃO EXISTIA AQUI
 
 
 /* --- Funções do Mapa (Leaflet.js) --- */
@@ -895,11 +801,8 @@ function showDetalheEntrega(order) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
         
-        // --- (CORREÇÃO ADICIONADA AQUI) ---
-        // Removemos o "5" (ou "2", "4", "6") que estava a mais e usámos um link mais robusto
+        // (LINK CORRIGIDO DEFINITIVAMENTE)
         mapButton.href = `https://www.google.com/maps/search/?api=1&query=${order.address_coords.lat},${order.address_coords.lng}`;
-        // --- FIM DA CORREÇÃO ---
-        
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
