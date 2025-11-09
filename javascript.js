@@ -4,6 +4,7 @@ const API_URL = 'https://entregaah-mz.onrender.com'; // O seu URL real do Render
 
 let socket = null;
 let myServicesChart = null;
+let myDeliveriesStatusChart = null; // (NOVO)
 let map = null; 
 let mapMarker = null; 
 
@@ -47,17 +48,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminDashboard = document.body.classList.contains('dashboard-body');
     if (adminDashboard) {
         
-        const iconShadowUrl = 'https://i.postimg.cc/VNb0bBsw/marker-shadow.png';
+        // --- (A CORREÇÃO ESTÁ AQUI) Links de ícones partidos (404) corrigidos ---
+        // Usamos os links de ícones padrão do Leaflet para garantir que nunca falham
+        const iconShadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
+        
+        // O seu 'freeIcon' (kXq0K1Gz) estava partido. Substituímos pelo ícone azul padrão.
         freeIcon = L.icon({
-            iconUrl: 'https://i.postimg.cc/kXq0K1Gz/marker-free.png',
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
             shadowUrl: iconShadowUrl,
             iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
         });
+        
+        // O seu 'busyIcon' (vermelho) está a funcionar, mas atualizamos a sombra
         busyIcon = L.icon({
             iconUrl: 'https://i.postimg.cc/J0bJ0fJj/marker-busy.png',
-            shadowUrl: iconShadowUrl,
+            shadowUrl: iconShadowUrl, // Usando a URL de sombra que sabemos que funciona
             iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
         });
+        // --- FIM DA CORREÇÃO ---
 
         // Funções que dependem de 'L' (Leaflet)
         function initializeLiveMap() {
@@ -147,6 +155,38 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('history-search-input').addEventListener('input', filterHistoryTable);
 
         document.getElementById('delivery-client-select').addEventListener('change', handleClientSelect);
+        
+        // --- LÓGICA DO MENU MOBILE ---
+        const menuToggle = document.getElementById('mobile-menu-toggle');
+        const mainContent = document.querySelector('.main-content');
+        
+        if (menuToggle) {
+            // 1. Abrir/Fechar com o botão
+            menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation(); // Impede o clique de fechar o menu
+                document.body.classList.toggle('mobile-menu-open');
+            });
+        }
+        
+        if (mainContent) {
+            // 2. Fechar o menu ao clicar fora (no conteúdo)
+            mainContent.addEventListener('click', () => {
+                if (document.body.classList.contains('mobile-menu-open')) {
+                    document.body.classList.remove('mobile-menu-open');
+                }
+            });
+        }
+
+        // 3. Fechar o menu ao clicar num item
+        document.querySelectorAll('.sidebar-menu .menu-item a').forEach(item => {
+            item.addEventListener('click', () => {
+                // Só fecha se estivermos em modo mobile
+                if (window.innerWidth < 992) {
+                    document.body.classList.remove('mobile-menu-open');
+                }
+            });
+        });
+        // --- FIM DA LÓGICA DO MENU MOBILE ---
     }
 
     // --- Lógica do PAINEL DO MOTORISTA ---
@@ -247,15 +287,14 @@ function connectSocket() {
     }
 }
 
+// (FUNÇÃO CORRIGIDA - clientId duplicado removido)
 async function handleNewDelivery(e) {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
 
-    const clientId = document.getElementById('delivery-client-id').value;
-    if (clientId) {
-        formData.append('clientId', clientId);
-    }
+    // O 'clientId' já está a ser incluído no 'formData' 
+    // automaticamente, porque o <input> tem o atributo "name='clientId'".
     
     try {
         const response = await fetch(`${API_URL}/api/orders`, {
@@ -263,16 +302,21 @@ async function handleNewDelivery(e) {
             headers: getAuthHeaders(),
             body: formData
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
+        
+        const data = await response.json(); 
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro do servidor');
+        }
+
         showCustomAlert('Sucesso!', `Pedido Criado! \nCódigo do Destinatário: ${data.order.verification_code}`, 'success');
         form.reset();
         removeImage();
         destroyMap();
         showPage('entregas-activas', 'nav-entregas', 'Entregas Activas');
+
     } catch (error) {
         console.error('Falha ao criar entrega:', error);
-        showCustomAlert('Erro', error.message, 'error');
+        showCustomAlert('Erro', error.message, 'error'); 
     }
 }
 
@@ -336,6 +380,7 @@ async function loadDrivers() {
     } catch (error) { console.error('Falha ao carregar motoristas:', error); }
 }
 
+// (FUNÇÃO ATUALIZADA - Nova coluna de CÓDIGO)
 async function loadActiveDeliveries() {
     try {
         const response = await fetch(`${API_URL}/api/orders/active`, { headers: getAuthHeaders() });
@@ -344,7 +389,7 @@ async function loadActiveDeliveries() {
         const tableBody = document.getElementById('active-orders-table-body');
         tableBody.innerHTML = '';
         if (data.orders.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="6">Nenhuma encomenda ativa.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="7">Nenhuma encomenda ativa.</td></tr>';
             return;
         }
         data.orders.forEach(order => {
@@ -358,6 +403,7 @@ async function loadActiveDeliveries() {
                     <td>${order.client_phone1}</td>
                     <td><span class="status ${statusClass}">${order.status}</span></td>
                     <td>${motoristaNome}</td>
+                    <td class="verification-code">${order.verification_code}</td>
                     <td>${acaoBotao}</td>
                 </tr>
             `;
@@ -365,6 +411,7 @@ async function loadActiveDeliveries() {
     } catch (error) { console.error('Falha ao carregar encomendas ativas:', error); }
 }
 
+// (FUNÇÃO ATUALIZADA - Nova coluna de CÓDIGO)
 async function loadHistory() {
     try {
         const response = await fetch(`${API_URL}/api/orders/history`, { headers: getAuthHeaders() });
@@ -373,7 +420,7 @@ async function loadHistory() {
         const tableBody = document.getElementById('history-orders-table-body');
         tableBody.innerHTML = '';
         if (data.orders.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="6">Nenhum histórico encontrado.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="7">Nenhum histórico encontrado.</td></tr>';
             return;
         }
         data.orders.forEach(order => {
@@ -387,6 +434,7 @@ async function loadHistory() {
                     <td>${serviceName}</td>
                     <td>${motoristaNome}</td>
                     <td>${duracao}</td>
+                    <td class="verification-code">${order.verification_code}</td>
                     <td><button class="btn-action-small" onclick="openHistoryDetailModal('${order._id}')"><i class="fas fa-eye"></i></button></td>
                 </tr>
             `;
@@ -408,6 +456,7 @@ function filterHistoryTable(event) {
 function formatDuration(start, end) { if (!start || !end) return 'N/D'; const diffMs = new Date(end) - new Date(start); if (diffMs < 0) return 'N/D'; const minutes = Math.floor(diffMs / 60000); const seconds = Math.floor((diffMs % 60000) / 1000); return `${minutes} min ${seconds} s`; }
 function formatTotalDuration(totalMs) { if (totalMs < 0) return 'N/D'; const totalMinutes = Math.floor(totalMs / 60000); const hours = Math.floor(totalMinutes / 60); const minutes = totalMinutes % 60; return `${hours} h ${minutes} min`; }
 
+// (FUNÇÃO ATUALIZADA - Chama o novo gráfico de Donut)
 async function loadOverviewStats() {
     try {
         const response = await fetch(`${API_URL}/api/stats/overview`, { headers: getAuthHeaders() });
@@ -417,7 +466,15 @@ async function loadOverviewStats() {
         document.getElementById('stats-em-transito').innerText = data.emTransito;
         document.getElementById('stats-concluidas-hoje').innerText = data.concluidasHoje;
         document.getElementById('stats-motoristas-online').innerText = data.motoristasOnline;
-    } catch (error) { console.error('Falha ao carregar estatísticas:', error); }
+        
+        // (NOVA CHAMADA) Chama a função para criar/atualizar o gráfico de donut
+        initDeliveriesStatusChart(data.pendentes, data.emTransito);
+
+    } catch (error) { 
+        console.error('Falha ao carregar estatísticas:', error); 
+        // Se falhar, desenha o gráfico com zeros
+        initDeliveriesStatusChart(0, 0);
+    }
 }
 
 async function openAssignModal(orderId) {
@@ -587,6 +644,11 @@ function closeDriverReportModal() { document.getElementById('driver-report-modal
 /* --- Funções de Navegação e UI --- */
 function showPage(pageId, navId, title, callback) { 
     if (map) destroyMap();
+    
+    // (ATUALIZADO) Limpa os gráficos ao sair da página
+    if (myServicesChart) { myServicesChart.destroy(); myServicesChart = null; }
+    if (myDeliveriesStatusChart) { myDeliveriesStatusChart.destroy(); myDeliveriesStatusChart = null; }
+    
     if (liveMap && pageId !== 'mapa-tempo-real') {
         liveMap.remove();
         liveMap = null;
@@ -673,6 +735,67 @@ async function initServicesChart(reset = false) {
             plugins: {
                 title: { display: true, text: 'Receita vs. Número de Pedidos por Serviço' },
                 tooltip: { callbacks: { label: function(context) { let l = context.dataset.label || ''; if (l) l += ': '; if (context.parsed.y !== null) { if (context.dataset.label.includes('MZN')) l += new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(context.parsed.y); else l += context.parsed.y + ' pedidos'; } return l; } } }
+            }
+        }
+    });
+}
+
+// (NOVA FUNÇÃO para o Gráfico de Donut)
+function initDeliveriesStatusChart(pendentes, emTransito) {
+    const ctx = document.getElementById('deliveriesStatusChart');
+    if (!ctx) return; // Se a página não for a "visao-geral", sai
+
+    if (myDeliveriesStatusChart) {
+        myDeliveriesStatusChart.destroy();
+    }
+
+    const total = pendentes + emTransito;
+    const data = {
+        labels: [
+            `Pendentes (${pendentes})`,
+            `Em Trânsito (${emTransito})`
+        ],
+        datasets: [{
+            label: 'Entregas Ativas',
+            data: [pendentes, emTransito],
+            backgroundColor: [
+                'rgba(255, 102, 0, 0.7)', // Cor Primária (Laranja)
+                'rgba(52, 152, 219, 0.7)' // Cor Info (Azul)
+            ],
+            borderColor: [
+                'rgba(255, 102, 0, 1)',
+                'rgba(52, 152, 219, 1)'
+            ],
+            borderWidth: 1
+        }]
+    };
+
+    myDeliveriesStatusChart = new Chart(ctx, {
+        type: 'doughnut', // Tipo "pizza"
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom', // Legenda em baixo
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                // Mostra a percentagem
+                                const percentage = total > 0 ? (context.parsed / total * 100).toFixed(1) : 0;
+                                label += `${percentage}%`;
+                            }
+                            return label;
+                        }
+                    }
+                }
             }
         }
     });
@@ -775,7 +898,8 @@ function showDetalheEntrega(order) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
         
-        mapButton.href = `http://googleusercontent.com/maps/google.com/0{order.address_coords.lat},${order.address_coords.lng}`;
+        // (LINK CORRIGIDO) - removi o "4" que estava a mais
+        mapButton.href = `https://maps.google.com/q=${order.address_coords.lat},${order.address_coords.lng}`;
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
@@ -845,9 +969,6 @@ async function handleCompleteDelivery(event, orderId) {
 
 
 /* --- Funções de Rastreamento em Tempo Real (Apenas Admin) --- */
-
-// (Nota: Estas funções só são definidas e usadas se 'adminDashboard' for verdadeiro)
-
 
 /**
  * Inicia o rastreamento de geolocalização no painel do motorista.
