@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Entregaah Mz</title>
     <link rel="icon" href="https://i.postimg.cc/4xkWBYss/ISOTIPO.png" type="image/png">
-
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
      crossorigin=""/>
-
+    
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-
+    
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
-
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.socket.io/4.7.0/socket.io.min.js"></script>
 
@@ -57,52 +57,31 @@
         </header>
 
         <div class="content-area">
-
+            
             <div id="visao-geral" class="content-page">
+    
                 <div class="stats-cards">
                     <div class="card"><h3>Pendentes</h3><p id="stats-pendentes">...</p></div>
                     <div class="card"><h3>Em Trânsito</h3><p id="stats-em-transito">...</p></div>
                     <div class="card"><h3>Concluídas (Hoje)</h3><p id="stats-concluidas-hoje">...</p></div>
                     <div class="card"><h3>Motoristas Online</h3><p id="stats-motoristas-online">...</p></div>
                 </div>
-                <div class="chart-container">
+
+                <div class="chart-container" id="main-chart-container">
                     <div class="chart-header">
                         <h3>Desempenho dos Serviços</h3>
                         <button class="btn-action-small btn-danger" id="btn-reset-chart"><i class="fas fa-sync"></i> Reset</button>
                     </div>
                     <canvas id="servicesChart"></canvas>
                 </div>
-    
-    <div class="stats-cards">
-        <div class="card"><h3>Pendentes</h3><p id="stats-pendentes">...</p></div>
-        <div class="card"><h3>Em Trânsito</h3><p id="stats-em-transito">...</p></div>
-        <div class="card"><h3>Concluídas (Hoje)</h3><p id="stats-concluidas-hoje">...</p></div>
-        <div class="card"><h3>Motoristas Online</h3><p id="stats-motoristas-online">...</p></div>
-    </div>
-
-    <div class="charts-grid">
-        
-        <div class="chart-container" id="main-chart-container">
-            <div class="chart-header">
-                <h3>Desempenho dos Serviços</h3>
-                <button class="btn-action-small btn-danger" id="btn-reset-chart"><i class="fas fa-sync"></i> Reset</button>
+            
             </div>
-            <canvas id="servicesChart"></canvas>
-        </div>
-        
-        <div class="chart-container" id="deliveries-chart-container">
-            <h3>Entregas Ativas</h3>
-            <canvas id="deliveriesStatusChart"></canvas>
-        </div>
-
-    </div>
-</div>
 
             <div id="form-nova-entrega" class="content-page hidden">
                 <form id="delivery-form">
                     <input type="hidden" id="service-type" name="service_type">
                     <input type="hidden" id="delivery-client-id" name="clientId">
-
+                    
                     <h3>Cliente</h3>
                     <div class="form-group form-group-large">
                         <label for="delivery-client-select">Cliente Registado (Opcional)</label>
@@ -110,14 +89,14 @@
                             <option value="">-- Ou digite manualmente abaixo --</option>
                         </select>
                     </div>
-
+                    
                     <h3>Dados do Cliente/Destinatário</h3>
                     <div class="form-row">
                         <div class="form-group"><label for="client-name">Nome Completo</label><input type="text" id="client-name" name="client_name" required></div>
                         <div class="form-group"><label for="client-phone1">Número Principal</label><input type="tel" id="client-phone1" name="client_phone1" required></div>
                         <div class="form-group"><label for="client-phone2">Número Alternativo</label><input type="tel" id="client-phone2" name="client_phone2"></div>
                     </div>
-
+                    
                     <h3>Detalhes da Encomenda</h3>
                     <div class="form-row">
                         <div class="form-group">
@@ -213,39 +192,41 @@
             <div id="entregas-activas" class="content-page hidden">
                 <h3>Gestão de Encomendas Activas</h3>
                 <table class="table-pedidos">
-    <thead>
-        <tr>
-            <th>ID Pedido</th>
-            <th>Cliente</th>
-            <th>Telefone</th>
-            <th>Estado</th>
-            <th>Motorista</th>
-            <th>Código</th> <th>Acção</th>
-        </tr>
-    </thead>
-    <tbody id="active-orders-table-body"></tbody>
-</table>
+                    <thead>
+                        <tr>
+                            <th>ID Pedido</th>
+                            <th>Cliente</th>
+                            <th>Telefone</th>
+                            <th>Estado</th>
+                            <th>Motorista</th>
+                            <th>Código</th> <th>Acção</th>
+                        </tr>
+                    </thead>
+                    <tbody id="active-orders-table-body"></tbody>
+                </table>
             </div>
 
             <div id="historico" class="content-page hidden">
                 <h3>Histórico de Encomendas</h3>
+                
                 <div class="search-container">
                     <input type="text" id="history-search-input" placeholder="Pesquisar no histórico (ID, Cliente, Motorista...)">
                     <i class="fas fa-search"></i>
                 </div>
+                
                 <table class="table-pedidos">
-    <thead>
-        <tr>
-            <th>ID Pedido</th>
-            <th>Cliente</th>
-            <th>Natureza do Pedido</th>
-            <th>Motorista</th>
-            <th>Duração</th>
-            <th>Código</th> <th>Acções</th>
-        </tr>
-    </thead>
-    <tbody id="history-orders-table-body"></tbody>
-</table>
+                    <thead>
+                        <tr>
+                            <th>ID Pedido</th>
+                            <th>Cliente</th>
+                            <th>Natureza do Pedido</th>
+                            <th>Motorista</th>
+                            <th>Duração</th>
+                            <th>Código</th> <th>Acções</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-orders-table-body"></tbody>
+                </table>
             </div>
 
             <div id="mapa-tempo-real" class="content-page hidden">
@@ -253,7 +234,7 @@
                 </div>
             </div>
 
-
+            
             <div id="assign-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -299,7 +280,7 @@
                     </form>
                 </div>
             </div>
-
+            
             <div id="history-detail-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -407,7 +388,7 @@
                     </div>
                     <div class="modal-body">
                         <input type="hidden" id="statement-client-id">
-
+                        
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="statement-start-date">De:</label>
@@ -422,11 +403,11 @@
                             <button type="button" class="btn-action-small" onclick="setStatementDates('this_week')">Esta Semana</button>
                             <button type="button" class="btn-action-small" onclick="setStatementDates('this_month')">Este Mês</button>
                         </div>
-
+                        
                         <button type="button" class="btn-submit" onclick="handleGenerateStatement()">
                             <i class="fas fa-search"></i> Gerar Extrato
                         </button>
-
+                        
                         <div id="statement-results" class="hidden" style="margin-top: 2rem;">
                             <hr>
                             <div class="report-summary">
