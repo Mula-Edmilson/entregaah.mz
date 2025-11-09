@@ -44,6 +44,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const driverLoginForm = document.getElementById('driver-login-form');
     if (driverLoginForm) driverLoginForm.addEventListener('submit', (e) => { e.preventDefault(); handleLogin('driver'); });
 
+    // Ficheiro: javascript.js
+// SUBSTITUA TODO O BLOCO if (adminDashboard) POR ESTE:
+
     // --- Lógica do PAINEL DO ADMIN ---
     const adminDashboard = document.body.classList.contains('dashboard-body');
     if (adminDashboard) {
@@ -60,8 +63,97 @@ document.addEventListener('DOMContentLoaded', () => {
             iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
         });
 
+        // Funções que dependem de 'L' (Leaflet)
+        function initializeLiveMap() {
+            try {
+                const maputoCoords = [-25.965, 32.589];
+                liveMap = L.map('live-map-container').setView(maputoCoords, 12);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(liveMap);
+                
+                console.log('Mapa em tempo real inicializado.');
+        
+                if (socket) {
+                    socket.emit('admin_request_all_locations'); 
+                    console.log('A pedir ao servidor as localizações ativas...');
+                }
+        
+            } catch (error) {
+                console.error("Erro ao inicializar o mapa em tempo real:", error);
+                document.getElementById('live-map-container').innerHTML = '<p>Erro ao carregar o mapa.</p>';
+            }
+        }
+        
+        function listenForDriverUpdates() {
+            if (!socket) return;
+        
+            console.log('Admin a ouvir atualizações de localização...');
+        
+            socket.on('driver_location_broadcast', (data) => {
+                const { driverId, driverName, status, lat, lng } = data;
+                if (!liveMap) return;
+        
+                const newLatLng = [lat, lng];
+                const popupContent = `<strong>${driverName}</strong><br>Status: ${status.replace('_', ' ')}`;
+                const iconToUse = (status === 'online_ocupado') ? busyIcon : freeIcon;
+        
+                if (driverMarkers[driverId]) {
+                    driverMarkers[driverId].setLatLng(newLatLng);
+                    driverMarkers[driverId].setPopupContent(popupContent);
+                    driverMarkers[driverId].setIcon(iconToUse);
+                } else {
+                    driverMarkers[driverId] = L.marker(newLatLng, { icon: iconToUse }).addTo(liveMap);
+                    driverMarkers[driverId].bindPopup(popupContent).openPopup();
+                    console.log(`Adicionando novo marcador para ${driverName}`);
+                }
+            });
+        
+            socket.on('driver_disconnected_broadcast', (data) => {
+                const { driverId, driverName } = data;
+                if (!liveMap) return;
+        
+                if (driverMarkers[driverId]) {
+                    liveMap.removeLayer(driverMarkers[driverId]);
+                    delete driverMarkers[driverId];
+                    console.log(`Removido marcador para ${driverName} (desconectado)`);
+                }
+            });
+        }
+        // --- Fim das funções de mapa ---
 
-        // --- (NOVO) LÓGICA DO MENU MOBILE ---
+        checkAuth('admin');
+        connectSocket(); 
+        listenForDriverUpdates(); 
+        
+        showPage('visao-geral', 'nav-visao-geral', 'Visão Geral');
+        
+        document.getElementById('delivery-form').addEventListener('submit', handleNewDelivery);
+        document.getElementById('form-add-motorista').addEventListener('submit', handleAddDriver);
+        document.getElementById('form-edit-motorista').addEventListener('submit', handleUpdateDriver);
+        
+        document.getElementById('form-add-cliente').addEventListener('submit', handleAddClient);
+        document.getElementById('form-edit-cliente').addEventListener('submit', handleUpdateClient);
+        document.getElementById('nav-clientes').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-clientes', 'nav-clientes', 'Gestão de Clientes'); });
+        
+        document.getElementById('delivery-image').addEventListener('change', handleImageUpload);
+
+        document.getElementById('nav-visao-geral').addEventListener('click', (e) => { e.preventDefault(); showPage('visao-geral', 'nav-visao-geral', 'Visão Geral'); });
+        document.getElementById('nav-motoristas').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-motoristas', 'nav-motoristas', 'Gestão de Motoristas'); });
+        document.getElementById('nav-entregas').addEventListener('click', (e) => { e.preventDefault(); showPage('entregas-activas', 'nav-entregas', 'Entregas Activas'); });
+        document.getElementById('nav-historico').addEventListener('click', (e) => { e.preventDefault(); showPage('historico', 'nav-historico', 'Histórico'); });
+        
+        document.getElementById('nav-mapa').addEventListener('click', (e) => { e.preventDefault(); showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real', initializeLiveMap); });
+
+        document.getElementById('admin-logout').addEventListener('click', (e) => { e.preventDefault(); handleLogout('admin'); });
+        document.getElementById('btn-reset-chart').addEventListener('click', openChartResetModal);
+        document.getElementById('btn-confirm-chart-reset').addEventListener('click', handleChartReset);
+        document.getElementById('history-search-input').addEventListener('input', filterHistoryTable);
+
+        document.getElementById('delivery-client-select').addEventListener('change', handleClientSelect);
+
+        // --- (CÓDIGO CORRIGIDO) LÓGICA DO MENU MOBILE ---
+        // Este código está agora no sítio certo, antes do '}' final do if(adminDashboard)
         const menuToggle = document.getElementById('mobile-menu-toggle');
         const mainContent = document.querySelector('.main-content');
         
@@ -92,7 +184,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         // --- FIM DA LÓGICA DO MENU MOBILE ---
-    }
+
+    } // <-- Este é o '}' final do if (adminDashboard)
         // Funções que dependem de 'L' (Leaflet)
         function initializeLiveMap() {
             try {
