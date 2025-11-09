@@ -713,3 +713,133 @@ body {
     border-top: none; /* Remove a primeira borda */
 }
 .modal-large h4 { margin-top: 1.5rem; margin-bottom: 1rem; color: var(--dark-color); font-weight: 600; }
+
+
+/* Ficheiro: style.css (ADICIONAR AO FIM DE TUDO) */
+
+/* --- (NOVO) Estilos de Responsividade Mobile --- */
+
+/* 1. O container para tabelas deslizantes */
+.table-container-responsive {
+    width: 100%;
+    overflow-x: auto; /* A MÁGICA! */
+    -webkit-overflow-scrolling: touch; /* Scroll suave no iOS */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+}
+.table-container-responsive .table-pedidos {
+    /* Remove os estilos do container da tabela interna */
+    border: none;
+    margin-top: 0;
+    box-shadow: none;
+    border-radius: 0;
+}
+.table-container-responsive .table-pedidos tr td:first-child,
+.table-container-responsive .table-pedidos tr th:first-child {
+    /* Garante que o raio não se aplica */
+    border-radius: 0;
+}
+
+
+/* 2. O botão Hamburger */
+.btn-mobile-menu {
+    display: none; /* Escondido no Desktop */
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--dark-color);
+    font-size: 1.2rem;
+    padding: 0.5rem 0.8rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.btn-mobile-menu:hover {
+    background: var(--light-color);
+    color: var(--primary-color);
+}
+
+
+/* 3. O Breakpoint (Abaixo de 992px) */
+@media (max-width: 992px) {
+
+    /* 3.1. Mostrar o botão Hamburger */
+    .btn-mobile-menu {
+        display: block;
+    }
+    
+    /* 3.2. Esconder o texto do perfil no cabeçalho */
+    .admin-profile span {
+        display: none;
+    }
+    .main-header {
+        padding: 1rem 1.5rem;
+    }
+
+    /* 3.3. Ajustar o Sidebar */
+    .sidebar {
+        /* Esconde o sidebar fora do ecrã */
+        transform: translateX(-100%); 
+        transition: transform 0.3s ease-out;
+        z-index: 1001; /* Fica por cima de tudo */
+        box-shadow: var(--shadow-lg);
+    }
+    
+    /* 3.4. O Estado "Menu Aberto" */
+    body.mobile-menu-open .sidebar {
+        /* Traz o sidebar para o ecrã */
+        transform: translateX(0);
+    }
+    body.mobile-menu-open .main-content::before {
+        /* (NOVO) Overlay escuro no conteúdo */
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+    }
+
+    /* 3.5. Ajustar o Conteúdo Principal */
+    .main-content {
+        margin-left: 0; /* Remove a margem do sidebar */
+        padding: 1.5rem; /* Reduz o padding */
+    }
+    .content-area {
+        padding: 1.5rem; /* Reduz o padding */
+    }
+    
+    /* 3.6. Ajustar Grids */
+    .charts-grid {
+        /* Força 1 coluna */
+        grid-template-columns: 1fr !important;
+    }
+    .charts-grid #main-chart-container,
+    .charts-grid #deliveries-chart-container {
+        grid-column: 1 / -1; /* Ocupa a coluna inteira */
+    }
+    
+    /* 3.7. Ajustar Cards de Stats */
+    .stats-cards {
+        /* Garante 1 ou 2 colunas, não 4 */
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    /* 3.8. Ajustar Modals */
+    .modal-content {
+        width: 95%;
+    }
+    .modal-body, .modal-header, .modal-actions {
+        padding: 1.5rem;
+    }
+    
+    /* 3.9. Ajustar Formulários */
+    .form-row {
+        grid-template-columns: 1fr; /* Uma coluna por linha */
+    }
+    .form-group input, .form-group select {
+        padding: 0.85rem; /* Um pouco menos de padding */
+    }
+}
