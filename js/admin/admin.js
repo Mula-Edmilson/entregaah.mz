@@ -70,9 +70,9 @@ function attachEventListeners() {
     // --- Modais e Botões ---
     document.getElementById('btn-reset-chart').addEventListener('click', openChartResetModal);
     document.getElementById('btn-confirm-chart-reset').addEventListener('click', handleChartReset);
+    document.getElementById('btn-close-chart-reset').addEventListener('click', closeChartResetModal); // <-- ADICIONADO
+    document.getElementById('btn-cancel-chart-reset').addEventListener('click', closeChartResetModal); // <-- ADICIONADO
     document.getElementById('history-search-input').addEventListener('input', filterHistoryTable);
-    document.getElementById('delivery-image').addEventListener('change', handleImageUpload);
-    document.getElementById('delivery-client-select').addEventListener('change', handleClientSelect);
 
     // --- (MUDANÇA) Listeners do Modal de Extrato (Movidos para cá para melhor organização) ---
     document.getElementById('btn-generate-statement').addEventListener('click', handleGenerateStatement);

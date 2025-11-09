@@ -73,6 +73,10 @@ function closeChartResetModal() {
     document.getElementById('chart-reset-password').value = ''; 
 }
 
+function openChartResetModal() { 
+    document.getElementById('chart-reset-modal').classList.remove('hidden'); 
+}
+
 function closeDriverReportModal() { 
     document.getElementById('driver-report-modal').classList.add('hidden'); 
 }
