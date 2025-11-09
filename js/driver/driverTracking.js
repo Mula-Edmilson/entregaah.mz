@@ -1,13 +1,53 @@
 /*
  * Ficheiro: js/driver/driverTracking.js
- * (MELHORIA: Notificações em Tempo Real)
+ * (Correção de Áudio Autoplay)
  */
 
 let socket = null;
 
-// (MELHORIA) Criamos o objeto de Áudio uma vez
 const notificationSound = new Audio('https://www.myinstants.com/media/sounds/notification-sound.mp3');
-notificationSound.volume = 0.5; // Define o volume
+notificationSound.volume = 0.5;
+
+// (MELHORIA) Esta variável controla se o browser nos deu permissão de áudio
+let audioUnblocked = false;
+
+/**
+ * (MELHORIA) Função dedicada para tocar o som.
+ * Tenta tocar; se falhar, regista que precisamos de interação.
+ */
+function playNotificationSound() {
+    // Tenta tocar o som
+    const playPromise = notificationSound.play();
+    
+    if (playPromise !== undefined) {
+        playPromise.then(() => {
+            // Sucesso! O áudio está desbloqueado.
+            audioUnblocked = true;
+        }).catch(error => {
+            // Falha. O browser bloqueou.
+            console.warn("Áudio bloqueado pelo browser. Esperando interação do utilizador.");
+            audioUnblocked = false;
+        });
+    }
+}
+
+/**
+ * (MELHORIA) Esta função é chamada pelo 'driver.js'
+ * no PRIMEIRO clique do utilizador, para "acordar" o áudio.
+ */
+function unlockAudio() {
+    if (!audioUnblocked) {
+        console.log("Tentativa de desbloquear o áudio com interação...");
+        // Toca o som sem volume (muted) para "acordar"
+        notificationSound.muted = true;
+        notificationSound.play().then(() => {
+            // Sucesso!
+            notificationSound.muted = false;
+            audioUnblocked = true;
+            console.log("Áudio desbloqueado com sucesso.");
+        }).catch(e => console.error("Desbloqueio de áudio falhou:", e));
+    }
+}
 
 
 function connectDriverSocket() {
@@ -24,26 +64,22 @@ function connectDriverSocket() {
     socket.on('connect', () => {
         console.log('Motorista conectado ao Socket.IO com ID:', socket.id);
         
-        // --- (A CORREÇÃO ESTÁ AQUI) ---
-        // Fica a "ouvir" por novas entregas
         socket.on('nova_entrega_atribuida', (data) => {
             console.log('Nova entrega recebida:', data);
             
-            // 1. Toca o som
-            notificationSound.play().catch(e => console.warn("Não foi possível tocar o som:", e));
+            // 1. (MUDANÇA) Chama a nossa nova função
+            playNotificationSound();
             
-            // 2. Mostra um alerta (de ui.js)
+            // 2. Mostra o alerta visual (isto já devia estar a funcionar)
             showCustomAlert(
                 'Nova Entrega!', 
                 `Novo pedido de ${data.clientName} (${SERVICE_NAMES[data.serviceType] || 'Serviço'}).`, 
                 'success'
             );
             
-            // 3. (MELHORIA) Envia um evento para o 'driver.js' recarregar a lista.
-            // Esta é a forma correta de comunicar entre ficheiros JS.
+            // 3. Envia o evento para o 'driver.js' recarregar a lista
             document.dispatchEvent(new Event('nova_entrega'));
         });
-        // --- FIM DA CORREÇÃO ---
     });
     
     socket.on('disconnect', () => {

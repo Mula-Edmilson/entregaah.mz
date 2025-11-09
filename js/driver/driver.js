@@ -1,6 +1,6 @@
 /*
  * Ficheiro: js/driver/driver.js
- * (MELHORIA: Notificações em Tempo Real)
+ * (Correção de Áudio Autoplay)
  */
 
 /* --- PONTO DE ENTRADA (Entry Point) --- */
@@ -29,25 +29,28 @@ function attachDriverEventListeners() {
     document.getElementById('btn-close-alert').addEventListener('click', closeCustomAlert);
     document.getElementById('btn-ok-alert').addEventListener('click', closeCustomAlert);
     
-    // --- (A CORREÇÃO ESTÁ AQUI) ---
-    // Ouve o evento "nova_entrega" disparado pelo 'driverTracking.js'
-    // e recarrega a lista de entregas.
+    // Ouve o evento "nova_entrega"
     document.addEventListener('nova_entrega', () => {
         console.log('Evento "nova_entrega" recebido. A recarregar a lista...');
-        
-        // Se o motorista estiver a ver os detalhes de outra entrega,
-        // não o force a voltar para a lista. Apenas recarregue em segundo plano.
         const listaSection = document.getElementById('lista-entregas');
         if (!listaSection.classList.contains('hidden')) {
             loadMyDeliveries();
         }
     });
+    
+    // --- (A CORREÇÃO ESTÁ AQUI) ---
+    // Adiciona um listener "once" (só corre uma vez)
+    // ao documento. No primeiro clique ou toque do utilizador
+    // em qualquer sítio, chama a função unlockAudio().
+    document.body.addEventListener('click', unlockAudio, { once: true });
+    document.body.addEventListener('touchstart', unlockAudio, { once: true });
     // --- FIM DA CORREÇÃO ---
 }
 
 
 /* --- Lógica de API (Carregamento de Dados - GET) --- */
 async function loadMyDeliveries() {
+    // ... (Esta função permanece 100% igual) ...
     const listaEntregas = document.getElementById('lista-entregas');
     if (!listaEntregas) return;
     
@@ -100,6 +103,7 @@ async function loadMyDeliveries() {
 
 /* --- Lógica de UI (Mostrar/Esconder Secções) --- */
 function showDetalheEntrega(order) {
+    // ... (Esta função permanece 100% igual) ...
     document.getElementById('lista-entregas').classList.add('hidden');
     
     const detalheSection = document.getElementById('detalhe-entrega');
@@ -154,6 +158,7 @@ function showDetalheEntrega(order) {
 }
 
 function showListaEntregas() {
+    // ... (Esta função permanece 100% igual) ...
     document.getElementById('lista-entregas').classList.remove('hidden');
     document.getElementById('detalhe-entrega').classList.add('hidden');
     loadMyDeliveries();
@@ -162,6 +167,7 @@ function showListaEntregas() {
 
 /* --- Lógica de API (Envio de Dados - POST) --- */
 async function handleStartDelivery(orderId) {
+    // ... (Esta função permanece 100% igual) ...
     try {
         const response = await fetch(`${API_URL}/api/orders/${orderId}/start`, {
             method: 'POST',
@@ -186,6 +192,7 @@ async function handleStartDelivery(orderId) {
 }
 
 async function handleCompleteDelivery(event, orderId) {
+    // ... (Esta função permanece 100% igual) ...
     event.preventDefault();
     const form = event.target;
     const verification_code = form.querySelector('#codigo-finalizacao').value.toUpperCase();
