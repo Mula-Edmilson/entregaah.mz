@@ -201,9 +201,9 @@ io.on('connection', (socket) => {
                     .then(() => {
                         console.log(`Motorista ${disconnectedUserName} (${disconnectedUserId}) está agora offline.`);
                         
-                        io.to(ADMIN_ROOM).emit('driver_disconnected_broadcast', {
-                            driverId: disconnectedUserId,
-                            driverName: disconnectedUserName
+                        io.to(ADMIN_ROOM).emit('driver_status_changed', { 
+                            driverId: disconnectedUserId, 
+                            newStatus: 'offline' 
                         });
                     })
                     .catch(err => console.error('Erro ao atualizar status para offline:', err));
