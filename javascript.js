@@ -4,7 +4,7 @@ const API_URL = 'https://entregaah-mz.onrender.com'; // O seu URL real do Render
 
 let socket = null;
 let myServicesChart = null;
-let myDeliveriesStatusChart = null;
+let myDeliveriesStatusChart = null; // (NOVO)
 let map = null; 
 let mapMarker = null; 
 
@@ -43,9 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const driverLoginForm = document.getElementById('driver-login-form');
     if (driverLoginForm) driverLoginForm.addEventListener('submit', (e) => { e.preventDefault(); handleLogin('driver'); });
-
-    // Ficheiro: javascript.js
-// SUBSTITUA TODO O BLOCO if (adminDashboard) POR ESTE:
 
     // --- Lógica do PAINEL DO ADMIN ---
     const adminDashboard = document.body.classList.contains('dashboard-body');
@@ -151,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('history-search-input').addEventListener('input', filterHistoryTable);
 
         document.getElementById('delivery-client-select').addEventListener('change', handleClientSelect);
-
+        
         // --- (CÓDIGO CORRIGIDO) LÓGICA DO MENU MOBILE ---
         // Este código está agora no sítio certo, antes do '}' final do if(adminDashboard)
         const menuToggle = document.getElementById('mobile-menu-toggle');
@@ -184,96 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         // --- FIM DA LÓGICA DO MENU MOBILE ---
-
-    } // <-- Este é o '}' final do if (adminDashboard)
-        // Funções que dependem de 'L' (Leaflet)
-        function initializeLiveMap() {
-            try {
-                const maputoCoords = [-25.965, 32.589];
-                liveMap = L.map('live-map-container').setView(maputoCoords, 12);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                }).addTo(liveMap);
-                
-                console.log('Mapa em tempo real inicializado.');
-        
-                if (socket) {
-                    socket.emit('admin_request_all_locations'); 
-                    console.log('A pedir ao servidor as localizações ativas...');
-                }
-        
-            } catch (error) {
-                console.error("Erro ao inicializar o mapa em tempo real:", error);
-                document.getElementById('live-map-container').innerHTML = '<p>Erro ao carregar o mapa.</p>';
-            }
-        }
-        
-        function listenForDriverUpdates() {
-            if (!socket) return;
-        
-            console.log('Admin a ouvir atualizações de localização...');
-        
-            socket.on('driver_location_broadcast', (data) => {
-                const { driverId, driverName, status, lat, lng } = data;
-                if (!liveMap) return;
-        
-                const newLatLng = [lat, lng];
-                const popupContent = `<strong>${driverName}</strong><br>Status: ${status.replace('_', ' ')}`;
-                const iconToUse = (status === 'online_ocupado') ? busyIcon : freeIcon;
-        
-                if (driverMarkers[driverId]) {
-                    driverMarkers[driverId].setLatLng(newLatLng);
-                    driverMarkers[driverId].setPopupContent(popupContent);
-                    driverMarkers[driverId].setIcon(iconToUse);
-                } else {
-                    driverMarkers[driverId] = L.marker(newLatLng, { icon: iconToUse }).addTo(liveMap);
-                    driverMarkers[driverId].bindPopup(popupContent).openPopup();
-                    console.log(`Adicionando novo marcador para ${driverName}`);
-                }
-            });
-        
-            socket.on('driver_disconnected_broadcast', (data) => {
-                const { driverId, driverName } = data;
-                if (!liveMap) return;
-        
-                if (driverMarkers[driverId]) {
-                    liveMap.removeLayer(driverMarkers[driverId]);
-                    delete driverMarkers[driverId];
-                    console.log(`Removido marcador para ${driverName} (desconectado)`);
-                }
-            });
-        }
-        // --- Fim das funções de mapa ---
-
-        checkAuth('admin');
-        connectSocket(); 
-        listenForDriverUpdates(); 
-        
-        showPage('visao-geral', 'nav-visao-geral', 'Visão Geral');
-        
-        document.getElementById('delivery-form').addEventListener('submit', handleNewDelivery);
-        document.getElementById('form-add-motorista').addEventListener('submit', handleAddDriver);
-        document.getElementById('form-edit-motorista').addEventListener('submit', handleUpdateDriver);
-        
-        document.getElementById('form-add-cliente').addEventListener('submit', handleAddClient);
-        document.getElementById('form-edit-cliente').addEventListener('submit', handleUpdateClient);
-        document.getElementById('nav-clientes').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-clientes', 'nav-clientes', 'Gestão de Clientes'); });
-        
-        document.getElementById('delivery-image').addEventListener('change', handleImageUpload);
-
-        document.getElementById('nav-visao-geral').addEventListener('click', (e) => { e.preventDefault(); showPage('visao-geral', 'nav-visao-geral', 'Visão Geral'); });
-        document.getElementById('nav-motoristas').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-motoristas', 'nav-motoristas', 'Gestão de Motoristas'); });
-        document.getElementById('nav-entregas').addEventListener('click', (e) => { e.preventDefault(); showPage('entregas-activas', 'nav-entregas', 'Entregas Activas'); });
-        document.getElementById('nav-historico').addEventListener('click', (e) => { e.preventDefault(); showPage('historico', 'nav-historico', 'Histórico'); });
-        
-        document.getElementById('nav-mapa').addEventListener('click', (e) => { e.preventDefault(); showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real', initializeLiveMap); });
-
-        document.getElementById('admin-logout').addEventListener('click', (e) => { e.preventDefault(); handleLogout('admin'); });
-        document.getElementById('btn-reset-chart').addEventListener('click', openChartResetModal);
-        document.getElementById('btn-confirm-chart-reset').addEventListener('click', handleChartReset);
-        document.getElementById('history-search-input').addEventListener('input', filterHistoryTable);
-
-        document.getElementById('delivery-client-select').addEventListener('change', handleClientSelect);
     }
 
     // --- Lógica do PAINEL DO MOTORISTA ---
@@ -374,10 +281,14 @@ function connectSocket() {
     }
 }
 
+// (FUNÇÃO CORRIGIDA - clientId duplicado removido)
 async function handleNewDelivery(e) {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
+
+    // O 'clientId' já está a ser incluído no 'formData' 
+    // automaticamente, porque o <input> tem o atributo "name='clientId'".
     
     try {
         const response = await fetch(`${API_URL}/api/orders`, {
@@ -385,16 +296,21 @@ async function handleNewDelivery(e) {
             headers: getAuthHeaders(),
             body: formData
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
+        
+        const data = await response.json(); 
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro do servidor');
+        }
+
         showCustomAlert('Sucesso!', `Pedido Criado! \nCódigo do Destinatário: ${data.order.verification_code}`, 'success');
         form.reset();
         removeImage();
         destroyMap();
         showPage('entregas-activas', 'nav-entregas', 'Entregas Activas');
+
     } catch (error) {
         console.error('Falha ao criar entrega:', error);
-        showCustomAlert('Erro', error.message, 'error');
+        showCustomAlert('Erro', error.message, 'error'); 
     }
 }
 
@@ -458,6 +374,7 @@ async function loadDrivers() {
     } catch (error) { console.error('Falha ao carregar motoristas:', error); }
 }
 
+// (FUNÇÃO ATUALIZADA - Nova coluna de CÓDIGO)
 async function loadActiveDeliveries() {
     try {
         const response = await fetch(`${API_URL}/api/orders/active`, { headers: getAuthHeaders() });
@@ -466,7 +383,6 @@ async function loadActiveDeliveries() {
         const tableBody = document.getElementById('active-orders-table-body');
         tableBody.innerHTML = '';
         if (data.orders.length === 0) {
-            // (ATUALIZADO) Colspan agora é 7
             tableBody.innerHTML = '<tr><td colspan="7">Nenhuma encomenda ativa.</td></tr>';
             return;
         }
@@ -474,8 +390,6 @@ async function loadActiveDeliveries() {
             const motoristaNome = order.assigned_to_driver ? order.assigned_to_driver.user.nome : 'N/D';
             const statusClass = `status-${order.status.replace('_', '-')}`;
             let acaoBotao = (order.status === 'pendente') ? `<button class="btn-action-assign" onclick="openAssignModal('${order._id}')">Atribuir</button>` : 'Em Curso';
-            
-            // (ATUALIZADA) Linha da tabela
             tableBody.innerHTML += `
                 <tr>
                     <td>#${order._id.slice(-6)}</td>
@@ -483,12 +397,15 @@ async function loadActiveDeliveries() {
                     <td>${order.client_phone1}</td>
                     <td><span class="status ${statusClass}">${order.status}</span></td>
                     <td>${motoristaNome}</td>
-                    <td class="verification-code">${order.verification_code}</td> <td>${acaoBotao}</td>
+                    <td class="verification-code">${order.verification_code}</td>
+                    <td>${acaoBotao}</td>
                 </tr>
             `;
         });
     } catch (error) { console.error('Falha ao carregar encomendas ativas:', error); }
 }
+
+// (FUNÇÃO ATUALIZADA - Nova coluna de CÓDIGO)
 async function loadHistory() {
     try {
         const response = await fetch(`${API_URL}/api/orders/history`, { headers: getAuthHeaders() });
@@ -497,7 +414,6 @@ async function loadHistory() {
         const tableBody = document.getElementById('history-orders-table-body');
         tableBody.innerHTML = '';
         if (data.orders.length === 0) {
-            // (ATUALIZADO) Colspan agora é 7
             tableBody.innerHTML = '<tr><td colspan="7">Nenhum histórico encontrado.</td></tr>';
             return;
         }
@@ -505,8 +421,6 @@ async function loadHistory() {
             const motoristaNome = order.assigned_to_driver ? order.assigned_to_driver.user.nome : 'N/D';
             const duracao = formatDuration(order.timestamp_started, order.timestamp_completed);
             const serviceName = serviceNames[order.service_type] || order.service_type;
-            
-            // (ATUALIZADA) Linha da tabela
             tableBody.innerHTML += `
                 <tr class="history-row">
                     <td>#${order._id.slice(-6)}</td>
@@ -514,7 +428,8 @@ async function loadHistory() {
                     <td>${serviceName}</td>
                     <td>${motoristaNome}</td>
                     <td>${duracao}</td>
-                    <td class="verification-code">${order.verification_code}</td> <td><button class="btn-action-small" onclick="openHistoryDetailModal('${order._id}')"><i class="fas fa-eye"></i></button></td>
+                    <td class="verification-code">${order.verification_code}</td>
+                    <td><button class="btn-action-small" onclick="openHistoryDetailModal('${order._id}')"><i class="fas fa-eye"></i></button></td>
                 </tr>
             `;
         });
@@ -535,17 +450,17 @@ function filterHistoryTable(event) {
 function formatDuration(start, end) { if (!start || !end) return 'N/D'; const diffMs = new Date(end) - new Date(start); if (diffMs < 0) return 'N/D'; const minutes = Math.floor(diffMs / 60000); const seconds = Math.floor((diffMs % 60000) / 1000); return `${minutes} min ${seconds} s`; }
 function formatTotalDuration(totalMs) { if (totalMs < 0) return 'N/D'; const totalMinutes = Math.floor(totalMs / 60000); const hours = Math.floor(totalMinutes / 60); const minutes = totalMinutes % 60; return `${hours} h ${minutes} min`; }
 
+// (FUNÇÃO ATUALIZADA - Chama o novo gráfico de Donut)
 async function loadOverviewStats() {
     try {
         const response = await fetch(`${API_URL}/api/stats/overview`, { headers: getAuthHeaders() });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
-        
         document.getElementById('stats-pendentes').innerText = data.pendentes;
         document.getElementById('stats-em-transito').innerText = data.emTransito;
         document.getElementById('stats-concluidas-hoje').innerText = data.concluidasHoje;
         document.getElementById('stats-motoristas-online').innerText = data.motoristasOnline;
-
+        
         // (NOVA CHAMADA) Chama a função para criar/atualizar o gráfico de donut
         initDeliveriesStatusChart(data.pendentes, data.emTransito);
 
@@ -723,8 +638,11 @@ function closeDriverReportModal() { document.getElementById('driver-report-modal
 /* --- Funções de Navegação e UI --- */
 function showPage(pageId, navId, title, callback) { 
     if (map) destroyMap();
+    
+    // (ATUALIZADO) Limpa os gráficos ao sair da página
     if (myServicesChart) { myServicesChart.destroy(); myServicesChart = null; }
     if (myDeliveriesStatusChart) { myDeliveriesStatusChart.destroy(); myDeliveriesStatusChart = null; }
+    
     if (liveMap && pageId !== 'mapa-tempo-real') {
         liveMap.remove();
         liveMap = null;
@@ -816,11 +734,7 @@ async function initServicesChart(reset = false) {
     });
 }
 
-// Ficheiro: javascript.js (NOVA FUNÇÃO)
-
-/**
- * Cria ou atualiza o gráfico de Donut para o estado das entregas ativas.
- */
+// (NOVA FUNÇÃO para o Gráfico de Donut)
 function initDeliveriesStatusChart(pendentes, emTransito) {
     const ctx = document.getElementById('deliveriesStatusChart');
     if (!ctx) return; // Se a página não for a "visao-geral", sai
@@ -869,7 +783,7 @@ function initDeliveriesStatusChart(pendentes, emTransito) {
                             }
                             if (context.parsed !== null) {
                                 // Mostra a percentagem
-                                const percentage = (context.parsed / total * 100).toFixed(1);
+                                const percentage = total > 0 ? (context.parsed / total * 100).toFixed(1) : 0;
                                 label += `${percentage}%`;
                             }
                             return label;
@@ -978,7 +892,8 @@ function showDetalheEntrega(order) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
         
-        mapButton.href = `https://www.google.com/maps/search/?api=1&query=${order.address_coords.lat},${order.address_coords.lng}`;
+        // (LINK CORRIGIDO)
+        mapButton.href = `https://maps.google.com/maps?q=${order.address_coords.lat},${order.address_coords.lng}`;
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
@@ -1048,9 +963,6 @@ async function handleCompleteDelivery(event, orderId) {
 
 
 /* --- Funções de Rastreamento em Tempo Real (Apenas Admin) --- */
-
-// (Nota: Estas funções só são definidas e usadas se 'adminDashboard' for verdadeiro)
-
 
 /**
  * Inicia o rastreamento de geolocalização no painel do motorista.
