@@ -52,9 +52,6 @@
 
     <main class="main-content">
         <header class="main-header">
-            <button class="btn-mobile-menu" id="mobile-menu-toggle">
-                <i class="fas fa-bars"></i>
-            </button>
             <h1 id="main-title">Visão Geral</h1>
             <div class="admin-profile"><span>Olá, Admin</span><i class="fas fa-user-circle"></i></div>
         </header>
@@ -63,30 +60,22 @@
             
             <div id="visao-geral" class="content-page">
     
-    <div class="stats-cards">
-        <div class="card"><h3>Pendentes</h3><p id="stats-pendentes">...</p></div>
-        <div class="card"><h3>Em Trânsito</h3><p id="stats-em-transito">...</p></div>
-        <div class="card"><h3>Concluídas (Hoje)</h3><p id="stats-concluidas-hoje">...</p></div>
-        <div class="card"><h3>Motoristas Online</h3><p id="stats-motoristas-online">...</p></div>
-    </div>
+                <div class="stats-cards">
+                    <div class="card"><h3>Pendentes</h3><p id="stats-pendentes">...</p></div>
+                    <div class="card"><h3>Em Trânsito</h3><p id="stats-em-transito">...</p></div>
+                    <div class="card"><h3>Concluídas (Hoje)</h3><p id="stats-concluidas-hoje">...</p></div>
+                    <div class="card"><h3>Motoristas Online</h3><p id="stats-motoristas-online">...</p></div>
+                </div>
 
-    <div class="charts-grid">
-        
-        <div class="chart-container" id="main-chart-container">
-            <div class="chart-header">
-                <h3>Desempenho dos Serviços</h3>
-                <button class="btn-action-small btn-danger" id="btn-reset-chart"><i class="fas fa-sync"></i> Reset</button>
+                <div class="chart-container" id="main-chart-container">
+                    <div class="chart-header">
+                        <h3>Desempenho dos Serviços</h3>
+                        <button class="btn-action-small btn-danger" id="btn-reset-chart"><i class="fas fa-sync"></i> Reset</button>
+                    </div>
+                    <canvas id="servicesChart"></canvas>
+                </div>
+            
             </div>
-            <canvas id="servicesChart"></canvas>
-        </div>
-        
-        <div class="chart-container" id="deliveries-chart-container">
-            <h3>Entregas Ativas</h3>
-            <canvas id="deliveriesStatusChart"></canvas>
-        </div>
-
-    </div>
-</div>
 
             <div id="form-nova-entrega" class="content-page hidden">
                 <form id="delivery-form">
@@ -202,43 +191,42 @@
 
             <div id="entregas-activas" class="content-page hidden">
                 <h3>Gestão de Encomendas Activas</h3>
-                <div class="table-container-responsive">
                 <table class="table-pedidos">
-    <thead>
-        <tr>
-            <th>ID Pedido</th>
-            <th>Cliente</th>
-            <th>Telefone</th>
-            <th>Estado</th>
-            <th>Motorista</th>
-            <th>Código</th> <th>Acção</th>
-        </tr>
-    </thead>
-    <tbody id="active-orders-table-body"></tbody>
-</table>
+                    <thead>
+                        <tr>
+                            <th>ID Pedido</th>
+                            <th>Cliente</th>
+                            <th>Telefone</th>
+                            <th>Estado</th>
+                            <th>Motorista</th>
+                            <th>Código</th> <th>Acção</th>
+                        </tr>
+                    </thead>
+                    <tbody id="active-orders-table-body"></tbody>
+                </table>
             </div>
 
             <div id="historico" class="content-page hidden">
                 <h3>Histórico de Encomendas</h3>
+                
                 <div class="search-container">
-                    </div>
-                <div class="table-container-responsive">
                     <input type="text" id="history-search-input" placeholder="Pesquisar no histórico (ID, Cliente, Motorista...)">
                     <i class="fas fa-search"></i>
                 </div>
+                
                 <table class="table-pedidos">
-    <thead>
-        <tr>
-            <th>ID Pedido</th>
-            <th>Cliente</th>
-            <th>Natureza do Pedido</th>
-            <th>Motorista</th>
-            <th>Duração</th>
-            <th>Código</th> <th>Acções</th>
-        </tr>
-    </thead>
-    <tbody id="history-orders-table-body"></tbody>
-</table>
+                    <thead>
+                        <tr>
+                            <th>ID Pedido</th>
+                            <th>Cliente</th>
+                            <th>Natureza do Pedido</th>
+                            <th>Motorista</th>
+                            <th>Duração</th>
+                            <th>Código</th> <th>Acções</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-orders-table-body"></tbody>
+                </table>
             </div>
 
             <div id="mapa-tempo-real" class="content-page hidden">

@@ -1,84 +1,72 @@
-// Ficheiro: backend/server.js (Completo e Pronto para Produção)
+// Ficheiro: backend/server.js (Melhorado com Segurança e Refatoração)
 
-// --- (NOVO) ---
-// Carrega as variáveis do ficheiro .env para process.env
-// Faça disto a PRIMEIRA linha do seu ficheiro.
+// Carrega as variáveis do .env (deve ser a primeira linha)
 require('dotenv').config();
-// --- FIM DO NOVO ---
 
 const express = require('express');
 const http = require('http');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
-const cors = require('cors'); // <--- Importamos o CORS
-const jwt = require('jsonwebtoken'); 
+const cors = require('cors');
+const path = require('path'); // <-- (MELHORIA) Para caminhos de ficheiros
+const helmet = require('helmet'); // <-- (MELHORIA) Para segurança HTTP
 
-const DriverProfile = require('./models/DriverProfile');
+// --- (MELHORIA) Lógica de Sockets, Erros e Constantes Refatorada ---
+// Vamos importar estes ficheiros que iremos criar a seguir
+const initSocketHandler = require('./socketHandler');
+const { notFound, errorHandler } = require('./middleware/errorMiddleware');
+const { ADMIN_ROOM } = require('./utils/constants');
+// ----------------------------------------------------
 
 // --- Configuração Inicial ---
 const app = express();
 const server = http.createServer(app);
 
-
-// --- (ALTERAÇÃO PRINCIPAL: Regras de CORS) ---
-// 1. Defina as suas origens (lidas do .env)
+// --- Configuração de CORS (O seu código original, está bom) ---
 const allowedOrigins = [
-    process.env.FRONTEND_URL,       // O seu GitHub Pages (ex: https://mula-edmilson.github.io)
-    process.env.FRONTEND_URL_DEV, // O seu teste local (http://127.0.0.1:5500)
-    "null"                          // Para testes locais (file://)
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_URL_DEV,
+    "null"
 ];
-
-// 2. Crie as opções de CORS
 const corsOptions = {
     origin: function (origin, callback) {
-        // Permite pedidos sem 'origin' (como Postman) ou que estejam na lista
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            // Se a origem não estiver na lista, rejeita o pedido
             console.error(`CORS Bloqueado para a origem: ${origin}`);
             callback(new Error('Não permitido pela política de CORS'));
         }
     },
-    methods: ["GET", "POST", "PUT"] // Métodos que o seu frontend usa
+    methods: ["GET", "POST", "PUT", "DELETE"] // (MELHORIA) Adicionado DELETE
 };
-
-// 3. Configure o Socket.io com as opções
 const io = new Server(server, {
-    cors: corsOptions // <--- Usamos as opções aqui
+    cors: corsOptions
 });
-// --- FIM DA ALTERAÇÃO ---
+app.set('socketio', io); // Disponibiliza o 'io' para os controllers
 
-
-app.set('socketio', io);
-
-// --- Declarações ÚNICAS ---
+// --- Declarações ---
 const PORT = process.env.PORT || 3000;
-
-// --- (ALTERAÇÃO) ---
-// Lê os segredos das variáveis de ambiente (carregadas do .env)
 const MONGO_URI = process.env.MONGO_URI;
-const JWT_SECRET = process.env.JWT_SECRET;
-// --- FIM DA ALTERAÇÃO ---
-
-const ADMIN_ROOM = 'admin_room';
+const JWT_SECRET = process.env.JWT_SECRET; // Será passado para o socket handler
 
 // --- Middlewares ---
+app.use(helmet()); // (MELHORIA) Adiciona 11 headers de segurança
+app.use(cors(corsOptions)); // (O seu código)
+app.use(express.json()); // (O seu código)
+app.use(express.urlencoded({ extended: true })); // (O seu código)
 
-// --- (A CORREÇÃO PRINCIPAL ESTÁ AQUI) ---
-// 4. Use as MESMAS opções de CORS para o Express (API)
-app.use(cors(corsOptions));
-// --- FIM DA CORREÇÃO ---
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static('uploads'));
+// (MELHORIA) Servir a pasta 'uploads' de forma estática e segura
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // --- Conexão ao MongoDB ---
-// Verifica se o MONGO_URI foi carregado
+// (MELHORIA) Adicionada verificação de segurança para JWT_SECRET
 if (!MONGO_URI) {
-    console.error("ERRO: MONGO_URI não foi definido. Verifique o seu ficheiro .env ou as Environment Variables no Render.");
-    process.exit(1); // Para a aplicação se a BD não estiver configurada
+    console.error("ERRO FATAL: MONGO_URI não foi definido. Verifique o seu ficheiro .env.");
+    process.exit(1);
+}
+if (!JWT_SECRET) {
+    console.error("ERRO FATAL: JWT_SECRET não foi definido. Verifique o seu ficheiro .env.");
+    process.exit(1);
 }
 mongoose.connect(MONGO_URI)
     .then(() => console.log("Conectado ao MongoDB com sucesso!"))
@@ -89,132 +77,22 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/drivers', require('./routes/driverRoutes'));
 app.use('/api/stats', require('./routes/statsRoutes'));
-app.use('/api/clients', require('./routes/clientRoutes')); // <-- (NOVA ROTA DE CLIENTES)
+app.use('/api/clients', require('./routes/clientRoutes'));
 
-// Rota de teste
 app.get('/', (req, res) => {
-    res.send('<h1>Servidor Backend da Entregaah Mz está no ar!</h1>');
+    res.send('<h1>Servidor Backend da Entregaah Mz está no ar! (v2 - Segurança Ativa)</h1>');
 });
 
+// --- (MELHORIA) LÓGICA DO SOCKET.IO REFATORADA ---
+// A lógica de 100+ linhas foi movida para 'socketHandler.js'
+// Passamos o JWT_SECRET e ADMIN_ROOM para ele
+initSocketHandler(io, JWT_SECRET, ADMIN_ROOM);
+// ------------------------------------------------
 
-// --- LÓGICA DO SOCKET.IO (Completa) ---
-
-const socketUserMap = new Map();
-
-io.on('connection', (socket) => {
-    console.log('Um utilizador conectou-se:', socket.id);
-    let userId, userRole, userName; 
-
-    try {
-        const token = socket.handshake.auth.token;
-        if (token) {
-            // Verifica se o JWT_SECRET foi carregado
-            if (!JWT_SECRET) {
-                throw new Error("JWT_SECRET não está configurado no servidor.");
-            }
-            const decoded = jwt.verify(token, JWT_SECRET);
-            userId = decoded.user.id;
-            userRole = decoded.user.role;
-            userName = decoded.user.nome; 
-
-            socketUserMap.set(socket.id, { userId, userRole, userName, lastLocation: null });
-
-            if (userRole === 'admin') {
-                socket.join(ADMIN_ROOM);
-                console.log(`Admin ${userName} (${userId}) entrou na sala ${ADMIN_ROOM}`);
-
-                // (LÓGICA DO REFRESH) Envia o backlog de motoristas
-                for (const [id, data] of socketUserMap.entries()) {
-                    if (data.userRole === 'driver' && data.lastLocation) {
-                        socket.emit('driver_location_broadcast', {
-                            driverId: data.userId,
-                            driverName: data.userName,
-                            status: (data.lastLocation.status || 'online_livre'),
-                            lat: data.lastLocation.lat,
-                            lng: data.lastLocation.lng
-                        });
-                    }
-                }
-
-                // (LÓGICA DA NAVEGAÇÃO) Ouve o pedido do admin
-                socket.on('admin_request_all_locations', () => {
-                    console.log(`Admin ${userName} (${socket.id}) pediu um refresh dos pins.`);
-                    for (const [id, data] of socketUserMap.entries()) {
-                        if (data.userRole === 'driver' && data.lastLocation) {
-                            socket.emit('driver_location_broadcast', {
-                                driverId: data.userId,
-                                driverName: data.userName,
-                                status: (data.lastLocation.status || 'online_livre'),
-                                lat: data.lastLocation.lat,
-                                lng: data.lastLocation.lng
-                            });
-                        }
-                    }
-                });
-
-            } 
-            else if (userRole === 'driver') {
-                DriverProfile.findOneAndUpdate({ user: userId }, { status: 'online_livre' })
-                    .then(() => console.log(`Motorista ${userName} (${userId}) está agora online_livre.`))
-                    .catch(err => console.error('Erro ao atualizar status para online:', err));
-            }
-        } else {
-             throw new Error('Token não fornecido');
-        }
-    } catch (error) {
-        console.log(`Falha na autenticação do socket (${socket.id}):`, error.message);
-        socket.disconnect(); 
-        return; 
-    }
-
-    // --- LÓGICA DE RASTREAMENTO ---
-    if (userRole === 'driver') {
-        socket.on('driver_location_update', async (data) => {
-            const { lat, lng } = data;
-            
-            const profile = await DriverProfile.findOne({ user: userId });
-            const currentStatus = profile ? profile.status : 'online_livre';
-
-            if (socketUserMap.has(socket.id)) {
-                socketUserMap.get(socket.id).lastLocation = { lat, lng, status: currentStatus };
-            }
-            
-            io.to(ADMIN_ROOM).emit('driver_location_broadcast', {
-                driverId: userId,
-                driverName: userName,
-                status: currentStatus,
-                lat: lat,
-                lng: lng
-            });
-        });
-    }
-
-    // Quando o utilizador desconecta (fecha a aba)
-    socket.on('disconnect', () => {
-        console.log('Utilizador desconectado:', socket.id);
-        
-        if (socketUserMap.has(socket.id)) {
-            const { userId: disconnectedUserId, userRole: disconnectedUserRole, userName: disconnectedUserName } = socketUserMap.get(socket.id);
-
-            if (disconnectedUserRole === 'driver') {
-                DriverProfile.findOneAndUpdate({ user: disconnectedUserId }, { status: 'offline' })
-                    .then(() => {
-                        console.log(`Motorista ${disconnectedUserName} (${disconnectedUserId}) está agora offline.`);
-                        
-                        io.to(ADMIN_ROOM).emit('driver_status_changed', { 
-                            driverId: disconnectedUserId, 
-                            newStatus: 'offline' 
-                        });
-                    })
-                    .catch(err => console.error('Erro ao atualizar status para offline:', err));
-            }
-            
-            socketUserMap.delete(socket.id);
-        }
-    });
-});
-// --- FIM DA LÓGICA DO SOCKET.IO ---
-
+// --- (MELHORIA) Middlewares de Erro ---
+// Devem ser os ÚLTIMOS 'app.use()' a ser declarados
+app.use(notFound); // Trata rotas 404 (que não existem)
+app.use(errorHandler); // Trata todos os outros erros (500)
 
 // --- Iniciar o Servidor ---
 server.listen(PORT, () => {

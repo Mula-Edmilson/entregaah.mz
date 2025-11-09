@@ -1,4 +1,4 @@
-// Ficheiro: backend/routes/driverRoutes.js (Completo e Corrigido)
+// Ficheiro: backend/routes/driverRoutes.js (Melhorado com Validação)
 
 const express = require('express');
 const router = express.Router();
@@ -6,21 +6,26 @@ const driverController = require('../controllers/driverController');
 const { protect, admin } = require('../middleware/authMiddleware');
 const User = require('../models/User');
 
+// --- (MELHORIA) Importar validadores ---
+const { body, param } = require('express-validator');
+const { DRIVER_STATUS } = require('../utils/constants');
+// ------------------------------------
+
 // @route   GET /api/drivers
 // @desc    Admin obtém a lista de TODOS os motoristas
 router.get('/', protect, admin, driverController.getAllDrivers);
 
 
-// --- ### A CORREÇÃO ESTÁ AQUI (A ORDEM MUDOU) ### ---
-
 // @route   GET /api/drivers/available
 // @desc    Admin obtém a lista de motoristas LIVRES
 // (Esta rota específica TEM de vir ANTES de '/:id')
 router.get('/available', protect, admin, async (req, res) => {
+    // (NOTA: Idealmente, esta lógica estaria no driverController,
+    // mas vamos mantê-la aqui por agora para focar na validação)
     try {
         const allDrivers = await User.find({ role: 'driver' }).populate('profile');
         const availableDrivers = allDrivers.filter(driver => {
-            return driver.profile && driver.profile.status === 'online_livre';
+            return driver.profile && driver.profile.status === DRIVER_STATUS.ONLINE_FREE; // (MELHORIA) Usando constante
         });
         res.status(200).json({ drivers: availableDrivers });
     } catch (error) {
@@ -31,20 +36,51 @@ router.get('/available', protect, admin, async (req, res) => {
 
 // @route   GET /api/drivers/:id/report
 // @desc    Admin obtém o relatório de um motorista
-// @access  Privado (Admin)
-// (Esta rota específica TEM de vir ANTES de '/:id')
-router.get('/:id/report', protect, admin, driverController.getDriverReport);
+router.get(
+    '/:id/report', 
+    protect, 
+    admin, 
+    [ // (MELHORIA) Valida o ID na URL
+        param('id', 'ID do motorista inválido').isMongoId()
+    ],
+    driverController.getDriverReport
+);
 
 
 // @route   GET /api/drivers/:id
 // @desc    Admin obtém um motorista por ID (para preencher o modal)
-// (Esta rota genérica TEM de vir DEPOIS das específicas)
-router.get('/:id', protect, admin, driverController.getDriverById);
+router.get(
+    '/:id', 
+    protect, 
+    admin, 
+    [ // (MELHORIA) Valida o ID na URL
+        param('id', 'ID do motorista inválido').isMongoId()
+    ],
+    driverController.getDriverById
+);
 
 // @route   PUT /api/drivers/:id
 // @desc    Admin atualiza um motorista
-router.put('/:id', protect, admin, driverController.updateDriver);
-
-// --- ### FIM DA CORREÇÃO ### ---
+router.put(
+    '/:id', 
+    protect, 
+    admin, 
+    [ // (MELHORIA) Valida o ID na URL e os dados no body
+        param('id', 'ID do motorista inválido').isMongoId(),
+        body('nome', 'O nome é obrigatório').notEmpty().trim(),
+        body('telefone', 'O telefone é obrigatório (mín. 9 dígitos)')
+            .notEmpty()
+            .trim()
+            .isLength({ min: 9 }),
+        body('vehicle_plate', 'A placa é opcional').optional().trim(),
+        body('status', 'Status inválido')
+            .isIn([
+                DRIVER_STATUS.ONLINE_FREE, 
+                DRIVER_STATUS.ONLINE_BUSY, 
+                DRIVER_STATUS.OFFLINE
+            ])
+    ],
+    driverController.updateDriver
+);
 
 module.exports = router;

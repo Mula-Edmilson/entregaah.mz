@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel do Motorista - Entregaah Mz</title>
+    <title>Painel de Entrega - Entregaah Mz</title>
     <link rel="icon" href="https://i.postimg.cc/4xkWBYss/ISOTIPO.png" type="image/png">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
     <script src="https://cdn.socket.io/4.7.0/socket.io.min.js"></script>
 </head>
 <body class="motorista-body">
@@ -14,84 +15,82 @@
     <header class="motorista-header">
         <img src="https://i.postimg.cc/VkQKDJ1x/LOGO.png" alt="Logotipo Entregaah Mz" class="motorista-logo">
         <div class="motorista-profile">
-            <span>Olá, Motorista</span>
-            <button id="driver-logout" class="btn-logout" title="Sair (Logout)">
-                <i class="fas fa-sign-out-alt"></i>
+            <span id="driver-name-header">Motorista</span>
+            <button class="btn-logout" id="driver-logout">
+                <i class="fas fa-sign-out-alt"></i> Sair
             </button>
         </div>
     </header>
 
     <main class="motorista-main">
-        
         <section id="lista-entregas">
             <h2>Minhas Entregas Pendentes</h2>
-            <p>A carregar entregas...</p>
-        </section>
+            </section>
 
         <section id="detalhe-entrega" class="hidden">
-            <button class="btn-voltar" onclick="showListaEntregas()"><i class="fas fa-arrow-left"></i> Voltar</button>
-            <h2 id="detalhe-entrega-title">Detalhes do Pedido #</h2>
-            
-            <div class="detalhes-bloco">
-                <h3><i class="fas fa-box-open"></i> Imagem da Encomenda</h3>
-                <div class="delivery-image-display">
-                    <img id="encomenda-imagem" src="" alt="Imagem da Encomenda" class="img-fluid">
-                    <p id="no-image-placeholder" class="hidden">Nenhuma imagem disponível.</p>
-                </div>
+            <button class="btn-voltar" onclick="showListaEntregas()">
+                <i class="fas fa-arrow-left"></i> Voltar à Lista
+            </button>
+            <h2 id="detalhe-entrega-title">Detalhes do Pedido #123456</h2>
+
+            <div class="detalhes-bloco delivery-image-display">
+                <h3>Imagem da Encomenda</h3>
+                <img src="" alt="Imagem da Encomenda" id="encomenda-imagem" class="hidden">
+                <p id="no-image-placeholder" class="hidden">Nenhuma imagem fornecida.</p>
             </div>
 
             <div class="detalhes-bloco">
-                <h3><i class="fas fa-user"></i> Destinatário</h3>
+                <h3>Destinatário</h3>
                 <p id="detalhe-cliente-nome"><strong>Nome:</strong> ...</p>
                 <p id="detalhe-cliente-telefone"><strong>Telefone:</strong> ...</p>
             </div>
 
             <div class="detalhes-bloco">
-                <h3><i class="fas fa-map-signs"></i> Destino</h3>
+                <h3>Destino</h3>
                 <p id="detalhe-cliente-endereco"><strong>Endereço:</strong> ...</p>
-                
-                <p id="detalhe-cliente-coords" class="coords-text hidden">
-                    <strong>Pin:</strong> <span>A carregar...</span>
+                <p id="detalhe-cliente-coords" class="hidden">
+                    <strong>Pin:</strong> <span>...</span>
                 </p>
-                
-                <a id="btn-google-maps" href="#" target="_blank" class="btn-mapa hidden">
-                    <i class="fas fa-map-marked-alt"></i> Abrir no Google Maps
+                <a href="#" target="_blank" class="btn-mapa hidden" id="btn-google-maps">
+                    <i class="fas fa-map-location-dot"></i> Abrir no Google Maps
                 </a>
             </div>
+
             <div class="detalhes-bloco">
-                <button id="btn-iniciar-entrega" class="btn-iniciar">
-                    <i class="fas fa-play"></i> Iniciar Entrega
+                <h3>Ações</h3>
+                
+                <button class="btn-submit btn-iniciar" id="btn-iniciar-entrega">
+                    <i class="fas fa-play-circle"></i> Iniciar Entrega
                 </button>
+
                 <form id="form-finalizacao" class="hidden">
-                    <h3><i class="fas fa-check-circle"></i> Finalizar Entrega</h3>
                     <p id="entrega-status">Entrega em progresso...</p>
-                    <p>Peça ao destinatário o código de 5 dígitos.</p>
                     <div class="form-group">
-                        <label for="codigo-finalizacao">Código de Confirmação</label>
-                        <input type="text" id="codigo-finalizacao" required maxlength="5" placeholder="_ _ _ _ _">
+                        <label for="codigo-finalizacao">Insira o Código de 5 dígitos do cliente:</label>
+                        <input type="text" id="codigo-finalizacao" maxlength="5" placeholder="ABC12">
                     </div>
-                    <button type="submit" class="btn-submit">Confirmar Entrega</button>
+                    <button type="submit" class="btn-submit">
+                        <i class="fas fa-check-circle"></i> Finalizar Entrega
+                    </button>
                 </form>
             </div>
         </section>
-
-        <div id="custom-alert-modal" class="modal-backdrop hidden">
-            <div class="modal-content modal-alert">
-                <div class="modal-header">
-                    <h3 id="custom-alert-title"></h3>
-                    <button class="modal-close-btn" onclick="closeCustomAlert()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <p id="custom-alert-message"></p>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-submit" onclick="closeCustomAlert()">OK</button>
-                </div>
-            </div>
-        </div>
-
     </main>
 
-    <script src="javascript.js"></script>
+    <div id="custom-alert-modal" class="modal-backdrop hidden">
+        <div class="modal-content modal-alert">
+            <div class="modal-header">
+                <h3 id="custom-alert-title"></h3>
+                <button class="modal-close-btn" onclick="closeCustomAlert()">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="custom-alert-message"></p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-submit" onclick="closeCustomAlert()">OK</button>
+            </div>
+        </div>
+    </div>
+    <script src="js/common/api.js"></script>
 </body>
 </html>
