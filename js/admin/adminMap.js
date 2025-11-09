@@ -29,7 +29,7 @@ function initializeMapIcons() {
     
     // Ícone para motorista 'online_livre'
     freeIcon = L.icon({
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        iconUrl: 'https://i.postimg.cc/MK8ty3PJ/car-pin-point.png',
         shadowUrl: iconShadowUrl,
         iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
     });

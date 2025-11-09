@@ -1,6 +1,5 @@
-// Ficheiro: backend/server.js (Melhorado com Segurança e Refatoração)
+// Ficheiro: backend/server.js (Corrigido)
 
-// Carrega as variáveis do .env (deve ser a primeira linha)
 require('dotenv').config();
 
 const express = require('express');
@@ -8,21 +7,18 @@ const http = require('http');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const path = require('path'); // <-- (MELHORIA) Para caminhos de ficheiros
-const helmet = require('helmet'); // <-- (MELHORIA) Para segurança HTTP
+const path = require('path');
+const helmet = require('helmet');
 
-// --- (MELHORIA) Lógica de Sockets, Erros e Constantes Refatorada ---
-// Vamos importar estes ficheiros que iremos criar a seguir
 const initSocketHandler = require('./socketHandler');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 const { ADMIN_ROOM } = require('./utils/constants');
-// ----------------------------------------------------
 
 // --- Configuração Inicial ---
 const app = express();
 const server = http.createServer(app);
 
-// --- Configuração de CORS (O seu código original, está bom) ---
+// --- Configuração de CORS (Sem alterações) ---
 const allowedOrigins = [
     process.env.FRONTEND_URL,
     process.env.FRONTEND_URL_DEV,
@@ -37,29 +33,32 @@ const corsOptions = {
             callback(new Error('Não permitido pela política de CORS'));
         }
     },
-    methods: ["GET", "POST", "PUT", "DELETE"] // (MELHORIA) Adicionado DELETE
+    methods: ["GET", "POST", "PUT", "DELETE"]
 };
 const io = new Server(server, {
     cors: corsOptions
 });
-app.set('socketio', io); // Disponibiliza o 'io' para os controllers
+app.set('socketio', io);
 
 // --- Declarações ---
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
-const JWT_SECRET = process.env.JWT_SECRET; // Será passado para o socket handler
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // --- Middlewares ---
-app.use(helmet()); // (MELHORIA) Adiciona 11 headers de segurança
-app.use(cors(corsOptions)); // (O seu código)
-app.use(express.json()); // (O seu código)
-app.use(express.urlencoded({ extended: true })); // (O seu código)
+app.use(helmet());
+app.use(cors(corsOptions)); // (MELHORIA) Aplica CORS a todas as rotas (incluindo API)
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// (MELHORIA) Servir a pasta 'uploads' de forma estática e segura
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// --- (A CORREÇÃO ESTÁ AQUI) ---
+// Aplicamos o middleware CORS (corsOptions) explicitamente
+// à rota /uploads, ANTES de servir os ficheiros estáticos.
+app.use('/uploads', cors(corsOptions), express.static(path.join(__dirname, 'uploads')));
+// --- FIM DA CORREÇÃO ---
 
-// --- Conexão ao MongoDB ---
-// (MELHORIA) Adicionada verificação de segurança para JWT_SECRET
+
+// --- Conexão ao MongoDB (Sem alterações) ---
 if (!MONGO_URI) {
     console.error("ERRO FATAL: MONGO_URI não foi definido. Verifique o seu ficheiro .env.");
     process.exit(1);
@@ -72,7 +71,7 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log("Conectado ao MongoDB com sucesso!"))
     .catch(err => console.error("Erro ao conectar ao MongoDB:", err));
 
-// --- Rotas da API ---
+// --- Rotas da API (Sem alterações) ---
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/drivers', require('./routes/driverRoutes'));
@@ -80,19 +79,13 @@ app.use('/api/stats', require('./routes/statsRoutes'));
 app.use('/api/clients', require('./routes/clientRoutes'));
 
 app.get('/', (req, res) => {
-    res.send('<h1>Servidor Backend da Entregaah Mz está no ar! (v2 - Segurança Ativa)</h1>');
+    res.send('<h1>Servidor Backend da Entregaah Mz está no ar! (v2.1 - CORS Fix)</h1>');
 });
 
-// --- (MELHORIA) LÓGICA DO SOCKET.IO REFATORADA ---
-// A lógica de 100+ linhas foi movida para 'socketHandler.js'
-// Passamos o JWT_SECRET e ADMIN_ROOM para ele
+// --- Lógica de Socket e Erros (Sem alterações) ---
 initSocketHandler(io, JWT_SECRET, ADMIN_ROOM);
-// ------------------------------------------------
-
-// --- (MELHORIA) Middlewares de Erro ---
-// Devem ser os ÚLTIMOS 'app.use()' a ser declarados
-app.use(notFound); // Trata rotas 404 (que não existem)
-app.use(errorHandler); // Trata todos os outros erros (500)
+app.use(notFound);
+app.use(errorHandler);
 
 // --- Iniciar o Servidor ---
 server.listen(PORT, () => {
