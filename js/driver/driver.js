@@ -1,38 +1,25 @@
 /*
  * Ficheiro: js/driver/driver.js
- *
- * (Dependência #5 do Motorista) - O CÉREBRO PRINCIPAL
- *
- * Este é o ficheiro principal que orquestra todo o painel do motorista.
+ * (MELHORIA: Notificações em Tempo Real)
  */
 
 /* --- PONTO DE ENTRADA (Entry Point) --- */
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // 1. Verificar se o motorista está logado
-    checkAuth('driver'); // De auth.js
-    
-    // 2. Conectar ao Socket.IO
-    connectDriverSocket(); // De driverTracking.js
-    
-    // 3. Carregar as entregas pendentes
+    checkAuth('driver');
+    connectDriverSocket();
     loadMyDeliveries();
-    
-    // 4. Iniciar o rastreamento GPS
-    startLocationTracking(); // De driverTracking.js
-    
-    // 5. (MUDANÇA) Anexar todos os listeners da página
+    startLocationTracking();
     attachDriverEventListeners();
 });
 
 /**
- * (NOVA FUNÇÃO) Anexa todos os event listeners do painel do motorista.
+ * Anexa todos os event listeners do painel do motorista.
  */
 function attachDriverEventListeners() {
     // Botão de Logout
     document.getElementById('driver-logout').addEventListener('click', (e) => {
         e.preventDefault();
-        handleLogout('driver'); // De auth.js
+        handleLogout('driver');
     });
     
     // Botão "Voltar à Lista"
@@ -41,14 +28,25 @@ function attachDriverEventListeners() {
     // Botões do Modal de Alerta
     document.getElementById('btn-close-alert').addEventListener('click', closeCustomAlert);
     document.getElementById('btn-ok-alert').addEventListener('click', closeCustomAlert);
+    
+    // --- (A CORREÇÃO ESTÁ AQUI) ---
+    // Ouve o evento "nova_entrega" disparado pelo 'driverTracking.js'
+    // e recarrega a lista de entregas.
+    document.addEventListener('nova_entrega', () => {
+        console.log('Evento "nova_entrega" recebido. A recarregar a lista...');
+        
+        // Se o motorista estiver a ver os detalhes de outra entrega,
+        // não o force a voltar para a lista. Apenas recarregue em segundo plano.
+        const listaSection = document.getElementById('lista-entregas');
+        if (!listaSection.classList.contains('hidden')) {
+            loadMyDeliveries();
+        }
+    });
+    // --- FIM DA CORREÇÃO ---
 }
 
 
 /* --- Lógica de API (Carregamento de Dados - GET) --- */
-
-/**
- * Carrega e exibe a lista de entregas pendentes do motorista.
- */
 async function loadMyDeliveries() {
     const listaEntregas = document.getElementById('lista-entregas');
     if (!listaEntregas) return;
@@ -58,7 +56,7 @@ async function loadMyDeliveries() {
     try {
         const response = await fetch(`${API_URL}/api/orders/my-deliveries`, {
             method: 'GET',
-            headers: getAuthHeaders() // De auth.js
+            headers: getAuthHeaders()
         });
         
         const data = await response.json();
@@ -82,7 +80,8 @@ async function loadMyDeliveries() {
                     <span><i class="fas fa-map-marker-alt"></i> ${order.address_text ? order.address_text.split(',')[0] || 'Destino' : 'Destino'}</span>
                 </div>
                 <p><strong>Cliente:</strong> ${order.client_name}</p>
-                <p><strong>Serviço:</strong> ${SERVICE_NAMES[order.service_type] || order.service_type}</p> <span class="ver-detalhes-btn">${order.status === 'atribuido' ? 'Ver Detalhes' : 'Continuar Entrega'}</span>
+                <p><strong>Serviço:</strong> ${SERVICE_NAMES[order.service_type] || order.service_type}</p>
+                <span class="ver-detalhes-btn">${order.status === 'atribuido' ? 'Ver Detalhes' : 'Continuar Entrega'}</span>
             `;
             
             card.addEventListener('click', () => { 
@@ -100,11 +99,6 @@ async function loadMyDeliveries() {
 
 
 /* --- Lógica de UI (Mostrar/Esconder Secções) --- */
-
-/**
- * Mostra a secção de detalhes da entrega e preenche-a com dados.
- * @param {object} order - O objeto da encomenda (vindo da cache do card).
- */
 function showDetalheEntrega(order) {
     document.getElementById('lista-entregas').classList.add('hidden');
     
@@ -114,7 +108,7 @@ function showDetalheEntrega(order) {
     const img = detalheSection.querySelector('#encomenda-imagem');
     const noImg = detalheSection.querySelector('#no-image-placeholder');
     if (order.image_url) {
-        img.src = `${API_URL}${order.image_url}`; // De api.js
+        img.src = `${API_URL}${order.image_url}`;
         img.classList.remove('hidden');
         noImg.classList.add('hidden');
     } else {
@@ -132,8 +126,7 @@ function showDetalheEntrega(order) {
     if (order.address_coords && order.address_coords.lat) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
-        
-        mapButton.href = `https://www.google.com/maps/search/?api=1&query=${order.address_coords.lat},${order.address_coords.lng}`;
+        mapButton.href = `http://googleusercontent.com/maps/google.com/0{order.address_coords.lat},${order.address_coords.lng}`;
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
@@ -150,46 +143,35 @@ function showDetalheEntrega(order) {
         btnIniciar.classList.add('hidden');
         formFinalizacao.classList.remove('hidden');
         formFinalizacao.reset(); 
-        
         formFinalizacao.onsubmit = (event) => handleCompleteDelivery(event, order._id);
-        
-    } else { // Status é 'atribuido'
+    } else {
         btnIniciar.classList.remove('hidden');
         formFinalizacao.classList.add('hidden');
-        
         btnIniciar.onclick = () => handleStartDelivery(order._id);
     }
     
     detalheSection.classList.remove('hidden');
 }
 
-/**
- * Mostra a secção da lista de entregas e esconde os detalhes.
- */
 function showListaEntregas() {
     document.getElementById('lista-entregas').classList.remove('hidden');
     document.getElementById('detalhe-entrega').classList.add('hidden');
-    loadMyDeliveries(); // Recarrega a lista
+    loadMyDeliveries();
 }
 
 
 /* --- Lógica de API (Envio de Dados - POST) --- */
-
-/**
- * Envia o pedido para "Iniciar Entrega" (POST /:id/start).
- * @param {string} orderId - O ID da encomenda a iniciar.
- */
 async function handleStartDelivery(orderId) {
     try {
         const response = await fetch(`${API_URL}/api/orders/${orderId}/start`, {
             method: 'POST',
-            headers: getAuthHeaders() // De auth.js
+            headers: getAuthHeaders()
         });
         
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
-        showCustomAlert('Sucesso', 'Entrega Iniciada!', 'success'); // De ui.js
+        showCustomAlert('Sucesso', 'Entrega Iniciada!', 'success');
         
         document.getElementById('btn-iniciar-entrega').classList.add('hidden');
         const formFinalizacao = document.getElementById('form-finalizacao');
@@ -199,15 +181,10 @@ async function handleStartDelivery(orderId) {
 
     } catch (error) {
         console.error('Falha ao iniciar entrega:', error);
-        showCustomAlert('Erro', error.message, 'error'); // De ui.js
+        showCustomAlert('Erro', error.message, 'error');
     }
 }
 
-/**
- * Envia o pedido para "Finalizar Entrega" com o código (POST /:id/complete).
- * @param {Event} event - O evento de 'submit' do formulário.
- * @param {string} orderId - O ID da encomenda a finalizar.
- */
 async function handleCompleteDelivery(event, orderId) {
     event.preventDefault();
     const form = event.target;
@@ -229,7 +206,7 @@ async function handleCompleteDelivery(event, orderId) {
         if (!response.ok) throw new Error(data.message);
         
         showCustomAlert('Sucesso', 'Entrega Finalizada com sucesso!', 'success');
-        showListaEntregas(); // Volta para a lista de entregas
+        showListaEntregas();
         
     } catch (error) {
         console.error('Falha ao finalizar entrega:', error);

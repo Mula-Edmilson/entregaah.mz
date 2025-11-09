@@ -1,4 +1,4 @@
-// Ficheiro: backend/controllers/orderController.js (MELHORADO com Otimização de Imagem)
+// Ficheiro: backend/controllers/orderController.js (MELHORIA: Notificações em Tempo Real)
 
 const Order = require('../models/Order');
 const DriverProfile = require('../models/DriverProfile');
@@ -6,14 +6,11 @@ const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const { DRIVER_STATUS, ORDER_STATUS, ADMIN_ROOM } = require('../utils/constants');
 const mongoose = require('mongoose');
-
-// --- (MELHORIA) Importar 'sharp' e 'fs' (File System) ---
 const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
-// -----------------------------------------------------
 
-// Função auxiliar (gerar código)
+// ... (A função generateVerificationCode permanece a mesma) ...
 function generateVerificationCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = '';
@@ -23,70 +20,44 @@ function generateVerificationCode() {
     return result;
 }
 
-/**
- * Cria uma nova encomenda (Pedido)
- */
+// ... (A função createOrder permanece a mesma) ...
 exports.createOrder = asyncHandler(async (req, res) => {
-    // 1. Validação de dados (que já tínhamos)
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         res.status(400);
         throw new Error(errors.array()[0].msg);
     }
-
     const { service_type, client_name, client_phone1, client_phone2, address_text, price, lat, lng, clientId } = req.body;
-
     let imageUrl = null;
-
-    // --- (MELHORIA) Bloco de Otimização de Imagem ---
     if (req.files && req.files.length > 0) {
         const file = req.files[0];
-        
-        // Define um novo nome de ficheiro (ex: 123456.jpeg)
         const newFilename = `${Date.now()}.jpeg`;
         const outputPath = path.join('uploads', newFilename);
-
         try {
-            // Usa o 'sharp' para processar a imagem
-            await sharp(file.path) // Abre o ficheiro temporário que o multer guardou
-                .resize(1200, 1200, { fit: 'inside' }) // Redimensiona (máx 1200x1200)
-                .jpeg({ quality: 80 }) // Comprime para JPEG com 80% de qualidade
-                .toFile(outputPath); // Salva no destino final
-            
-            // Apaga o ficheiro original (grande) que o multer guardou
+            await sharp(file.path)
+                .resize(1200, 1200, { fit: 'inside' })
+                .jpeg({ quality: 80 })
+                .toFile(outputPath);
             fs.unlinkSync(file.path);
-            
-            // Guarda o *novo* caminho no banco de dados
             imageUrl = `/uploads/${newFilename}`;
-
         } catch (err) {
             console.error('Erro ao otimizar imagem:', err);
-            // Se falhar a otimização, apaga o ficheiro temporário e continua sem imagem
             fs.unlinkSync(file.path);
-            // Não lança um erro, a encomenda pode ser criada sem imagem
         }
     }
-    // --- Fim do Bloco de Otimização ---
-
-    // 2. Lógica de criação da encomenda (que já tínhamos)
     const verification_code = generateVerificationCode();
     const availableDriver = await DriverProfile.findOne({ status: DRIVER_STATUS.ONLINE_FREE });
-    
     let driverId = null;
     let orderStatus = ORDER_STATUS.PENDING;
-
     if (availableDriver) {
         driverId = availableDriver._id;
         orderStatus = ORDER_STATUS.ASSIGNED;
     }
-
     let coordinates = null;
     if (lat && lng) {
         coordinates = { lat: parseFloat(lat), lng: parseFloat(lng) };
     }
-    
     const numericPrice = parseFloat(price);
-
     const newOrder = new Order({
         service_type, 
         price: isNaN(numericPrice) ? 0 : numericPrice,
@@ -96,55 +67,42 @@ exports.createOrder = asyncHandler(async (req, res) => {
         address_text, 
         address_coords: coordinates,
         client: clientId || null,
-        image_url: imageUrl, // <-- Vai usar o 'imageUrl' otimizado
+        image_url: imageUrl,
         verification_code: verification_code,
         created_by_admin: req.user._id, 
         assigned_to_driver: driverId,
         status: orderStatus
     });
     await newOrder.save();
-    
     res.status(201).json({ message: 'Encomenda criada com sucesso!', order: newOrder });
 });
 
-
-/* --- RESTANTE DAS FUNÇÕES ---
-   (As outras funções como getMyDeliveries, startDelivery, completeDelivery, etc.
-   permanecem exatamente iguais ao ficheiro anterior. Não precisam de ser alteradas.)
-*/
-
-// @desc    Obtém as encomendas atribuídas a um motorista
+// ... (getMyDeliveries, startDelivery, completeDelivery, getAllOrders, getActiveOrders permanecem as mesmas) ...
 exports.getMyDeliveries = asyncHandler(async (req, res) => {
     const driverProfile = await DriverProfile.findOne({ user: req.user._id });
     if (!driverProfile) {
         res.status(404);
         throw new Error('Perfil de motorista não encontrado');
     }
-    
     const orders = await Order.find({
         assigned_to_driver: driverProfile._id,
         status: { $in: [ORDER_STATUS.ASSIGNED, ORDER_STATUS.IN_PROGRESS] }
     }).sort({ timestamp_created: -1 });
-    
     res.status(200).json({ orders });
 });
 
-// @desc    Motorista clica em "Iniciar Entrega"
 exports.startDelivery = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         res.status(400);
         throw new Error(errors.array()[0].msg);
     }
-
     const orderId = req.params.id;
     const driverProfile = await DriverProfile.findOne({ user: req.user._id });
-    
     if (!driverProfile) {
         res.status(404);
         throw new Error('Perfil de motorista não encontrado');
     }
-
     const order = await Order.findById(orderId);
     if (!order) {
         res.status(404);
@@ -154,41 +112,33 @@ exports.startDelivery = asyncHandler(async (req, res) => {
         res.status(403);
         throw new Error('Não autorizado para esta encomenda');
     }
-    
     order.status = ORDER_STATUS.IN_PROGRESS;
     order.timestamp_started = Date.now();
     await order.save();
-    
     driverProfile.status = DRIVER_STATUS.ONLINE_BUSY;
     await driverProfile.save();
-    
     const io = req.app.get('socketio'); 
     io.to(ADMIN_ROOM).emit('delivery_started', { id: order._id, driverName: req.user.nome });
     io.to(ADMIN_ROOM).emit('driver_status_changed', { 
         driverId: driverProfile._id, 
         newStatus: driverProfile.status 
     });
-    
     res.status(200).json({ message: 'Entrega iniciada', order: order });
 });
 
-// @desc    Motorista finaliza a entrega com o código
 exports.completeDelivery = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         res.status(400);
         throw new Error(errors.array()[0].msg);
     }
-
     const orderId = req.params.id;
     const { verification_code } = req.body;
-    
     const driverProfile = await DriverProfile.findOne({ user: req.user._id });
     if (!driverProfile) {
         res.status(404);
         throw new Error('Perfil de motorista não encontrado');
     }
-
     const order = await Order.findById(orderId);
     if (!order) {
         res.status(404);
@@ -202,25 +152,20 @@ exports.completeDelivery = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error('Código de verificação incorreto');
     }
-    
     order.status = ORDER_STATUS.COMPLETED;
     order.timestamp_completed = Date.now();
     await order.save();
-    
     driverProfile.status = DRIVER_STATUS.ONLINE_FREE;
     await driverProfile.save();
-    
     const io = req.app.get('socketio');
     io.to(ADMIN_ROOM).emit('delivery_completed', { id: order._id });
     io.to(ADMIN_ROOM).emit('driver_status_changed', { 
         driverId: driverProfile._id, 
         newStatus: driverProfile.status 
     });
-    
     res.status(200).json({ message: 'Entrega finalizada com sucesso!' });
 });
 
-// @desc    Obtém todas as encomendas (para o Admin - depreciado)
 exports.getAllOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find()
         .populate('assigned_to_driver') 
@@ -229,7 +174,6 @@ exports.getAllOrders = asyncHandler(async (req, res) => {
     res.status(200).json({ orders });
 });
 
-// @desc    Obtém todas as encomendas ativas
 exports.getActiveOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find({
         status: { $in: [ORDER_STATUS.PENDING, ORDER_STATUS.ASSIGNED, ORDER_STATUS.IN_PROGRESS] }
@@ -240,11 +184,13 @@ exports.getActiveOrders = asyncHandler(async (req, res) => {
         populate: { path: 'user', select: 'nome' } 
     })
     .sort({ timestamp_created: -1 });
-    
     res.status(200).json({ orders });
 });
 
-// @desc    Atribui uma encomenda a um motorista
+
+/**
+ * Atribui uma encomenda a um motorista
+ */
 exports.assignOrder = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -261,20 +207,36 @@ exports.assignOrder = asyncHandler(async (req, res) => {
         throw new Error('Encomenda não encontrada');
     }
     
+    // (MELHORIA) Precisamos do 'user' ID do motorista, não apenas o 'profile' ID.
+    // O 'driverId' que recebemos é o ID do Perfil.
     const driverProfile = await DriverProfile.findById(driverId);
     if (!driverProfile) {
         res.status(404);
-        throw new Error('Motorista não encontrado');
+        throw new Error('Perfil de motorista não encontrado');
     }
     
     order.assigned_to_driver = driverId;
     order.status = ORDER_STATUS.ASSIGNED;
     await order.save();
     
+    // --- (A CORREÇÃO ESTÁ AQUI) ---
+    const io = req.app.get('socketio');
+    
+    // O 'driverProfile.user' é o 'userId' que usámos para a sala privada.
+    const assignedUserId = driverProfile.user.toString(); 
+
+    // Emite o evento APENAS para a sala privada daquele motorista.
+    io.to(assignedUserId).emit('nova_entrega_atribuida', {
+        orderId: order._id,
+        clientName: order.client_name,
+        serviceType: order.service_type
+    });
+    // --- FIM DA CORREÇÃO ---
+    
     res.status(200).json({ message: 'Encomenda atribuída com sucesso', order });
 });
 
-// @desc    Obtém o histórico de encomendas
+// ... (getHistoryOrders e getOrderById permanecem as mesmas) ...
 exports.getHistoryOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find({
         status: { $in: [ORDER_STATUS.COMPLETED, ORDER_STATUS.CANCELED] }
@@ -284,29 +246,24 @@ exports.getHistoryOrders = asyncHandler(async (req, res) => {
         populate: { path: 'user', select: 'nome' }
     })
     .sort({ timestamp_completed: -1 });
-    
     res.status(200).json({ orders });
 });
 
-// @desc    Obtém os detalhes de UMA encomenda específica
 exports.getOrderById = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         res.status(400);
         throw new Error(errors.array()[0].msg);
     }
-
     const order = await Order.findById(req.params.id)
         .populate('created_by_admin', 'nome')
         .populate({
             path: 'assigned_to_driver',
             populate: { path: 'user', select: 'nome telefone' }
         });
-
     if (!order) {
         res.status(404);
         throw new Error('Encomenda não encontrada');
     }
-    
     res.status(200).json({ order });
 });
