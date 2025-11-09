@@ -46,6 +46,7 @@ exports.createOrder = asyncHandler(async (req, res) => {
         const newFilename = `${Date.now()}.jpeg`;
         const outputPath = path.join('uploads', newFilename);
 
+<<<<<<< HEAD
         try {
             // Usa o 'sharp' para processar a imagem
             await sharp(file.path) // Abre o ficheiro temporário que o multer guardou
@@ -65,6 +66,44 @@ exports.createOrder = asyncHandler(async (req, res) => {
             fs.unlinkSync(file.path);
             // Não lança um erro, a encomenda pode ser criada sem imagem
         }
+=======
+        if (availableDriver) {
+            driverId = availableDriver._id;
+            orderStatus = 'atribuido'; 
+        }
+
+        let coordinates = null;
+        if (lat && lng) {
+            coordinates = {
+                lat: parseFloat(lat),
+                lng: parseFloat(lng) 
+            };
+        }
+        
+        const numericPrice = parseFloat(price);
+
+        const newOrder = new Order({
+            service_type, 
+            price: isNaN(numericPrice) ? 0 : numericPrice,
+            client_name, 
+            client_phone1, 
+            client_phone2,
+            address_text, 
+            address_coords: coordinates,
+            client: clientId || null,
+            image_url: imageUrl, 
+            verification_code: verification_code,
+            created_by_admin: req.user._id, 
+            assigned_to_driver: driverId,
+            status: orderStatus
+        });
+        await newOrder.save();
+        
+        res.status(201).json({ message: 'Encomenda criada com sucesso!', order: newOrder });
+    } catch (error) {
+        console.error('Erro ao criar encomenda:', error); 
+        res.status(500).json({ message: 'Erro do servidor' });
+>>>>>>> e025ded95063eda761bd926c9780992e9734e575
     }
     // --- Fim do Bloco de Otimização ---
 
@@ -80,13 +119,56 @@ exports.createOrder = asyncHandler(async (req, res) => {
         orderStatus = ORDER_STATUS.ASSIGNED;
     }
 
+<<<<<<< HEAD
     let coordinates = null;
     if (lat && lng) {
         coordinates = { lat: parseFloat(lat), lng: parseFloat(lng) };
+=======
+/**
+ * Motorista clica em "Iniciar Entrega"
+ */
+exports.startDelivery = async (req, res) => {
+    try {
+        const orderId = req.params.id;
+        const driverProfile = await DriverProfile.findOne({ user: req.user._id });
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ message: 'Encomenda não encontrada' });
+        }
+        if (order.assigned_to_driver.toString() !== driverProfile._id.toString()) {
+            return res.status(403).json({ message: 'Não autorizado para esta encomenda' });
+        }
+        order.status = 'em_progresso';
+        order.timestamp_started = Date.now();
+        await order.save();
+        driverProfile.status = 'online_ocupado';
+        await driverProfile.save();
+        
+        const io = req.app.get('socketio'); 
+        
+        // --- (CORREÇÃO ADICIONADA AQUI) ---
+        // 1. Avisa o admin que a entrega começou (para atualizar a tabela de Entregas Ativas)
+        io.to('admin_room').emit('delivery_started', { id: order._id, driverName: req.user.nome });
+        
+        // 2. Avisa o admin que o status do motorista mudou
+        io.to('admin_room').emit('driver_status_changed', { 
+            driverId: driverProfile._id, 
+            newStatus: driverProfile.status 
+        });
+        
+        // 3. Envia a resposta de sucesso DE VOLTA ao motorista (para o pop-up funcionar)
+        res.status(200).json({ message: 'Entrega iniciada', order: order });
+        // --- FIM DA CORREÇÃO ---
+        
+    } catch (error) {
+        console.error('Erro ao iniciar entrega:', error);
+        res.status(500).json({ message: 'Erro do servidor' });
+>>>>>>> e025ded95063eda761bd926c9780992e9734e575
     }
     
     const numericPrice = parseFloat(price);
 
+<<<<<<< HEAD
     const newOrder = new Order({
         service_type, 
         price: isNaN(numericPrice) ? 0 : numericPrice,
@@ -119,6 +201,49 @@ exports.getMyDeliveries = asyncHandler(async (req, res) => {
     if (!driverProfile) {
         res.status(404);
         throw new Error('Perfil de motorista não encontrado');
+=======
+/**
+ * Motorista finaliza a entrega com o código
+ */
+exports.completeDelivery = async (req, res) => {
+    try {
+        const orderId = req.params.id;
+        const { verification_code } = req.body;
+        const driverProfile = await DriverProfile.findOne({ user: req.user._id });
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ message: 'Encomenda não encontrada' });
+        }
+        if (order.assigned_to_driver.toString() !== driverProfile._id.toString()) {
+            return res.status(403).json({ message: 'Não autorizado para esta encomenda' });
+        }
+        if (order.verification_code !== verification_code.toUpperCase()) {
+            return res.status(400).json({ message: 'Código de verificação incorreto' });
+        }
+        order.status = 'concluido';
+        order.timestamp_completed = Date.now();
+        await order.save();
+        driverProfile.status = 'online_livre';
+        await driverProfile.save();
+        
+        const io = req.app.get('socketio');
+
+        // --- (CORREÇÃO ADICIONADA AQUI) ---
+        // 1. Avisa o admin que a entrega foi concluída
+        io.to('admin_room').emit('delivery_completed', { id: order._id });
+
+        // 2. Avisa o admin que o status do motorista mudou
+        io.to('admin_room').emit('driver_status_changed', { 
+            driverId: driverProfile._id, 
+            newStatus: driverProfile.status 
+        });
+        // --- FIM DA CORREÇÃO ---
+        
+        res.status(200).json({ message: 'Entrega finalizada com sucesso!' });
+    } catch (error) {
+        console.error('Erro ao completar entrega:', error);
+        res.status(500).json({ message: 'Erro do servidor' });
+>>>>>>> e025ded95063eda761bd926c9780992e9734e575
     }
     
     const orders = await Order.find({

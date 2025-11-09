@@ -67,12 +67,26 @@
                     <div class="card"><h3>Motoristas Online</h3><p id="stats-motoristas-online">...</p></div>
                 </div>
 
+
                 <div class="chart-container" id="main-chart-container">
                     <div class="chart-header">
                         <h3>Desempenho dos Serviços</h3>
                         <button class="btn-action-small btn-danger" id="btn-reset-chart"><i class="fas fa-sync"></i> Reset</button>
                     </div>
                     <canvas id="servicesChart"></canvas>
+                <div class="charts-grid">
+                    <div class="chart-container" id="main-chart-container">
+                        <div class="chart-header">
+                            <h3>Desempenho dos Serviços</h3>
+                            <button class="btn-action-small btn-danger" id="btn-reset-chart"><i class="fas fa-sync"></i> Reset</button>
+                        </div>
+                        <canvas id="servicesChart"></canvas>
+                    </div>
+                    
+                    <div class="chart-container" id="deliveries-chart-container">
+                        <h3>Entregas Ativas</h3>
+                        <canvas id="deliveriesStatusChart"></canvas>
+                    </div>
                 </div>
             
             </div>
@@ -144,10 +158,12 @@
                     <button type="button" class="btn-cancel" onclick="showAddDriverForm(false)">Cancelar</button>
                 </form>
                 <h3>Motoristas Registados</h3>
-                <table class="table-motoristas">
-                    <thead><tr><th>Nome</th><th>Telefone</th><th>Viatura</th><th>Estado</th><th>Acções</th></tr></thead>
-                    <tbody id="drivers-table-body"></tbody>
-                </table>
+                <div class="table-container-responsive">
+                    <table class="table-motoristas">
+                        <thead><tr><th>Nome</th><th>Telefone</th><th>Viatura</th><th>Estado</th><th>Acções</th></tr></thead>
+                        <tbody id="drivers-table-body"></tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="gestao-clientes" class="content-page hidden">
@@ -174,23 +190,26 @@
                 </form>
 
                 <h3>Clientes Registados</h3>
-                <table class="table-motoristas">
-                    <thead>
-                        <tr>
-                            <th>Nome</th>
-                            <th>Telefone</th>
-                            <th>Empresa</th>
-                            <th>Acções</th>
-                        </tr>
-                    </thead>
-                    <tbody id="clients-table-body">
-                    </tbody>
-                </table>
+                <div class="table-container-responsive">
+                    <table class="table-motoristas">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Telefone</th>
+                                <th>Empresa</th>
+                                <th>Acções</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clients-table-body">
+                        </tbody>
+                    </table>
+                </div>
             </div> 
 
 
             <div id="entregas-activas" class="content-page hidden">
                 <h3>Gestão de Encomendas Activas</h3>
+
                 <table class="table-pedidos">
                     <thead>
                         <tr>
@@ -204,6 +223,21 @@
                     </thead>
                     <tbody id="active-orders-table-body"></tbody>
                 </table>
+                <div class="table-container-responsive">
+                    <table class="table-pedidos">
+                        <thead>
+                            <tr>
+                                <th>ID Pedido</th>
+                                <th>Cliente</th>
+                                <th>Telefone</th>
+                                <th>Estado</th>
+                                <th>Motorista</th>
+                                <th>Código</th> <th>Acção</th>
+                            </tr>
+                        </thead>
+                        <tbody id="active-orders-table-body"></tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="historico" class="content-page hidden">
@@ -213,7 +247,6 @@
                     <input type="text" id="history-search-input" placeholder="Pesquisar no histórico (ID, Cliente, Motorista...)">
                     <i class="fas fa-search"></i>
                 </div>
-                
                 <table class="table-pedidos">
                     <thead>
                         <tr>
@@ -227,6 +260,21 @@
                     </thead>
                     <tbody id="history-orders-table-body"></tbody>
                 </table>
+                <div class="table-container-responsive">
+                    <table class="table-pedidos">
+                        <thead>
+                            <tr>
+                                <th>ID Pedido</th>
+                                <th>Cliente</th>
+                                <th>Natureza do Pedido</th>
+                                <th>Motorista</th>
+                                <th>Duração</th>
+                                <th>Código</th> <th>Acções</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-orders-table-body"></tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="mapa-tempo-real" class="content-page hidden">
@@ -451,6 +499,6 @@
             </div>
     </main>
 
-    <script src="javascript.js"></script>
+    <script src="js/common/api.js"></script>
 </body>
 </html>
