@@ -1,4 +1,4 @@
-// Ficheiro: backend/server.js (Corrigido para CORS Preflight e Helmet)
+// Ficheiro: backend/server.js (Correção Definitiva de CORS e Helmet)
 
 require('dotenv').config();
 
@@ -18,7 +18,7 @@ const { ADMIN_ROOM } = require('./utils/constants');
 const app = express();
 const server = http.createServer(app);
 
-// --- Configuração de CORS (COM A CORREÇÃO 1) ---
+// --- Configuração de CORS (Permite OPTIONS) ---
 const allowedOrigins = [
     process.env.FRONTEND_URL,
     process.env.FRONTEND_URL_DEV,
@@ -33,10 +33,7 @@ const corsOptions = {
             callback(new Error('Não permitido pela política de CORS'));
         }
     },
-    // --- (CORREÇÃO 1: Adicionado "OPTIONS") ---
-    // Isto permite os "preflight requests"
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    // --- FIM DA CORREÇÃO 1 ---
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"] // Deve incluir OPTIONS
 };
 const io = new Server(server, {
     cors: corsOptions
@@ -50,17 +47,26 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 // --- Middlewares ---
 
-// (CORREÇÃO 2: Aplicamos o CORS globalmente ANTES do Helmet)
+// --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
+
+// 1. Aplicamos o CORS (com as nossas opções) GLOBALMENTE.
+//    Isto deve ser o primeiro middleware de segurança.
 app.use(cors(corsOptions));
 
-// (CORREÇÃO 3: Configuramos o Helmet para permitir recursos cross-origin)
-app.use(helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
-// --- FIM DAS CORREÇÕES 2 E 3 ---
+// 2. Aplicamos o Helmet (com as definições padrão)
+app.use(helmet());
 
+// 3. (IMPORTANTE) Dizemos ao Helmet para permitir que
+//    imagens e outros recursos sejam carregados por outros domínios
+//    (ex: github.io a carregar imagens do onrender.com)
+app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
+
+// --- FIM DA CORREÇÃO ---
+
+// 4. Aplicamos os parsers de body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 
 // Servir a pasta 'uploads' de forma estática
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -86,7 +92,7 @@ app.use('/api/stats', require('./routes/statsRoutes'));
 app.use('/api/clients', require('./routes/clientRoutes'));
 
 app.get('/', (req, res) => {
-    res.send('<h1>Servidor Backend da Entregaah Mz está no ar! (v2.3 - CORS Preflight Fix)</h1>');
+    res.send('<h1>Servidor Backend da Entregaah Mz está no ar! (v2.4 - CORS/Helmet Fix)</h1>');
 });
 
 // --- Lógica de Socket e Erros (Sem alterações) ---
