@@ -48,11 +48,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminDashboard = document.body.classList.contains('dashboard-body');
     if (adminDashboard) {
         
-        // --- (CORREÇÃO) Links de ícones partidos (404) corrigidos ---
+        // --- (CORREÇÃO DEFINITIVA) Links de ícones partidos (404) corrigidos ---
         // Usamos os links de ícones padrão do Leaflet para garantir que nunca falham
         const iconShadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
         
-        // O seu 'freeIcon' (kXq0K1Gz) estava partido. Substituímos pelo ícone azul padrão.
+        // O 'freeIcon' (kXq0K1Gz) estava partido. Substituímos pelo ícone azul padrão.
         freeIcon = L.icon({
             iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
             shadowUrl: iconShadowUrl,
@@ -900,7 +900,7 @@ function showDetalheEntrega(order) {
         coordsP.classList.remove('hidden');
         
         // (LINK CORRIGIDO)
-        mapButton.href = `http://googleusercontent.com/maps/google.com/5{order.address_coords.lat},${order.address_coords.lng}`;
+        mapButton.href = `https://www.google.com/maps/search/?api=1&query=${order.address_coords.lat},${order.address_coords.lng}`;
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
