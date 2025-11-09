@@ -120,8 +120,10 @@ exports.startDelivery = async (req, res) => {
         driverProfile.status = 'online_ocupado';
         await driverProfile.save();
         const io = req.app.get('socketio'); 
-        io.to('admin_room').emit('delivery_started', { id: order._id, driverName: req.user.nome });
-        res.status(200).json({ message: 'Entrega iniciada', order: order });
+        io.to('admin_room').emit('driver_status_changed', { 
+            driverId: driverProfile._id, 
+            newStatus: driverProfile.status 
+        });
     } catch (error) {
         console.error('Erro ao iniciar entrega:', error);
         res.status(500).json({ message: 'Erro do servidor' });
@@ -152,7 +154,10 @@ exports.completeDelivery = async (req, res) => {
         driverProfile.status = 'online_livre';
         await driverProfile.save();
         const io = req.app.get('socketio');
-        io.to('admin_room').emit('delivery_completed', { id: order._id });
+        io.to('admin_room').emit('driver_status_changed', { 
+            driverId: driverProfile._id, 
+            newStatus: driverProfile.status 
+        });
         res.status(200).json({ message: 'Entrega finalizada com sucesso!' });
     } catch (error) {
         console.error('Erro ao completar entrega:', error);
