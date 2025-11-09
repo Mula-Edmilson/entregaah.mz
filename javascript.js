@@ -898,8 +898,8 @@ function showDetalheEntrega(order) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
         
-        // (LINK CORRIGIDO) - removi o "4" que estava a mais
-        mapButton.href = `http://googleusercontent.com/maps.google.com/5{order.address_coords.lat},${order.address_coords.lng}`;
+        // (LINK CORRIGIDO) - removi o "5" que estava a mais
+        mapButton.href = `http://googleusercontent.com/maps/google.com/5{order.address_coords.lat},${order.address_coords.lng}`;
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
