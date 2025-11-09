@@ -1,4 +1,4 @@
-// Ficheiro: backend/server.js (Corrigido para CORS)
+// Ficheiro: backend/server.js (Corrigido para CORS Preflight e Helmet)
 
 require('dotenv').config();
 
@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
-const helmet = require('helmet');
+const helmet = require('helmet'); // Importado
 
 const initSocketHandler = require('./socketHandler');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
@@ -18,7 +18,7 @@ const { ADMIN_ROOM } = require('./utils/constants');
 const app = express();
 const server = http.createServer(app);
 
-// --- Configuração de CORS (Sem alterações) ---
+// --- Configuração de CORS (COM A CORREÇÃO 1) ---
 const allowedOrigins = [
     process.env.FRONTEND_URL,
     process.env.FRONTEND_URL_DEV,
@@ -33,7 +33,10 @@ const corsOptions = {
             callback(new Error('Não permitido pela política de CORS'));
         }
     },
-    methods: ["GET", "POST", "PUT", "DELETE"]
+    // --- (CORREÇÃO 1: Adicionado "OPTIONS") ---
+    // Isto permite os "preflight requests"
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    // --- FIM DA CORREÇÃO 1 ---
 };
 const io = new Server(server, {
     cors: corsOptions
@@ -47,19 +50,17 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 // --- Middlewares ---
 
-// (A CORREÇÃO DEFINITIVA DO CORS ESTÁ AQUI)
-// 1. Aplicamos o CORS (com as nossas opções) GLOBALMENTE.
-//    Isto deve aplicar-se a TODAS as rotas, incluindo /uploads.
+// (CORREÇÃO 2: Aplicamos o CORS globalmente ANTES do Helmet)
 app.use(cors(corsOptions));
 
-// 2. Aplicamos o Helmet (segurança)
-app.use(helmet());
+// (CORREÇÃO 3: Configuramos o Helmet para permitir recursos cross-origin)
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+// --- FIM DAS CORREÇÕES 2 E 3 ---
 
-// 3. Aplicamos os parsers de body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// --- FIM DA CORREÇÃO ---
-
 
 // Servir a pasta 'uploads' de forma estática
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -85,7 +86,7 @@ app.use('/api/stats', require('./routes/statsRoutes'));
 app.use('/api/clients', require('./routes/clientRoutes'));
 
 app.get('/', (req, res) => {
-    res.send('<h1>Servidor Backend da Entregaah Mz está no ar! (v2.2 - CORS Global Fix)</h1>');
+    res.send('<h1>Servidor Backend da Entregaah Mz está no ar! (v2.3 - CORS Preflight Fix)</h1>');
 });
 
 // --- Lógica de Socket e Erros (Sem alterações) ---
