@@ -251,11 +251,6 @@ async function handleNewDelivery(e) {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
-
-    const clientId = document.getElementById('delivery-client-id').value;
-    if (clientId) {
-        formData.append('clientId', clientId);
-    }
     
     try {
         const response = await fetch(`${API_URL}/api/orders`, {
