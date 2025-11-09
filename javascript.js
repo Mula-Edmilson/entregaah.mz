@@ -4,7 +4,7 @@ const API_URL = 'https://entregaah-mz.onrender.com'; // O seu URL real do Render
 
 let socket = null;
 let myServicesChart = null;
-let myDeliveriesStatusChart = null;
+let myDeliveriesStatusChart = null; // (NOVO)
 let map = null; 
 let mapMarker = null; 
 
@@ -40,25 +40,32 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Lógica de LOGIN ---
     const loginForm = document.getElementById('login-form');
     if (loginForm) loginForm.addEventListener('submit', (e) => { e.preventDefault(); handleLogin('admin'); });
-
+    
     const driverLoginForm = document.getElementById('driver-login-form');
     if (driverLoginForm) driverLoginForm.addEventListener('submit', (e) => { e.preventDefault(); handleLogin('driver'); });
 
     // --- Lógica do PAINEL DO ADMIN ---
     const adminDashboard = document.body.classList.contains('dashboard-body');
     if (adminDashboard) {
-
-        const iconShadowUrl = 'https://i.postimg.cc/VNb0bBsw/marker-shadow.png';
+        
+        // --- (CORREÇÃO) Links de ícones partidos (404) corrigidos ---
+        // Usamos os links de ícones padrão do Leaflet para garantir que nunca falham
+        const iconShadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
+        
+        // O seu 'freeIcon' (kXq0K1Gz) estava partido. Substituímos pelo ícone azul padrão.
         freeIcon = L.icon({
-            iconUrl: 'https://i.postimg.cc/kXq0K1Gz/marker-free.png',
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
             shadowUrl: iconShadowUrl,
             iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
         });
+        
+        // O seu 'busyIcon' (vermelho) está a funcionar, mas atualizamos a sombra
         busyIcon = L.icon({
             iconUrl: 'https://i.postimg.cc/J0bJ0fJj/marker-busy.png',
-            shadowUrl: iconShadowUrl,
+            shadowUrl: iconShadowUrl, // Usando a URL de sombra que sabemos que funciona
             iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
         });
+        // --- FIM DA CORREÇÃO ---
 
         // Funções que dependem de 'L' (Leaflet)
         function initializeLiveMap() {
@@ -68,33 +75,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 }).addTo(liveMap);
-
+                
                 console.log('Mapa em tempo real inicializado.');
-
+        
                 if (socket) {
                     socket.emit('admin_request_all_locations'); 
                     console.log('A pedir ao servidor as localizações ativas...');
                 }
-
+        
             } catch (error) {
                 console.error("Erro ao inicializar o mapa em tempo real:", error);
                 document.getElementById('live-map-container').innerHTML = '<p>Erro ao carregar o mapa.</p>';
             }
         }
-
+        
         function listenForDriverUpdates() {
             if (!socket) return;
-
+        
             console.log('Admin a ouvir atualizações de localização...');
-
+        
             socket.on('driver_location_broadcast', (data) => {
                 const { driverId, driverName, status, lat, lng } = data;
                 if (!liveMap) return;
-
+        
                 const newLatLng = [lat, lng];
                 const popupContent = `<strong>${driverName}</strong><br>Status: ${status.replace('_', ' ')}`;
                 const iconToUse = (status === 'online_ocupado') ? busyIcon : freeIcon;
-
+        
                 if (driverMarkers[driverId]) {
                     driverMarkers[driverId].setLatLng(newLatLng);
                     driverMarkers[driverId].setPopupContent(popupContent);
@@ -105,11 +112,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log(`Adicionando novo marcador para ${driverName}`);
                 }
             });
-
+        
             socket.on('driver_disconnected_broadcast', (data) => {
                 const { driverId, driverName } = data;
                 if (!liveMap) return;
-
+        
                 if (driverMarkers[driverId]) {
                     liveMap.removeLayer(driverMarkers[driverId]);
                     delete driverMarkers[driverId];
@@ -122,24 +129,24 @@ document.addEventListener('DOMContentLoaded', () => {
         checkAuth('admin');
         connectSocket(); 
         listenForDriverUpdates(); 
-
+        
         showPage('visao-geral', 'nav-visao-geral', 'Visão Geral');
-
+        
         document.getElementById('delivery-form').addEventListener('submit', handleNewDelivery);
         document.getElementById('form-add-motorista').addEventListener('submit', handleAddDriver);
         document.getElementById('form-edit-motorista').addEventListener('submit', handleUpdateDriver);
-
+        
         document.getElementById('form-add-cliente').addEventListener('submit', handleAddClient);
         document.getElementById('form-edit-cliente').addEventListener('submit', handleUpdateClient);
         document.getElementById('nav-clientes').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-clientes', 'nav-clientes', 'Gestão de Clientes'); });
-
+        
         document.getElementById('delivery-image').addEventListener('change', handleImageUpload);
 
         document.getElementById('nav-visao-geral').addEventListener('click', (e) => { e.preventDefault(); showPage('visao-geral', 'nav-visao-geral', 'Visão Geral'); });
         document.getElementById('nav-motoristas').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-motoristas', 'nav-motoristas', 'Gestão de Motoristas'); });
         document.getElementById('nav-entregas').addEventListener('click', (e) => { e.preventDefault(); showPage('entregas-activas', 'nav-entregas', 'Entregas Activas'); });
         document.getElementById('nav-historico').addEventListener('click', (e) => { e.preventDefault(); showPage('historico', 'nav-historico', 'Histórico'); });
-
+        
         document.getElementById('nav-mapa').addEventListener('click', (e) => { e.preventDefault(); showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real', initializeLiveMap); });
 
         document.getElementById('admin-logout').addEventListener('click', (e) => { e.preventDefault(); handleLogout('admin'); });
@@ -148,6 +155,39 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('history-search-input').addEventListener('input', filterHistoryTable);
 
         document.getElementById('delivery-client-select').addEventListener('change', handleClientSelect);
+        
+        // --- (CÓDIGO CORRIGIDO) LÓGICA DO MENU MOBILE ---
+        // Este código está agora no sítio certo, antes do '}' final do if(adminDashboard)
+        const menuToggle = document.getElementById('mobile-menu-toggle');
+        const mainContent = document.querySelector('.main-content');
+        
+        if (menuToggle) {
+            // 1. Abrir/Fechar com o botão
+            menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation(); // Impede o clique de fechar o menu
+                document.body.classList.toggle('mobile-menu-open');
+            });
+        }
+        
+        if (mainContent) {
+            // 2. Fechar o menu ao clicar fora (no conteúdo)
+            mainContent.addEventListener('click', () => {
+                if (document.body.classList.contains('mobile-menu-open')) {
+                    document.body.classList.remove('mobile-menu-open');
+                }
+            });
+        }
+
+        // 3. Fechar o menu ao clicar num item
+        document.querySelectorAll('.sidebar-menu .menu-item a').forEach(item => {
+            item.addEventListener('click', () => {
+                // Só fecha se estivermos em modo mobile
+                if (window.innerWidth < 992) {
+                    document.body.classList.remove('mobile-menu-open');
+                }
+            });
+        });
+        // --- FIM DA LÓGICA DO MENU MOBILE ---
     }
 
     // --- Lógica do PAINEL DO MOTORISTA ---
@@ -175,7 +215,7 @@ async function handleLogin(role) {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
-
+        
         if (role === 'admin') localStorage.setItem('adminToken', data.token);
         else localStorage.setItem('driverToken', data.token);
 
@@ -196,12 +236,12 @@ function handleLogout(role) {
 function showCustomAlert(title, message, type = 'info') {
     const modal = document.getElementById('custom-alert-modal');
     if (!modal) { alert(`${title}: ${message}`); return; }
-
+    
     const modalContent = modal.querySelector('.modal-content');
     modalContent.classList.remove('success', 'error');
     if (type === 'success') modalContent.classList.add('success');
     if (type === 'error') modalContent.classList.add('error');
-
+    
     document.getElementById('custom-alert-title').innerText = title;
     document.getElementById('custom-alert-message').innerText = message;
     modal.classList.remove('hidden');
@@ -216,9 +256,9 @@ function closeCustomAlert() {
 function connectSocket() {
     const token = getAuthToken();
     if (!token) return;
-
+    
     socket = io(API_URL, { auth: { token: token } });
-
+    
     socket.on('connect', () => {
         console.log('Conectado ao servidor Socket.io com ID:', socket.id);
         if (document.body.classList.contains('dashboard-body')) {
@@ -231,7 +271,7 @@ function connectSocket() {
             const page = document.querySelector('.content-page:not(.hidden)');
             return page ? page.id : null;
         };
-
+        
         socket.on('delivery_started', (order) => {
             if (activePage() === 'entregas-activas') loadActiveDeliveries();
             if (activePage() === 'visao-geral') loadOverviewStats();
@@ -248,27 +288,36 @@ function connectSocket() {
     }
 }
 
+// (FUNÇÃO CORRIGIDA - clientId duplicado removido)
 async function handleNewDelivery(e) {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
 
+    // O 'clientId' já está a ser incluído no 'formData' 
+    // automaticamente, porque o <input> tem o atributo "name='clientId'".
+    
     try {
         const response = await fetch(`${API_URL}/api/orders`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: formData
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
+        
+        const data = await response.json(); 
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro do servidor');
+        }
+
         showCustomAlert('Sucesso!', `Pedido Criado! \nCódigo do Destinatário: ${data.order.verification_code}`, 'success');
         form.reset();
         removeImage();
         destroyMap();
         showPage('entregas-activas', 'nav-entregas', 'Entregas Activas');
+
     } catch (error) {
         console.error('Falha ao criar entrega:', error);
-        showCustomAlert('Erro', error.message, 'error');
+        showCustomAlert('Erro', error.message, 'error'); 
     }
 }
 
@@ -332,6 +381,7 @@ async function loadDrivers() {
     } catch (error) { console.error('Falha ao carregar motoristas:', error); }
 }
 
+// (FUNÇÃO ATUALIZADA - Nova coluna de CÓDIGO)
 async function loadActiveDeliveries() {
     try {
         const response = await fetch(`${API_URL}/api/orders/active`, { headers: getAuthHeaders() });
@@ -340,7 +390,6 @@ async function loadActiveDeliveries() {
         const tableBody = document.getElementById('active-orders-table-body');
         tableBody.innerHTML = '';
         if (data.orders.length === 0) {
-            // (ATUALIZADO) Colspan agora é 7
             tableBody.innerHTML = '<tr><td colspan="7">Nenhuma encomenda ativa.</td></tr>';
             return;
         }
@@ -348,8 +397,6 @@ async function loadActiveDeliveries() {
             const motoristaNome = order.assigned_to_driver ? order.assigned_to_driver.user.nome : 'N/D';
             const statusClass = `status-${order.status.replace('_', '-')}`;
             let acaoBotao = (order.status === 'pendente') ? `<button class="btn-action-assign" onclick="openAssignModal('${order._id}')">Atribuir</button>` : 'Em Curso';
-
-            // (ATUALIZADA) Linha da tabela
             tableBody.innerHTML += `
                 <tr>
                     <td>#${order._id.slice(-6)}</td>
@@ -357,12 +404,15 @@ async function loadActiveDeliveries() {
                     <td>${order.client_phone1}</td>
                     <td><span class="status ${statusClass}">${order.status}</span></td>
                     <td>${motoristaNome}</td>
-                    <td class="verification-code">${order.verification_code}</td> <td>${acaoBotao}</td>
+                    <td class="verification-code">${order.verification_code}</td>
+                    <td>${acaoBotao}</td>
                 </tr>
             `;
         });
     } catch (error) { console.error('Falha ao carregar encomendas ativas:', error); }
 }
+
+// (FUNÇÃO ATUALIZADA - Nova coluna de CÓDIGO)
 async function loadHistory() {
     try {
         const response = await fetch(`${API_URL}/api/orders/history`, { headers: getAuthHeaders() });
@@ -371,7 +421,6 @@ async function loadHistory() {
         const tableBody = document.getElementById('history-orders-table-body');
         tableBody.innerHTML = '';
         if (data.orders.length === 0) {
-            // (ATUALIZADO) Colspan agora é 7
             tableBody.innerHTML = '<tr><td colspan="7">Nenhum histórico encontrado.</td></tr>';
             return;
         }
@@ -379,8 +428,6 @@ async function loadHistory() {
             const motoristaNome = order.assigned_to_driver ? order.assigned_to_driver.user.nome : 'N/D';
             const duracao = formatDuration(order.timestamp_started, order.timestamp_completed);
             const serviceName = serviceNames[order.service_type] || order.service_type;
-
-            // (ATUALIZADA) Linha da tabela
             tableBody.innerHTML += `
                 <tr class="history-row">
                     <td>#${order._id.slice(-6)}</td>
@@ -388,7 +435,8 @@ async function loadHistory() {
                     <td>${serviceName}</td>
                     <td>${motoristaNome}</td>
                     <td>${duracao}</td>
-                    <td class="verification-code">${order.verification_code}</td> <td><button class="btn-action-small" onclick="openHistoryDetailModal('${order._id}')"><i class="fas fa-eye"></i></button></td>
+                    <td class="verification-code">${order.verification_code}</td>
+                    <td><button class="btn-action-small" onclick="openHistoryDetailModal('${order._id}')"><i class="fas fa-eye"></i></button></td>
                 </tr>
             `;
         });
@@ -409,18 +457,17 @@ function filterHistoryTable(event) {
 function formatDuration(start, end) { if (!start || !end) return 'N/D'; const diffMs = new Date(end) - new Date(start); if (diffMs < 0) return 'N/D'; const minutes = Math.floor(diffMs / 60000); const seconds = Math.floor((diffMs % 60000) / 1000); return `${minutes} min ${seconds} s`; }
 function formatTotalDuration(totalMs) { if (totalMs < 0) return 'N/D'; const totalMinutes = Math.floor(totalMs / 60000); const hours = Math.floor(totalMinutes / 60); const minutes = totalMinutes % 60; return `${hours} h ${minutes} min`; }
 
+// (FUNÇÃO ATUALIZADA - Chama o novo gráfico de Donut)
 async function loadOverviewStats() {
     try {
         const response = await fetch(`${API_URL}/api/stats/overview`, { headers: getAuthHeaders() });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
-        
         document.getElementById('stats-pendentes').innerText = data.pendentes;
         document.getElementById('stats-em-transito').innerText = data.emTransito;
         document.getElementById('stats-concluidas-hoje').innerText = data.concluidasHoje;
         document.getElementById('stats-motoristas-online').innerText = data.motoristasOnline;
-    } catch (error) { console.error('Falha ao carregar estatísticas:', error); }
-
+        
         // (NOVA CHAMADA) Chama a função para criar/atualizar o gráfico de donut
         initDeliveriesStatusChart(data.pendentes, data.emTransito);
 
@@ -517,12 +564,12 @@ async function openHistoryDetailModal(orderId) {
         const order = data.order;
         const motorista = order.assigned_to_driver ? order.assigned_to_driver.user.nome : 'N/D';
         const admin = order.created_by_admin ? order.created_by_admin.nome : 'N/D';
-
+        
         let coordsHtml = '<p><strong>Pin do Mapa:</strong> N/D</p>';
         if (order.address_coords && order.address_coords.lat) {
             coordsHtml = `<p><strong>Pin do Mapa:</strong> ${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}</p>`;
         }
-
+        
         body.innerHTML = `
             <p><strong>Cliente:</strong> ${order.client_name}</p>
             <p><strong>Telefone:</strong> ${order.client_phone1}</p>
@@ -598,8 +645,11 @@ function closeDriverReportModal() { document.getElementById('driver-report-modal
 /* --- Funções de Navegação e UI --- */
 function showPage(pageId, navId, title, callback) { 
     if (map) destroyMap();
+    
+    // (ATUALIZADO) Limpa os gráficos ao sair da página
     if (myServicesChart) { myServicesChart.destroy(); myServicesChart = null; }
     if (myDeliveriesStatusChart) { myDeliveriesStatusChart.destroy(); myDeliveriesStatusChart = null; }
+    
     if (liveMap && pageId !== 'mapa-tempo-real') {
         liveMap.remove();
         liveMap = null;
@@ -619,12 +669,12 @@ function showPage(pageId, navId, title, callback) {
     if (pageId === 'entregas-activas') loadActiveDeliveries();
     if (pageId === 'historico') loadHistory();
     if (pageId === 'gestao-clientes') loadClients();
-
+    
     if (pageId === 'visao-geral') {
         loadOverviewStats();
         initServicesChart(false);
     }
-
+    
     if (pageId === 'mapa-tempo-real' && !liveMap && typeof callback === 'function') {
         callback();
     }
@@ -632,15 +682,15 @@ function showPage(pageId, navId, title, callback) {
 
 function showServiceForm(serviceType) {
     const titles = { 'doc': 'Nova Tramitação de Documentos', 'farma': 'Novo Pedido Farmacêutico', 'carga': 'Novo Transporte de Carga', 'rapido': 'Novo Delivery Rápido', 'outros': 'Outros Serviços', 'config': 'Configurações' };
-
+    
     showPage('form-nova-entrega', null, titles[serviceType] || 'Nova Entrega');
-
+    
     document.getElementById('service-type').value = serviceType;
     removeImage();
-
+    
     resetDeliveryForm();
     loadClientsIntoDropdown(); 
-
+    
     setTimeout(initializeMap, 100);
 }
 
@@ -686,6 +736,67 @@ async function initServicesChart(reset = false) {
             plugins: {
                 title: { display: true, text: 'Receita vs. Número de Pedidos por Serviço' },
                 tooltip: { callbacks: { label: function(context) { let l = context.dataset.label || ''; if (l) l += ': '; if (context.parsed.y !== null) { if (context.dataset.label.includes('MZN')) l += new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(context.parsed.y); else l += context.parsed.y + ' pedidos'; } return l; } } }
+            }
+        }
+    });
+}
+
+// (NOVA FUNÇÃO para o Gráfico de Donut)
+function initDeliveriesStatusChart(pendentes, emTransito) {
+    const ctx = document.getElementById('deliveriesStatusChart');
+    if (!ctx) return; // Se a página não for a "visao-geral", sai
+
+    if (myDeliveriesStatusChart) {
+        myDeliveriesStatusChart.destroy();
+    }
+
+    const total = pendentes + emTransito;
+    const data = {
+        labels: [
+            `Pendentes (${pendentes})`,
+            `Em Trânsito (${emTransito})`
+        ],
+        datasets: [{
+            label: 'Entregas Ativas',
+            data: [pendentes, emTransito],
+            backgroundColor: [
+                'rgba(255, 102, 0, 0.7)', // Cor Primária (Laranja)
+                'rgba(52, 152, 219, 0.7)' // Cor Info (Azul)
+            ],
+            borderColor: [
+                'rgba(255, 102, 0, 1)',
+                'rgba(52, 152, 219, 1)'
+            ],
+            borderWidth: 1
+        }]
+    };
+
+    myDeliveriesStatusChart = new Chart(ctx, {
+        type: 'doughnut', // Tipo "pizza"
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom', // Legenda em baixo
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                // Mostra a percentagem
+                                const percentage = total > 0 ? (context.parsed / total * 100).toFixed(1) : 0;
+                                label += `${percentage}%`;
+                            }
+                            return label;
+                        }
+                    }
+                }
             }
         }
     });
@@ -765,7 +876,7 @@ function showDetalheEntrega(order) {
     document.getElementById('lista-entregas').classList.add('hidden');
     const detalheSection = document.getElementById('detalhe-entrega');
     detalheSection.querySelector('#detalhe-entrega-title').innerText = `Detalhes do Pedido #${order._id.slice(-6)}`;
-
+    
     const img = detalheSection.querySelector('#encomenda-imagem');
     const noImg = detalheSection.querySelector('#no-image-placeholder');
     if (order.image_url) {
@@ -779,16 +890,17 @@ function showDetalheEntrega(order) {
 
     document.getElementById('detalhe-cliente-nome').innerHTML = `<strong>Nome:</strong> ${order.client_name}`;
     document.getElementById('detalhe-cliente-telefone').innerHTML = `<strong>Telefone:</strong> ${order.client_phone1}`;
-
+    
     document.getElementById('detalhe-cliente-endereco').innerHTML = `<strong>Endereço:</strong> ${order.address_text || 'N/D'}`;
     const coordsP = document.getElementById('detalhe-cliente-coords');
     const mapButton = document.getElementById('btn-google-maps');
-
+    
     if (order.address_coords && order.address_coords.lat) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
-
-        mapButton.href = `https://www.google.com/maps/search/?api=1&query=${order.address_coords.lat},${order.address_coords.lng}`;
+        
+        // (LINK CORRIGIDO)
+        mapButton.href = `http://googleusercontent.com/maps/google.com/5{order.address_coords.lat},${order.address_coords.lng}`;
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
@@ -859,9 +971,6 @@ async function handleCompleteDelivery(event, orderId) {
 
 /* --- Funções de Rastreamento em Tempo Real (Apenas Admin) --- */
 
-// (Nota: Estas funções só são definidas e usadas se 'adminDashboard' for verdadeiro)
-
-
 /**
  * Inicia o rastreamento de geolocalização no painel do motorista.
  */
@@ -876,7 +985,7 @@ function startLocationTracking() {
     navigator.geolocation.watchPosition(
         (position) => {
             const { latitude, longitude } = position.coords;
-
+            
             if (socket) {
                 socket.emit('driver_location_update', { 
                     lat: latitude, 
@@ -903,15 +1012,15 @@ async function loadClients() {
         const response = await fetch(`${API_URL}/api/clients`, { method: 'GET', headers: getAuthHeaders() });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
-
+        
         const tableBody = document.getElementById('clients-table-body');
         tableBody.innerHTML = '';
-
+        
         if (data.clients.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="4">Nenhum cliente registado.</td></tr>';
             return;
         }
-
+        
         data.clients.forEach(client => {
             tableBody.innerHTML += `
                 <tr>
@@ -936,7 +1045,7 @@ function showAddClientForm(show) {
     const form = document.getElementById('form-add-cliente');
     const button = document.getElementById('btn-show-client-form');
     if (!form || !button) return;
-
+    
     if (show) { 
         form.classList.remove('hidden'); 
         button.classList.add('hidden'); 
@@ -949,7 +1058,7 @@ function showAddClientForm(show) {
 
 async function handleAddClient(e) {
     e.preventDefault();
-
+    
     const clientData = {
         nome: document.getElementById('client-nome').value,
         telefone: document.getElementById('client-telefone').value,
@@ -972,11 +1081,11 @@ async function handleAddClient(e) {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
-
+        
         showCustomAlert('Sucesso', 'Cliente adicionado com sucesso!', 'success');
         showAddClientForm(false);
         loadClients(); 
-
+        
     } catch (error) {
         console.error('Falha ao adicionar cliente:', error);
         showCustomAlert('Erro', error.message, 'error');
@@ -986,12 +1095,12 @@ async function handleAddClient(e) {
 async function openEditClientModal(clientId) {
     const modal = document.getElementById('edit-client-modal');
     modal.classList.remove('hidden');
-
+    
     try {
         const response = await fetch(`${API_URL}/api/clients/${clientId}`, { headers: getAuthHeaders() });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
-
+        
         const client = data.client;
         document.getElementById('edit-client-id').value = client._id;
         document.getElementById('edit-client-nome').value = client.nome;
@@ -1000,7 +1109,7 @@ async function openEditClientModal(clientId) {
         document.getElementById('edit-client-email').value = client.email || '';
         document.getElementById('edit-client-nuit').value = client.nuit || '';
         document.getElementById('edit-client-endereco').value = client.endereco || '';
-
+        
     } catch (error) {
         console.error('Falha ao carregar dados do cliente:', error);
         showCustomAlert('Erro', 'Erro ao carregar dados do cliente.', 'error');
@@ -1016,7 +1125,7 @@ function closeEditClientModal() {
 async function handleUpdateClient(e) {
     e.preventDefault();
     const clientId = document.getElementById('edit-client-id').value;
-
+    
     const updatedData = {
         nome: document.getElementById('edit-client-nome').value,
         telefone: document.getElementById('edit-client-telefone').value,
@@ -1030,7 +1139,7 @@ async function handleUpdateClient(e) {
         showCustomAlert('Atenção', 'Nome e Telefone são obrigatórios.', 'error');
         return;
     }
-
+    
     try {
         const response = await fetch(`${API_URL}/api/clients/${clientId}`, {
             method: 'PUT',
@@ -1039,11 +1148,11 @@ async function handleUpdateClient(e) {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
-
+        
         showCustomAlert('Sucesso', 'Cliente atualizado com sucesso!', 'success');
         closeEditClientModal();
         loadClients(); 
-
+        
     } catch (error) {
         console.error('Falha ao atualizar cliente:', error);
         showCustomAlert('Erro', error.message, 'error');
@@ -1054,7 +1163,7 @@ async function handleDeleteClient(clientId, clientName) {
     if (!confirm(`Tem a certeza que quer apagar o cliente "${clientName}"?\nEsta ação não pode ser revertida.`)) {
         return;
     }
-
+    
     try {
         const response = await fetch(`${API_URL}/api/clients/${clientId}`, {
             method: 'DELETE',
@@ -1062,10 +1171,10 @@ async function handleDeleteClient(clientId, clientName) {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
-
+        
         showCustomAlert('Sucesso', data.message, 'success');
         loadClients(); 
-
+        
     } catch (error) {
         console.error('Falha ao apagar cliente:', error);
         showCustomAlert('Erro', error.message, 'error');
@@ -1078,28 +1187,28 @@ async function handleDeleteClient(clientId, clientName) {
 async function loadClientsIntoDropdown() {
     const select = document.getElementById('delivery-client-select');
     select.innerHTML = '<option value="">A carregar clientes...</option>';
-
+    
     try {
         const response = await fetch(`${API_URL}/api/clients`, { headers: getAuthHeaders() });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
-
+        
         clientCache = data.clients; 
-
+        
         select.innerHTML = '<option value="">-- Selecione um cliente ou digite manualmente --</option>';
-
+        
         if (clientCache.length === 0) {
             select.innerHTML = '<option value="">-- Nenhum cliente registado --</option>';
             return;
         }
-
+        
         clientCache.forEach(client => {
             const option = document.createElement('option');
             option.value = client._id;
             option.textContent = `${client.nome} (${client.empresa || client.telefone})`;
             select.appendChild(option);
         });
-
+        
     } catch (error) {
         console.error('Falha ao carregar clientes para o dropdown:', error);
         select.innerHTML = '<option value="">-- Erro ao carregar clientes --</option>';
@@ -1109,16 +1218,16 @@ async function loadClientsIntoDropdown() {
 function handleClientSelect(e) {
     const selectedClientId = e.target.value;
     const client = clientCache.find(c => c._id === selectedClientId);
-
+    
     if (client) {
         document.getElementById('client-name').value = client.nome;
         document.getElementById('client-phone1').value = client.telefone;
         document.getElementById('client-phone2').value = ''; 
         document.getElementById('delivery-client-id').value = client._id;
-
+        
         document.getElementById('client-name').readOnly = true;
         document.getElementById('client-phone1').readOnly = true;
-
+        
     } else {
         resetDeliveryForm();
     }
@@ -1127,7 +1236,7 @@ function handleClientSelect(e) {
 function resetDeliveryForm() {
     document.getElementById('delivery-form').reset();
     document.getElementById('delivery-client-id').value = ''; 
-
+    
     document.getElementById('client-name').readOnly = false;
     document.getElementById('client-phone1').readOnly = false;
 }
@@ -1141,13 +1250,13 @@ function openStatementModal(clientId, clientName) {
     const modal = document.getElementById('statement-modal');
     document.getElementById('statement-client-name').textContent = `Extrato de ${clientName}`;
     document.getElementById('statement-client-id').value = clientId;
-
+    
     // Limpa resultados anteriores
     document.getElementById('statement-results').classList.add('hidden');
     document.getElementById('statement-table-body').innerHTML = '';
     document.getElementById('statement-start-date').value = '';
     document.getElementById('statement-end-date').value = '';
-
+    
     modal.classList.remove('hidden');
 }
 
@@ -1174,7 +1283,7 @@ function setStatementDates(range) {
         // Primeiro dia do mês atual
         startDate.setDate(1);
     }
-
+    
     // Formata para 'YYYY-MM-DD' (o formato que o input type="date" precisa)
     document.getElementById('statement-start-date').value = startDate.toISOString().split('T')[0];
     document.getElementById('statement-end-date').value = endDate.toISOString().split('T')[0];
@@ -1195,14 +1304,14 @@ async function handleGenerateStatement() {
 
     const resultsDiv = document.getElementById('statement-results');
     resultsDiv.classList.add('hidden');
-
+    
     try {
         const response = await fetch(`${API_URL}/api/clients/${clientId}/statement?startDate=${startDate}&endDate=${endDate}`, {
             headers: getAuthHeaders()
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
-
+        
         // Se a busca foi bem-sucedida, preenche o modal com os dados
         populateStatementModal(data, startDate, endDate);
 
@@ -1217,12 +1326,12 @@ async function handleGenerateStatement() {
  */
 function populateStatementModal(data, startDate, endDate) {
     const { totalValue, totalOrders, ordersList } = data;
-
+    
     // Formata os totais
     const formattedTotal = new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(totalValue);
     document.getElementById('statement-total-value').textContent = formattedTotal;
     document.getElementById('statement-total-orders').textContent = `${totalOrders} Pedidos`;
-
+    
     // Formata o período
     const start = new Date(startDate).toLocaleDateString('pt-MZ');
     const end = new Date(endDate).toLocaleDateString('pt-MZ');
@@ -1231,7 +1340,7 @@ function populateStatementModal(data, startDate, endDate) {
     // Preenche a tabela
     const tableBody = document.getElementById('statement-table-body');
     tableBody.innerHTML = '';
-
+    
     if (ordersList.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="4">Nenhum pedido concluído neste período.</td></tr>';
     } else {
@@ -1246,7 +1355,7 @@ function populateStatementModal(data, startDate, endDate) {
             `;
         });
     }
-
+    
     // Mostra a área de resultados
     document.getElementById('statement-results').classList.remove('hidden');
 }
@@ -1258,7 +1367,7 @@ function handleDownloadPDF() {
     try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-
+        
         // Pega os dados do modal
         const clientName = document.getElementById('statement-client-name').textContent; // "Extrato de NOME"
         const cleanClientName = clientName.replace('Extrato de ', '');
@@ -1269,13 +1378,13 @@ function handleDownloadPDF() {
         // Título
         doc.setFontSize(18);
         doc.text('Extrato de Conta de Cliente', 14, 22);
-
+        
         // Informações
         doc.setFontSize(11);
         doc.setTextColor(100); // Cinzento
         doc.text(`Cliente: ${cleanClientName}`, 14, 32);
         doc.text(`Período: ${dateRange}`, 14, 38);
-
+        
         // Totais
         doc.setFontSize(12);
         doc.setTextColor(0); // Preto
@@ -1291,7 +1400,7 @@ function handleDownloadPDF() {
             styles: { fontSize: 9 },
             headStyles: { fillColor: [44, 62, 80] } // Cor --dark-color
         });
-
+        
         // Salva o ficheiro
         doc.save(`Extrato_${cleanClientName.replace(/ /g, '_')}.pdf`);
 
