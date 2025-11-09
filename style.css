@@ -727,3 +727,42 @@ body {
     letter-spacing: 1px;
     font-size: 0.95rem;
 }
+/* --- (NOVO) Melhorias na Visão Geral --- */
+.charts-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* Por defeito, uma coluna */
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+#deliveries-chart-container {
+    padding: 1.5rem;
+}
+#deliveries-chart-container h3 {
+    font-size: 1.2rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: var(--dark-color);
+    font-weight: 600;
+}
+#deliveriesStatusChart {
+    max-height: 280px;
+    margin: 0 auto;
+}
+
+/* Para ecrãs médios e grandes, divide em 2 colunas */
+@media (min-width: 992px) {
+    .charts-grid {
+        /* 2fr para o gráfico principal, 1fr para o novo */
+        grid-template-columns: 2fr 1fr; 
+    }
+    
+    #main-chart-container {
+        /* Ocupa a primeira coluna */
+        grid-column: 1 / 2;
+    }
+    #deliveries-chart-container {
+        /* Ocupa a segunda coluna */
+        grid-column: 2 / 3;
+    }
+}
