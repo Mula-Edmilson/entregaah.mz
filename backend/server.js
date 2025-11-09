@@ -1,4 +1,4 @@
-// Ficheiro: backend/server.js (Corrigido)
+// Ficheiro: backend/server.js (Corrigido para CORS)
 
 require('dotenv').config();
 
@@ -46,17 +46,23 @@ const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // --- Middlewares ---
+
+// (A CORREÇÃO DEFINITIVA DO CORS ESTÁ AQUI)
+// 1. Aplicamos o CORS (com as nossas opções) GLOBALMENTE.
+//    Isto deve aplicar-se a TODAS as rotas, incluindo /uploads.
+app.use(cors(corsOptions));
+
+// 2. Aplicamos o Helmet (segurança)
 app.use(helmet());
-app.use(cors(corsOptions)); // (MELHORIA) Aplica CORS a todas as rotas (incluindo API)
+
+// 3. Aplicamos os parsers de body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// --- (A CORREÇÃO ESTÁ AQUI) ---
-// Aplicamos o middleware CORS (corsOptions) explicitamente
-// à rota /uploads, ANTES de servir os ficheiros estáticos.
-app.use('/uploads', cors(corsOptions), express.static(path.join(__dirname, 'uploads')));
 // --- FIM DA CORREÇÃO ---
 
+
+// Servir a pasta 'uploads' de forma estática
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // --- Conexão ao MongoDB (Sem alterações) ---
 if (!MONGO_URI) {
@@ -79,7 +85,7 @@ app.use('/api/stats', require('./routes/statsRoutes'));
 app.use('/api/clients', require('./routes/clientRoutes'));
 
 app.get('/', (req, res) => {
-    res.send('<h1>Servidor Backend da Entregaah Mz está no ar! (v2.1 - CORS Fix)</h1>');
+    res.send('<h1>Servidor Backend da Entregaah Mz está no ar! (v2.2 - CORS Global Fix)</h1>');
 });
 
 // --- Lógica de Socket e Erros (Sem alterações) ---

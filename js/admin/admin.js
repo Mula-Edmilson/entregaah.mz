@@ -1,5 +1,52 @@
 /*
  * Ficheiro: js/admin/admin.js
+ * (O CÉREBRO PRINCIPAL)
+ */
+
+// ... (todo o código no topo permanece o mesmo) ...
+// ... (attachEventListeners, showPage, showServiceForm, connectSocket) ...
+
+/* --- Lógica de API (Carregamento de Dados - GET) --- */
+
+/**
+ * Carrega os 4 cartões de estatísticas e o gráfico de donut.
+ */
+async function loadOverviewStats() {
+    try {
+        const response = await fetch(`${API_URL}/api/stats/overview`, { headers: getAuthHeaders() });
+
+        // --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
+        // Se o token for inválido, o backend envia um 401.
+        if (response.status === 401) {
+            console.error('Token inválido ou expirado. A forçar logout.');
+            showCustomAlert('Sessão Expirada', 'A sua sessão é inválida ou expirou. Por favor, faça login novamente.', 'error');
+            // Espera 2 segundos para o admin ler e depois faz logout.
+            setTimeout(() => handleLogout('admin'), 2500);
+            return; // Para a execução
+        }
+        // --- FIM DA CORREÇÃO ---
+        
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        
+        document.getElementById('stats-pendentes').innerText = data.pendentes;
+        document.getElementById('stats-em-transito').innerText = data.emTransito;
+        document.getElementById('stats-concluidas-hoje').innerText = data.concluidasHoje;
+        document.getElementById('stats-motoristas-online').innerText = data.motoristasOnline;
+        
+        initDeliveriesStatusChart(data.pendentes, data.emTransito);
+
+    } catch (error) { 
+        console.error('Falha ao carregar estatísticas:', error); 
+        initDeliveriesStatusChart(0, 0);
+    }
+}
+
+// ... (O resto do ficheiro 'admin.js' permanece o mesmo) ...
+// ... (loadDrivers, loadActiveDeliveries, loadHistory, loadClients, etc.) ...
+
+/*
+ * Ficheiro: js/admin/admin.js
  *
  * (Dependência #6) - O CÉREBRO PRINCIPAL
  *
@@ -73,6 +120,8 @@ function attachEventListeners() {
     document.getElementById('btn-close-chart-reset').addEventListener('click', closeChartResetModal); // <-- ADICIONADO
     document.getElementById('btn-cancel-chart-reset').addEventListener('click', closeChartResetModal); // <-- ADICIONADO
     document.getElementById('history-search-input').addEventListener('input', filterHistoryTable);
+    document.getElementById('delivery-image').addEventListener('change', handleImageUpload);
+    document.getElementById('delivery-client-select').addEventListener('change', handleClientSelect);
 
     // --- (MUDANÇA) Listeners do Modal de Extrato (Movidos para cá para melhor organização) ---
     document.getElementById('btn-generate-statement').addEventListener('click', handleGenerateStatement);
@@ -261,6 +310,18 @@ function connectSocket() {
 async function loadOverviewStats() {
     try {
         const response = await fetch(`${API_URL}/api/stats/overview`, { headers: getAuthHeaders() });
+        
+        // --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
+        // Se o token for inválido, o backend envia um 401.
+        if (response.status === 401) {
+            console.error('Token inválido ou expirado. A forçar logout.');
+            showCustomAlert('Sessão Expirada', 'A sua sessão é inválida ou expirou. Por favor, faça login novamente.', 'error');
+            // Espera 2.5 segundos para o admin ler e depois faz logout.
+            setTimeout(() => handleLogout('admin'), 2500);
+            return; // Para a execução
+        }
+        // --- FIM DA CORREÇÃO ---
+        
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
@@ -287,6 +348,9 @@ async function loadDrivers() {
 
     try {
         const response = await fetch(`${API_URL}/api/drivers`, { method: 'GET', headers: getAuthHeaders() });
+        // (MELHORIA) Adiciona verificação de 401 também aqui
+        if (response.status === 401) { return handleLogout('admin'); }
+        
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
@@ -329,6 +393,8 @@ async function loadActiveDeliveries() {
 
     try {
         const response = await fetch(`${API_URL}/api/orders/active`, { headers: getAuthHeaders() });
+        if (response.status === 401) { return handleLogout('admin'); }
+
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
@@ -370,6 +436,8 @@ async function loadHistory() {
 
     try {
         const response = await fetch(`${API_URL}/api/orders/history`, { headers: getAuthHeaders() });
+        if (response.status === 401) { return handleLogout('admin'); }
+
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
@@ -411,6 +479,8 @@ async function loadClients() {
 
     try {
         const response = await fetch(`${API_URL}/api/clients`, { method: 'GET', headers: getAuthHeaders() });
+        if (response.status === 401) { return handleLogout('admin'); }
+
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
@@ -449,6 +519,12 @@ async function loadClientsIntoDropdown() {
     
     try {
         const response = await fetch(`${API_URL}/api/clients`, { headers: getAuthHeaders() });
+        // (MELHORIA) Adiciona verificação de 401
+        if (response.status === 401) { 
+            select.innerHTML = '<option value="">-- Erro de Sessão --</option>';
+            return handleLogout('admin');
+        }
+
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
@@ -785,6 +861,8 @@ async function openAssignModal(orderId) {
     
     try {
         const response = await fetch(`${API_URL}/api/drivers/available`, { headers: getAuthHeaders() });
+        if (response.status === 401) { return handleLogout('admin'); }
+
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
@@ -829,6 +907,8 @@ async function openEditDriverModal(driverUserId) {
     
     try {
         const response = await fetch(`${API_URL}/api/drivers/${driverUserId}`, { headers: getAuthHeaders() });
+        if (response.status === 401) { return handleLogout('admin'); }
+
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
@@ -860,6 +940,8 @@ async function openHistoryDetailModal(orderId) {
     
     try {
         const response = await fetch(`${API_URL}/api/orders/${orderId}`, { headers: getAuthHeaders() });
+        if (response.status === 401) { return handleLogout('admin'); }
+
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
@@ -911,6 +993,8 @@ async function openDriverReportModal(driverUserId, driverName) {
     
     try {
         const response = await fetch(`${API_URL}/api/drivers/${driverUserId}/report`, { headers: getAuthHeaders() });
+        if (response.status === 401) { return handleLogout('admin'); }
+
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
@@ -959,6 +1043,8 @@ async function openEditClientModal(clientId) {
     
     try {
         const response = await fetch(`${API_URL}/api/clients/${clientId}`, { headers: getAuthHeaders() });
+        if (response.status === 401) { return handleLogout('admin'); }
+
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
