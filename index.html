@@ -32,11 +32,11 @@
             <li class="menu-item has-submenu">
                 <a href="#"><i class="fas fa-plus-circle"></i> Nova Entrega</a>
                 <ul class="submenu">
-                    <li><a href="#" onclick="showServiceForm('doc')">Tramitação de Documentos</a></li>
-                    <li><a href="#" onclick="showServiceForm('farma')">Produtos Farmacêuticos</a></li>
-                    <li><a href="#" onclick="showServiceForm('carga')">Transporte de Cargas</a></li>
-                    <li><a href="#" onclick="showServiceForm('rapido')">Delivery Rápido</a></li>
-                    <li><a href="#" onclick="showServiceForm('outros')">Outros Serviços</a></li>
+                    <li><a href="#" id="nav-form-doc">Tramitação de Documentos</a></li>
+                    <li><a href="#" id="nav-form-farma">Produtos Farmacêuticos</a></li>
+                    <li><a href="#" id="nav-form-carga">Transporte de Cargas</a></li>
+                    <li><a href="#" id="nav-form-rapido">Delivery Rápido</a></li>
+                    <li><a href="#" id="nav-form-outros">Outros Serviços</a></li>
                 </ul>
             </li>
             <li class="menu-item" id="nav-entregas"><a href="#"><i class="fas fa-tasks"></i> Entregas Activas</a></li>
@@ -44,7 +44,9 @@
             <li class="menu-item" id="nav-clientes"><a href="#"><i class="fas fa-users"></i> Clientes</a></li>
             <li class="menu-item" id="nav-historico"><a href="#"><i class="fas fa-history"></i> Histórico</a></li>
             <li class="menu-item" id="nav-mapa"><a href="#"><i class="fas fa-map-marked-alt"></i> Mapa em Tempo Real</a></li>
-            <li class="menu-item" id="nav-config"><a href="#" onclick="showServiceForm('config')"><i class="fas fa-cog"></i> Configurações</a></li>
+            
+            <li class="menu-item" id="nav-config"><a href="#"><i class="fas fa-cog"></i> Configurações</a></li>
+            
             <li class="menu-item menu-item-logout" id="admin-logout"><a href="#"><i class="fas fa-sign-out-alt"></i> Sair (Logout)</a></li>
         </ul>
         <div class="sidebar-footer"><a href="https://wa.me/258820234840" target="_blank"><i class="fab fa-whatsapp"></i> Suporte (+258 82...40)</a></div>
@@ -52,6 +54,9 @@
 
     <main class="main-content">
         <header class="main-header">
+            <button class="btn-mobile-menu" id="mobile-menu-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
             <h1 id="main-title">Visão Geral</h1>
             <div class="admin-profile"><span>Olá, Admin</span><i class="fas fa-user-circle"></i></div>
         </header>
@@ -67,13 +72,6 @@
                     <div class="card"><h3>Motoristas Online</h3><p id="stats-motoristas-online">...</p></div>
                 </div>
 
-
-                <div class="chart-container" id="main-chart-container">
-                    <div class="chart-header">
-                        <h3>Desempenho dos Serviços</h3>
-                        <button class="btn-action-small btn-danger" id="btn-reset-chart"><i class="fas fa-sync"></i> Reset</button>
-                    </div>
-                    <canvas id="servicesChart"></canvas>
                 <div class="charts-grid">
                     <div class="chart-container" id="main-chart-container">
                         <div class="chart-header">
@@ -209,20 +207,6 @@
 
             <div id="entregas-activas" class="content-page hidden">
                 <h3>Gestão de Encomendas Activas</h3>
-
-                <table class="table-pedidos">
-                    <thead>
-                        <tr>
-                            <th>ID Pedido</th>
-                            <th>Cliente</th>
-                            <th>Telefone</th>
-                            <th>Estado</th>
-                            <th>Motorista</th>
-                            <th>Código</th> <th>Acção</th>
-                        </tr>
-                    </thead>
-                    <tbody id="active-orders-table-body"></tbody>
-                </table>
                 <div class="table-container-responsive">
                     <table class="table-pedidos">
                         <thead>
@@ -247,19 +231,7 @@
                     <input type="text" id="history-search-input" placeholder="Pesquisar no histórico (ID, Cliente, Motorista...)">
                     <i class="fas fa-search"></i>
                 </div>
-                <table class="table-pedidos">
-                    <thead>
-                        <tr>
-                            <th>ID Pedido</th>
-                            <th>Cliente</th>
-                            <th>Natureza do Pedido</th>
-                            <th>Motorista</th>
-                            <th>Duração</th>
-                            <th>Código</th> <th>Acções</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-orders-table-body"></tbody>
-                </table>
+                
                 <div class="table-container-responsive">
                     <table class="table-pedidos">
                         <thead>
@@ -448,11 +420,11 @@
                             </div>
                         </div>
                         <div class="form-group" style="display: flex; gap: 1rem; margin-top: -0.5rem;">
-                            <button type="button" class="btn-action-small" onclick="setStatementDates('this_week')">Esta Semana</button>
-                            <button type="button" class="btn-action-small" onclick="setStatementDates('this_month')">Este Mês</button>
+                            <button type="button" class="btn-action-small btn-set-date" data-range="this_week">Esta Semana</button>
+                            <button type="button" class="btn-action-small btn-set-date" data-range="this_month">Este Mês</button>
                         </div>
                         
-                        <button type="button" class="btn-submit" onclick="handleGenerateStatement()">
+                        <button type="button" class="btn-submit" id="btn-generate-statement">
                             <i class="fas fa-search"></i> Gerar Extrato
                         </button>
                         
@@ -470,7 +442,7 @@
                             </div>
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <h4 id="statement-date-range">Pedidos Concluídos</h4>
-                                <button type="button" class="btn-action-small" id="btn-download-pdf" onclick="handleDownloadPDF()">
+                                <button type="button" class="btn-action-small" id="btn-download-pdf">
                                     <i class="fas fa-file-pdf"></i> Baixar PDF
                                 </button>
                             </div>
@@ -498,7 +470,9 @@
             </div>
             </div>
     </main>
+    
 
-    <script src="js/common/api.js"></script>
+    <script src="js/common/api.js">
+</script>
 </body>
 </html>

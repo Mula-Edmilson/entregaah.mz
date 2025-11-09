@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /**
  * Anexa todos os event listeners da aplicação.
+ * (MUDANÇA PRINCIPAL AQUI)
  */
 function attachEventListeners() {
     // --- Formulários ---
@@ -53,6 +54,16 @@ function attachEventListeners() {
     document.getElementById('nav-historico').addEventListener('click', (e) => { e.preventDefault(); showPage('historico', 'nav-historico', 'Histórico'); });
     document.getElementById('nav-mapa').addEventListener('click', (e) => { e.preventDefault(); showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real'); });
 
+    // --- (MUDANÇA) Listeners para o Submenu "Nova Entrega" ---
+    document.getElementById('nav-form-doc').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('doc'); });
+    document.getElementById('nav-form-farma').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('farma'); });
+    document.getElementById('nav-form-carga').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('carga'); });
+    document.getElementById('nav-form-rapido').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('rapido'); });
+    document.getElementById('nav-form-outros').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('outros'); });
+    
+    // --- (MUDANÇA) Listener para "Configurações" ---
+    document.getElementById('nav-config').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('config'); });
+
     // --- Autenticação ---
     document.getElementById('admin-logout').addEventListener('click', (e) => { e.preventDefault(); handleLogout('admin'); });
 
@@ -63,13 +74,11 @@ function attachEventListeners() {
     document.getElementById('delivery-image').addEventListener('change', handleImageUpload);
     document.getElementById('delivery-client-select').addEventListener('change', handleClientSelect);
 
-    // --- Modal de Extrato (Statement) ---
-    // (Listeners para botões dentro do modal são anexados quando o modal é aberto,
-    // mas estes são para os botões estáticos)
-    document.getElementById('statement-modal').addEventListener('click', (e) => {
-        if (e.target.id === 'btn-generate-statement') handleGenerateStatement();
-        if (e.target.id === 'btn-download-pdf') handleDownloadPDF();
-        if (e.target.classList.contains('btn-set-date')) setStatementDates(e.target.dataset.range);
+    // --- (MUDANÇA) Listeners do Modal de Extrato (Movidos para cá para melhor organização) ---
+    document.getElementById('btn-generate-statement').addEventListener('click', handleGenerateStatement);
+    document.getElementById('btn-download-pdf').addEventListener('click', handleDownloadPDF);
+    document.querySelectorAll('.btn-set-date').forEach(btn => {
+        btn.addEventListener('click', () => setStatementDates(btn.dataset.range));
     });
 
     // --- Lógica do Menu Mobile ---
@@ -1040,8 +1049,9 @@ function populateStatementModal(data, startDate, endDate) {
     document.getElementById('statement-total-value').textContent = formattedTotal;
     document.getElementById('statement-total-orders').textContent = `${totalOrders} Pedidos`;
     
-    const start = new Date(startDate).toLocaleDateString('pt-MZ');
-    const end = new Date(endDate).toLocaleDateString('pt-MZ');
+    // (CORREÇÃO) Garante que as datas são tratadas como UTC antes de formatar
+    const start = new Date(startDate + 'T00:00:00Z').toLocaleDateString('pt-MZ', { timeZone: 'UTC' });
+    const end = new Date(endDate + 'T00:00:00Z').toLocaleDateString('pt-MZ', { timeZone: 'UTC' });
     document.getElementById('statement-date-range').textContent = `Pedidos Concluídos de ${start} a ${end}`;
 
     const tableBody = document.getElementById('statement-table-body');
