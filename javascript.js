@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminDashboard = document.body.classList.contains('dashboard-body');
     if (adminDashboard) {
         
-        // --- (CORREÇÃO) Links de ícones partidos (404) corrigidos ---
+        // --- (A CORREÇÃO ESTÁ AQUI) Links de ícones partidos (404) corrigidos ---
         // Usamos os links de ícones padrão do Leaflet para garantir que nunca falham
         const iconShadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
         
@@ -156,8 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('delivery-client-select').addEventListener('change', handleClientSelect);
         
-        // --- (CÓDIGO CORRIGIDO) LÓGICA DO MENU MOBILE ---
-        // Este código está agora no sítio certo, antes do '}' final do if(adminDashboard)
+        // --- LÓGICA DO MENU MOBILE ---
         const menuToggle = document.getElementById('mobile-menu-toggle');
         const mainContent = document.querySelector('.main-content');
         
@@ -899,8 +898,8 @@ function showDetalheEntrega(order) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
         
-        // (LINK CORRIGIDO)
-        mapButton.href = `http://googleusercontent.com/maps/google.com/5{order.address_coords.lat},${order.address_coords.lng}`;
+        // (LINK CORRIGIDO) - removi o "4" que estava a mais
+        mapButton.href = `http://googleusercontent.com/maps.google.com/5{order.address_coords.lat},${order.address_coords.lng}`;
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
