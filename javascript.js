@@ -893,7 +893,7 @@ function showDetalheEntrega(order) {
         coordsP.classList.remove('hidden');
         
         // (LINK CORRIGIDO)
-        mapButton.href = `https://maps.google.com/maps?q=${order.address_coords.lat},${order.address_coords.lng}`;
+        mapButton.href = `http://googleusercontent.com/maps/google.com/4{order.address_coords.lat},${order.address_coords.lng}`;
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
@@ -1188,7 +1188,7 @@ async function loadClientsIntoDropdown() {
         
         clientCache = data.clients; 
         
-        select.innerHTML = '<option value="">-- Selecione um cliente ou digite manualmente --</option>';
+        select.innerHTML = '<option value="">-- Selecione um cliente ou digite manually --</option>';
         
         if (clientCache.length === 0) {
             select.innerHTML = '<option value="">-- Nenhum cliente registado --</option>';
