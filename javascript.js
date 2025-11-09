@@ -48,17 +48,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminDashboard = document.body.classList.contains('dashboard-body');
     if (adminDashboard) {
         
-        const iconShadowUrl = 'https://i.postimg.cc/VNb0bBsw/marker-shadow.png';
+        // --- (CORREÇÃO) Links de ícones partidos (404) corrigidos ---
+        // Usamos os links de ícones padrão do Leaflet para garantir que nunca falham
+        const iconShadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
+        
+        // O seu 'freeIcon' será o ícone azul padrão do Leaflet (fiável)
         freeIcon = L.icon({
-            iconUrl: 'https://i.postimg.cc/kXq0K1Gz/marker-free.png',
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
             shadowUrl: iconShadowUrl,
             iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
         });
+        
+        // O seu 'busyIcon' (vermelho) está a funcionar, mas atualizamos a sombra
         busyIcon = L.icon({
             iconUrl: 'https://i.postimg.cc/J0bJ0fJj/marker-busy.png',
-            shadowUrl: iconShadowUrl,
+            shadowUrl: iconShadowUrl, // Usando a URL de sombra que sabemos que funciona
             iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
         });
+        // --- FIM DA CORREÇÃO ---
 
         // Funções que dependem de 'L' (Leaflet)
         function initializeLiveMap() {
@@ -1188,7 +1195,7 @@ async function loadClientsIntoDropdown() {
         
         clientCache = data.clients; 
         
-        select.innerHTML = '<option value="">-- Selecione um cliente ou digite manually --</option>';
+        select.innerHTML = '<option value="">-- Selecione um cliente ou digite manualmente --</option>';
         
         if (clientCache.length === 0) {
             select.innerHTML = '<option value="">-- Nenhum cliente registado --</option>';
