@@ -1,4 +1,4 @@
-// Ficheiro: backend/controllers/orderController.js (Completo e Corrigido)
+// Ficheiro: backend/controllers/orderController.js (Corrigido)
 const Order = require('../models/Order');
 const DriverProfile = require('../models/DriverProfile');
 
@@ -19,14 +19,10 @@ exports.createOrder = async (req, res) => {
     try {
         const { service_type, client_name, client_phone1, client_phone2, address_text, price, lat, lng, clientId } = req.body;
 
-        // --- (A CORREÇÃO ESTÁ AQUI) ---
-        // Como estamos a usar upload.any(), a imagem está em req.files (um array)
         let imageUrl = null;
         if (req.files && req.files.length > 0) {
-            // Pega no primeiro ficheiro que foi enviado
             imageUrl = `/uploads/${req.files[0].filename}`;
         }
-        // --- FIM DA CORREÇÃO ---
         
         const verification_code = generateVerificationCode();
         const availableDriver = await DriverProfile.findOne({ status: 'online_livre' });
@@ -46,16 +42,28 @@ exports.createOrder = async (req, res) => {
                 lng: parseFloat(lng) 
             };
         }
+        
+        // --- (A CORREÇÃO ESTÁ AQUI) ---
+        // Verificamos se 'price' é um número válido.
+        // Se 'price' for "" ou inválido, parseFloat(price) dará NaN (Not a Number).
+        const numericPrice = parseFloat(price);
+        // --- FIM DA CORREÇÃO ---
+
 
         const newOrder = new Order({
             service_type, 
-            price,
+            
+            // --- (A CORREÇÃO ESTÁ AQUI) ---
+            // Usamos o valor numérico verificado. Se for NaN, usamos 0.
+            price: isNaN(numericPrice) ? 0 : numericPrice,
+            // --- FIM DA CORREÇÃO ---
+
             client_name, 
             client_phone1, 
             client_phone2,
             address_text, 
             address_coords: coordinates,
-            client: clientId || null, // O clientId agora será lido corretamente do req.body
+            client: clientId || null,
             image_url: imageUrl, 
             verification_code: verification_code,
             created_by_admin: req.user._id, 
@@ -66,7 +74,8 @@ exports.createOrder = async (req, res) => {
         
         res.status(201).json({ message: 'Encomenda criada com sucesso!', order: newOrder });
     } catch (error) {
-        console.error('Erro ao criar encomenda:', error);
+        // Agora, se houver um erro, o log no Render mostrará detalhes
+        console.error('Erro ao criar encomenda:', error); 
         res.status(500).json({ message: 'Erro do servidor' });
     }
 };
@@ -246,7 +255,7 @@ exports.getOrderById = async (req, res) => {
             });
 
         if (!order) {
-            return res.status(404).json({ message: 'Encomenda não encontrada' });
+            return res.status(44).json({ message: 'Encomenda não encontrada' });
         }
         
         res.status(200).json({ order });
