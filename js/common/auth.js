@@ -67,7 +67,13 @@ async function handleLogin(e, role) {
     const form = e.target;
     const email = form.querySelector('#email').value;
     const password = form.querySelector('#password').value;
-    const alertModal = document.getElementById('custom-alert-modal'); // Busca o modal
+    const showAlert = (title, message, type) => {
+        if (typeof showCustomAlert === 'function') {
+            showCustomAlert(title, message, type);
+        } else {
+            alert(`${title}: ${message}`); // Fallback para o alerta padrão
+        }
+    };
 
     try {
         const response = await fetch(`${API_URL}/api/auth/login`, {
