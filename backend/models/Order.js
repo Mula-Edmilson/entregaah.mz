@@ -1,9 +1,9 @@
-// Ficheiro: backend/models/Order.js (Completo e Atualizado)
+// Ficheiro: backend/models/Order.js (Atualizado)
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
     // --- Detalhes do Serviço ---
-    service_type: { type: String, required: true }, // 'doc', 'farma', etc.
+    service_type: { type: String, required: true },
     price: {
         type: Number,
         required: true,
@@ -17,13 +17,10 @@ const orderSchema = new mongoose.Schema({
 
     // --- Detalhes do Local ---
     address_text: { type: String },
-    
-    // --- (CAMPO ATIVADO) ---
     address_coords: { 
         lat: { type: Number }, 
         lng: { type: Number }
     },
-    // --- FIM DA ATIVAÇÃO ---
 
     // --- Identificação ---
     image_url: { type: String }, 
@@ -38,15 +35,11 @@ const orderSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'DriverProfile' 
     },
-
-    // --- (CAMPO NOVO) ---
-    // Ligação ao Cliente Registado
     client: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Client',
         required: false 
     },
-    // --- FIM DO CAMPO NOVO ---
 
     // --- Status e Timestamps ---
     status: {
@@ -55,10 +48,21 @@ const orderSchema = new mongoose.Schema({
         default: 'pendente'
     },
     timestamp_started: { type: Date }, 
-    timestamp_completed: { type: Date } 
+    timestamp_completed: { type: Date },
+
+    // --- (NOVA MELHORIA FINANCEIRA) ---
+    // Estes valores são calculados quando a entrega é 'concluida'
+    valor_motorista: {
+        type: Number,
+        default: 0
+    },
+    valor_empresa: {
+        type: Number,
+        default: 0
+    }
+    // --- FIM DA MELHORIA ---
 
 }, {
-    // Usa os timestamps automáticos (createdAt e updatedAt)
     timestamps: true 
 });
 
