@@ -11,10 +11,9 @@ const { ORDER_STATUS } = require('../utils/constants');
  */
 exports.deleteOldHistory = asyncHandler(async (req, res) => {
     
-    // 1. Define a data de corte (30 dias atrás)
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - 30); // 30 dias no passado
-
+    // 1. Define a data de corte (1 minuto atrás) - APENAS PARA TESTE
+const cutoffDate = new Date();
+cutoffDate.setMinutes(cutoffDate.getMinutes() - 1); // 1 minuto no passado
     // 2. Define o critério de busca
     const query = {
         status: { $in: [ORDER_STATUS.COMPLETED, ORDER_STATUS.CANCELED] },
