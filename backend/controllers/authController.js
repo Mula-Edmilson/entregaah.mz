@@ -1,4 +1,4 @@
-// Ficheiro: backend/controllers/authController.js (Adicionada nova função)
+// Ficheiro: backend/controllers/authController.js (Atualizado)
 
 const User = require('../models/User');
 const DriverProfile = require('../models/DriverProfile');
@@ -10,7 +10,7 @@ const { DRIVER_STATUS } = require('../utils/constants');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'a-minha-chave-secreta-para-a-entregaah-mz-2024';
 
-// ... (A função generateToken permanece a mesma) ...
+// Função auxiliar para gerar um Token JWT
 const generateToken = (id, role, nome) => {
     return jwt.sign(
         { user: { id, role, nome } },
@@ -19,21 +19,29 @@ const generateToken = (id, role, nome) => {
     );
 };
 
-// ... (A função registerDriver permanece a mesma) ...
+
+// @desc    Admin regista um novo motorista
+// @route   POST /api/auth/register-driver
+// @access  Privado (Admin)
 exports.registerDriver = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         res.status(400);
         throw new Error(errors.array()[0].msg);
     }
-    const { nome, email, telefone, password, vehicle_plate } = req.body;
+
+    // (MUDANÇA) Adicionámos 'commissionRate' vindo do req.body
+    const { nome, email, telefone, password, vehicle_plate, commissionRate } = req.body;
+
     const userExists = await User.findOne({ email });
     if (userExists) {
         res.status(400);
         throw new Error('Já existe um utilizador com este email');
     }
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
+
     const user = await User.create({
         nome,
         email: email.toLowerCase(),
@@ -41,20 +49,26 @@ exports.registerDriver = asyncHandler(async (req, res) => {
         password: hashedPassword,
         role: 'driver'
     });
+
     if (!user) {
         res.status(500);
         throw new Error('Falha ao criar o utilizador motorista');
     }
+
+    // (MUDANÇA) Adicionámos 'commissionRate' à criação do Perfil
     const driverProfile = await DriverProfile.create({
         user: user._id,
         vehicle_plate: vehicle_plate || '',
-        status: DRIVER_STATUS.OFFLINE
+        status: DRIVER_STATUS.OFFLINE,
+        commissionRate: commissionRate || 20 // Usa a comissão enviada, ou 20% por defeito
     });
+
     if (!driverProfile) {
         await user.deleteOne(); 
         res.status(500);
         throw new Error('Falha ao criar o perfil do motorista');
     }
+
     res.status(201).json({
         message: 'Motorista registado com sucesso',
         _id: user._id,
@@ -66,8 +80,11 @@ exports.registerDriver = asyncHandler(async (req, res) => {
 });
 
 
-// ... (A função login permanece a mesma) ...
+// @desc    Login para Admin ou Motorista
+// @route   POST /api/auth/login
+// @access  Público
 exports.login = asyncHandler(async (req, res) => {
+    // ... (Esta função permanece 100% igual) ...
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         res.status(400);
@@ -91,41 +108,29 @@ exports.login = asyncHandler(async (req, res) => {
 });
 
 
-// --- (NOVA FUNÇÃO ADICIONADA) ---
 // @desc    Utilizador logado muda a sua própria senha
 // @route   PUT /api/auth/change-password
 // @access  Privado (Qualquer um logado)
 exports.changePassword = asyncHandler(async (req, res) => {
-    // 1. Validar os dados
+    // ... (Esta função permanece 100% igual) ...
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         res.status(400);
         throw new Error(errors.array()[0].msg);
     }
-
     const { senhaAntiga, senhaNova } = req.body;
-
-    // 2. Encontrar o utilizador (o ID vem do token, via middleware 'protect')
-    // (Precisamos de .select('+password') porque o modelo o esconde por defeito)
     const user = await User.findById(req.user.id).select('+password');
-
     if (!user) {
         res.status(404);
         throw new Error('Utilizador não encontrado');
     }
-
-    // 3. Verificar se a senha antiga está correta
     const isMatch = await bcrypt.compare(senhaAntiga, user.password);
     if (!isMatch) {
-        res.status(401); // Unauthorized
+        res.status(401);
         throw new Error('A senha antiga está incorreta');
     }
-
-    // 4. Encriptar e salvar a nova senha
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(senhaNova, salt);
     await user.save();
-
     res.status(200).json({ message: 'Senha atualizada com sucesso!' });
 });
-// --- FIM DA NOVA FUNÇÃO ---

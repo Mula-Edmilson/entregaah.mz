@@ -133,6 +133,11 @@
                     </div>
                     <div class="form-row">
                          <div class="form-group"><label for="driver-plate">Viatura (Placa)</label><input type="text" id="driver-plate" placeholder="Ex: MXX-123-MP"></div>
+                         
+                         <div class="form-group">
+                            <label for="driver-commission">Comissão (%)</label>
+                            <input type="number" id="driver-commission" value="20" min="0" max="100" step="1">
+                         </div>
                     </div>
                     <button type="submit" class="btn-submit">Salvar Motorista</button>
                     <button type="button" class="btn-cancel" onclick="showAddDriverForm(false)">Cancelar</button>
@@ -183,7 +188,6 @@
                     </table>
                 </div>
             </div> 
-
             <div id="entregas-activas" class="content-page hidden">
                 <h3>Gestão de Encomendas Activas</h3>
                 <div class="table-container-responsive">
@@ -202,7 +206,6 @@
                     </table>
                 </div>
             </div>
-
             <div id="historico" class="content-page hidden">
                 <h3>Histórico de Encomendas</h3>
                 <div class="search-container">
@@ -225,16 +228,12 @@
                     </table>
                 </div>
             </div>
-
             <div id="mapa-tempo-real" class="content-page hidden">
                 <div id="live-map-container">
                 </div>
             </div>
-
-            
             <div id="configuracoes" class="content-page hidden">
                 <h3>Segurança da Conta</h3>
-                
                 <form id="form-change-password">
                     <p>Altere a sua senha de administrador. Você será desconectado após a alteração.</p>
                     <div class="form-group">
@@ -251,19 +250,17 @@
                     </div>
                     <button type="submit" class="btn-submit">Atualizar Senha</button>
                 </form>
-
                 <h3 style="margin-top: 3rem; border-color: var(--danger-color);">Zona de Perigo</h3>
                 <div id="zona-de-perigo">
                     <p>Ações administrativas perigosas. Estas ações são irreversíveis.</p>
-                    
                     <button class="btn-danger" id="btn-delete-old-history">
                         <i class="fas fa-trash"></i> Apagar Histórico Antigo
                     </button>
                     <small style="display: block; margin-top: 5px;">Apaga todas as encomendas concluídas com mais de 30 dias.</small>
-                    
                     <button class="btn-danger" disabled style="margin-top: 1rem;"><i class="fas fa-users-slash"></i> Apagar Clientes Inativos (brevemente)</button>
                 </div>
             </div>
+            
             <div id="assign-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -280,6 +277,7 @@
                     </div>
                 </div>
             </div>
+
             <div id="edit-driver-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -292,6 +290,12 @@
                             <div class="form-group"><label for="edit-driver-name">Nome Completo</label><input type="text" id="edit-driver-name" required></div>
                             <div class="form-group"><label for="edit-driver-phone">Telefone</label><input type="tel" id="edit-driver-phone" required></div>
                             <div class="form-group"><label for="edit-driver-plate">Viatura (Placa)</label><input type="text" id="edit-driver-plate"></div>
+                            
+                            <div class="form-group">
+                                <label for="edit-driver-commission">Comissão (%)</label>
+                                <input type="number" id="edit-driver-commission" value="20" min="0" max="100" step="1">
+                            </div>
+
                             <div class="form-group">
                                 <label for="edit-driver-status">Estado</label>
                                 <select id="edit-driver-status" required>
@@ -308,6 +312,7 @@
                     </form>
                 </div>
             </div>
+            
             <div id="history-detail-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -466,10 +471,10 @@
                     </div>
                 </div>
             </div>
-
             <div id="confirmation-modal" class="modal-backdrop hidden">
                 <div class="modal-content modal-alert">
-                    <div class="modal-header error"> <h3 id="confirmation-title">Confirmar Ação</h3>
+                    <div class="modal-header error">
+                        <h3 id="confirmation-title">Confirmar Ação</h3>
                         <button class="modal-close-btn" id="btn-close-confirmation-modal">×</button>
                     </div>
                     <div class="modal-body">
@@ -485,7 +490,6 @@
                     </div>
                 </div>
             </div>
-
 
             </div>
     </main>

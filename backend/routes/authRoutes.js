@@ -1,14 +1,13 @@
-// Ficheiro: backend/routes/authRoutes.js (Adicionada nova rota)
+// Ficheiro: backend/routes/authRoutes.js (Atualizado)
 
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
-// (MUDANÇA) 'protect' é necessário, mas 'admin' não (ambos podem mudar)
 const { protect, admin } = require('../middleware/authMiddleware'); 
 const { body } = require('express-validator');
 
 
-// ... (A rota register-driver permanece a mesma) ...
+// @route   POST api/auth/register-driver
 router.post(
     '/register-driver', 
     protect, 
@@ -22,13 +21,19 @@ router.post(
             .isLength({ min: 9 }),
         body('password', 'A senha deve ter pelo menos 6 caracteres')
             .isLength({ min: 6 }),
-        body('vehicle_plate', 'A placa é opcional').optional().trim()
+        body('vehicle_plate', 'A placa é opcional').optional().trim(),
+        
+        // --- (NOVA VALIDAÇÃO) ---
+        body('commissionRate', 'A comissão deve ser um número entre 0 e 100')
+            .optional()
+            .isFloat({ min: 0, max: 100 })
+        // --- FIM DA VALIDAÇÃO ---
     ],
     authController.registerDriver
 );
 
 
-// ... (A rota login permanece a mesma) ...
+// @route   POST api/auth/login
 router.post(
     '/login',
     [
@@ -39,20 +44,16 @@ router.post(
     authController.login
 );
 
-// --- (NOVA ROTA ADICIONADA) ---
 // @route   PUT api/auth/change-password
-// @desc    Utilizador logado (admin ou motorista) muda a sua própria senha
-// @access  Privado (Qualquer um logado)
 router.put(
     '/change-password',
-    protect, // Requer que o utilizador esteja logado
+    protect,
     [
         body('senhaAntiga', 'A senha antiga é obrigatória').notEmpty(),
         body('senhaNova', 'A nova senha deve ter pelo menos 6 caracteres')
             .isLength({ min: 6 })
     ],
-    authController.changePassword // Nova função que vamos criar
+    authController.changePassword
 );
-// --- FIM DA NOVA ROTA ---
 
 module.exports = router;

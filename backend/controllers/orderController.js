@@ -1,4 +1,4 @@
-// Ficheiro: backend/controllers/orderController.js (MELHORIA: Notificações em Tempo Real)
+// Ficheiro: backend/controllers/orderController.js (Atualizado com Cálculo Financeiro)
 
 const Order = require('../models/Order');
 const DriverProfile = require('../models/DriverProfile');
@@ -77,7 +77,7 @@ exports.createOrder = asyncHandler(async (req, res) => {
     res.status(201).json({ message: 'Encomenda criada com sucesso!', order: newOrder });
 });
 
-// ... (getMyDeliveries, startDelivery, completeDelivery, getAllOrders, getActiveOrders permanecem as mesmas) ...
+// ... (getMyDeliveries e startDelivery permanecem as mesmas) ...
 exports.getMyDeliveries = asyncHandler(async (req, res) => {
     const driverProfile = await DriverProfile.findOne({ user: req.user._id });
     if (!driverProfile) {
@@ -126,19 +126,28 @@ exports.startDelivery = asyncHandler(async (req, res) => {
     res.status(200).json({ message: 'Entrega iniciada', order: order });
 });
 
+
+// @desc    Motorista finaliza a entrega com o código
+// @route   POST /api/orders/:id/complete
 exports.completeDelivery = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         res.status(400);
         throw new Error(errors.array()[0].msg);
     }
+
     const orderId = req.params.id;
     const { verification_code } = req.body;
-    const driverProfile = await DriverProfile.findOne({ user: req.user._id });
+    
+    // (MUDANÇA) Trocámos o 'driverProfile' pelo 'user' ID do motorista
+    // para que a lógica de cálculo seja mais robusta
+    const driverUser = req.user; 
+    const driverProfile = await DriverProfile.findOne({ user: driverUser._id });
     if (!driverProfile) {
         res.status(404);
         throw new Error('Perfil de motorista não encontrado');
     }
+
     const order = await Order.findById(orderId);
     if (!order) {
         res.status(404);
@@ -152,20 +161,42 @@ exports.completeDelivery = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error('Código de verificação incorreto');
     }
+
+    // --- (A LÓGICA FINANCEIRA ESTÁ AQUI) ---
+    // 1. Obter a taxa de comissão do perfil do motorista
+    const commissionRate = driverProfile.commissionRate || 20; // Usa 20% se não estiver definido
+    
+    // 2. Calcular os valores
+    const precoTotal = order.price;
+    const ganhoMotorista = precoTotal * (commissionRate / 100);
+    const ganhoEmpresa = precoTotal - ganhoMotorista;
+    
+    // 3. Atribuir os valores à encomenda
+    order.valor_motorista = ganhoMotorista;
+    order.valor_empresa = ganhoEmpresa;
+    // --- FIM DA LÓGICA FINANCEIRA ---
+
+    // 4. Atualizar o status da encomenda e do motorista
     order.status = ORDER_STATUS.COMPLETED;
     order.timestamp_completed = Date.now();
-    await order.save();
+    await order.save(); // Salva a encomenda (agora com os valores financeiros)
+    
     driverProfile.status = DRIVER_STATUS.ONLINE_FREE;
     await driverProfile.save();
+    
+    // 5. Emitir sockets (como antes)
     const io = req.app.get('socketio');
     io.to(ADMIN_ROOM).emit('delivery_completed', { id: order._id });
     io.to(ADMIN_ROOM).emit('driver_status_changed', { 
         driverId: driverProfile._id, 
         newStatus: driverProfile.status 
     });
+    
     res.status(200).json({ message: 'Entrega finalizada com sucesso!' });
 });
 
+
+// ... (assignOrder, getHistoryOrders, etc. permanecem as mesmas) ...
 exports.getAllOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find()
         .populate('assigned_to_driver') 
@@ -187,56 +218,39 @@ exports.getActiveOrders = asyncHandler(async (req, res) => {
     res.status(200).json({ orders });
 });
 
-
-/**
- * Atribui uma encomenda a um motorista
- */
 exports.assignOrder = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         res.status(400);
         throw new Error(errors.array()[0].msg);
     }
-
     const { orderId } = req.params;
     const { driverId } = req.body;
-    
     const order = await Order.findById(orderId);
     if (!order) {
         res.status(404);
         throw new Error('Encomenda não encontrada');
     }
-    
-    // (MELHORIA) Precisamos do 'user' ID do motorista, não apenas o 'profile' ID.
-    // O 'driverId' que recebemos é o ID do Perfil.
     const driverProfile = await DriverProfile.findById(driverId);
     if (!driverProfile) {
         res.status(404);
         throw new Error('Perfil de motorista não encontrado');
     }
-    
     order.assigned_to_driver = driverId;
     order.status = ORDER_STATUS.ASSIGNED;
     await order.save();
     
-    // --- (A CORREÇÃO ESTÁ AQUI) ---
     const io = req.app.get('socketio');
-    
-    // O 'driverProfile.user' é o 'userId' que usámos para a sala privada.
     const assignedUserId = driverProfile.user.toString(); 
-
-    // Emite o evento APENAS para a sala privada daquele motorista.
     io.to(assignedUserId).emit('nova_entrega_atribuida', {
         orderId: order._id,
         clientName: order.client_name,
         serviceType: order.service_type
     });
-    // --- FIM DA CORREÇÃO ---
     
     res.status(200).json({ message: 'Encomenda atribuída com sucesso', order });
 });
 
-// ... (getHistoryOrders e getOrderById permanecem as mesmas) ...
 exports.getHistoryOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find({
         status: { $in: [ORDER_STATUS.COMPLETED, ORDER_STATUS.CANCELED] }
