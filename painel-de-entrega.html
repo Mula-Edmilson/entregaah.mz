@@ -17,7 +17,11 @@
         <div class="motorista-profile">
             <span id="driver-name-header">Motorista</span>
             
-            <button class="btn-logout" id="driver-settings" title="Configurações" style="background: none; border: none; color: var(--white-color); margin-left: 10px; font-size: 1.2rem;">
+            <button class="btn-logout" id="driver-earnings" title="Meus Ganhos" style="background: none; border: none; color: var(--text-color); margin-left: 10px; font-size: 1.2rem;">
+                <i class="fas fa-file-invoice-dollar"></i>
+            </button>
+            
+            <button class="btn-logout" id="driver-settings" title="Configurações" style="background: none; border: none; color: var(--text-color); margin-left: 10px; font-size: 1.2rem;">
                 <i class="fas fa-cog"></i>
             </button>
             
@@ -99,7 +103,45 @@
                 <button type="submit" class="btn-submit">Atualizar Senha</button>
             </form>
         </section>
-    </main>
+        
+        <section id="meus-ganhos" class="hidden">
+            <button class="btn-voltar" id="btn-voltar-lista-ganhos">
+                <i class="fas fa-arrow-left"></i> Voltar às Entregas
+            </button>
+            <h2>Meus Ganhos (Este Mês)</h2>
+            
+            <div class="report-summary">
+                <div class="summary-card">
+                    <span><i class="fas fa-dollar-sign"></i> Total Ganhos (MZN)</span>
+                    <strong id="driver-total-ganhos">...</strong>
+                </div>
+                <div class="summary-card">
+                    <span><i class="fas fa-tasks"></i> Total Entregas</span>
+                    <strong id="driver-total-entregas">...</strong>
+                </div>
+                <div class="summary-card">
+                    <span><i class="fas fa-percent"></i> Minha Comissão</span>
+                    <strong id="driver-commission-rate">... %</strong>
+                </div>
+            </div>
+
+            <h4>Extrato de Entregas Concluídas (Este Mês)</h4>
+            <div class="table-responsive">
+                <table class="table-pedidos">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>ID Pedido</th>
+                            <th>Valor Pedido (MZN)</th>
+                            <th>Meu Ganho (MZN)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="driver-earnings-table-body">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+        </main>
 
     <div id="custom-alert-modal" class="modal-backdrop hidden">
         <div class="modal-content modal-alert">

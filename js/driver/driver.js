@@ -1,6 +1,6 @@
 /*
  * Ficheiro: js/driver/driver.js
- * (MELHORIA: Adicionada página de Configurações)
+ * (MELHORIA: Adicionada página 'Meus Ganhos')
  */
 
 /* --- PONTO DE ENTRADA (Entry Point) --- */
@@ -24,9 +24,14 @@ function attachDriverEventListeners() {
         handleLogout('driver');
     });
     
-    // (MUDANÇA) Botão de Configurações
+    // Botão de Configurações
     document.getElementById('driver-settings').addEventListener('click', () => {
         showDriverPage('configuracoes-motorista');
+    });
+    
+    // (NOVO) Botão de Ganhos
+    document.getElementById('driver-earnings').addEventListener('click', () => {
+        showDriverPage('meus-ganhos');
     });
     
     // Botões "Voltar"
@@ -34,6 +39,10 @@ function attachDriverEventListeners() {
         showDriverPage('lista-entregas');
     });
     document.getElementById('btn-voltar-lista-config').addEventListener('click', () => {
+        showDriverPage('lista-entregas');
+    });
+    // (NOVO) Botão Voltar da pág. Ganhos
+    document.getElementById('btn-voltar-lista-ganhos').addEventListener('click', () => {
         showDriverPage('lista-entregas');
     });
 
@@ -50,7 +59,7 @@ function attachDriverEventListeners() {
         }
     });
 
-    // (MUDANÇA) Listener do novo formulário de senha
+    // Listener do formulário de senha
     document.getElementById('form-change-password-driver').addEventListener('submit', handleChangePasswordDriver);
 }
 
@@ -58,14 +67,14 @@ function attachDriverEventListeners() {
 /* --- Lógica de Navegação do Motorista --- */
 
 /**
- * (NOVA FUNÇÃO) Controla qual secção é mostrada ao motorista.
- * @param {string} pageId ('lista-entregas', 'detalhe-entrega', 'configuracoes-motorista')
+ * Controla qual secção é mostrada ao motorista.
  */
 function showDriverPage(pageId) {
     // Esconde todas as secções
     document.getElementById('lista-entregas').classList.add('hidden');
     document.getElementById('detalhe-entrega').classList.add('hidden');
     document.getElementById('configuracoes-motorista').classList.add('hidden');
+    document.getElementById('meus-ganhos').classList.add('hidden'); // (NOVO)
 
     // Mostra a secção pedida
     const pageToShow = document.getElementById(pageId);
@@ -73,21 +82,23 @@ function showDriverPage(pageId) {
         pageToShow.classList.remove('hidden');
     }
 
-    // Carrega os dados se for a lista
+    // Carrega os dados necessários para a página
     if (pageId === 'lista-entregas') {
         loadMyDeliveries();
     }
-    
-    // Limpa o formulário de senha se for a pág de config
     if (pageId === 'configuracoes-motorista') {
         document.getElementById('form-change-password-driver').reset();
+    }
+    if (pageId === 'meus-ganhos') {
+        loadMyEarnings(); // (NOVO)
     }
 }
 
 
-/* --- Lógica de API (Carregamento de Dados - GET) --- */
+/* --- Lógica de API (GET) --- */
+
+// ... (loadMyDeliveries permanece 100% igual) ...
 async function loadMyDeliveries() {
-    // ... (Esta função permanece 100% igual) ...
     const listaEntregas = document.getElementById('lista-entregas');
     if (!listaEntregas) return;
     listaEntregas.innerHTML = '<h2>Minhas Entregas Pendentes</h2><p>A carregar...</p>';
@@ -117,9 +128,7 @@ async function loadMyDeliveries() {
                 <span class="ver-detalhes-btn">${order.status === 'atribuido' ? 'Ver Detalhes' : 'Continuar Entrega'}</span>
             `;
             card.addEventListener('click', () => { 
-                // (MUDANÇA) Chama a nova função de navegação
                 showDriverPage('detalhe-entrega');
-                // Preenche os detalhes (lógica movida de 'showDetalheEntrega')
                 fillDetalheEntrega(order); 
             });
             listaEntregas.appendChild(card);
@@ -131,17 +140,77 @@ async function loadMyDeliveries() {
 }
 
 
+// --- (NOVA FUNÇÃO ADICIONADA) ---
+/**
+ * Carrega e exibe o extrato de ganhos do motorista.
+ */
+async function loadMyEarnings() {
+    // Formata um número para moeda MZN
+    const formatMZN = (value) => new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(value);
+
+    // Seleciona os elementos da UI
+    const totalGanhosEl = document.getElementById('driver-total-ganhos');
+    const totalOrdersEl = document.getElementById('driver-total-entregas');
+    const commissionEl = document.getElementById('driver-commission-rate');
+    const tableBody = document.getElementById('driver-earnings-table-body');
+    
+    // Feedback de carregamento
+    totalGanhosEl.innerText = '...';
+    totalOrdersEl.innerText = '...';
+    commissionEl.innerText = '... %';
+    tableBody.innerHTML = '<tr><td colspan="4">A carregar...</td></tr>';
+
+    try {
+        const response = await fetch(`${API_URL}/api/drivers/my-earnings`, {
+            method: 'GET',
+            headers: getAuthHeaders()
+        });
+
+        // Se o token estiver inválido, força o logout
+        if (response.status === 401) {
+            return handleLogout('driver');
+        }
+        
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        
+        // Preenche os cartões de resumo
+        totalGanhosEl.innerText = formatMZN(data.totalGanhos);
+        totalOrdersEl.innerText = data.totalOrders;
+        commissionEl.innerText = `${data.commissionRate} %`;
+        
+        // Preenche a tabela
+        tableBody.innerHTML = ''; // Limpa o "A carregar..."
+        if (data.ordersList.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4">Nenhuma entrega concluída este mês.</td></tr>';
+            return;
+        }
+        
+        data.ordersList.forEach(order => {
+            tableBody.innerHTML += `
+                <tr>
+                    <td>${new Date(order.timestamp_completed).toLocaleDateString('pt-MZ')}</td>
+                    <td>#${order._id.slice(-6)}</td>
+                    <td>${formatMZN(order.price)}</td>
+                    <td style="color: var(--success-color); font-weight: 600;">${formatMZN(order.valor_motorista)}</td>
+                </tr>
+            `;
+        });
+        
+    } catch (error) { 
+        console.error('Falha ao carregar ganhos:', error);
+        tableBody.innerHTML = `<tr><td colspan="4" style="color: var(--danger-color);">Erro ao carregar extrato. Tente novamente.</td></tr>`;
+    }
+}
+// --- FIM DA NOVA FUNÇÃO ---
+
+
 /* --- Lógica de UI (Mostrar/Esconder Secções) --- */
 
-/**
- * (NOME MUDADO) Preenche os detalhes da entrega (não muda a página).
- * @param {object} order - O objeto da encomenda (vindo da cache do card).
- */
+// ... (fillDetalheEntrega e showListaEntregas permanecem 100% iguais) ...
 function fillDetalheEntrega(order) {
     const detalheSection = document.getElementById('detalhe-entrega');
     detalheSection.querySelector('#detalhe-entrega-title').innerText = `Detalhes do Pedido #${order._id.slice(-6)}`;
-    
-    // ... (o resto desta função - preencher imagens, texto, botões - permanece 100% igual) ...
     const img = detalheSection.querySelector('#encomenda-imagem');
     const noImg = detalheSection.querySelector('#no-image-placeholder');
     if (order.image_url) {
@@ -181,59 +250,43 @@ function fillDetalheEntrega(order) {
         btnIniciar.onclick = () => handleStartDelivery(order._id);
     }
 }
-
-/**
- * (NOME MUDADO) Função de callback para o botão "Voltar".
- */
 function showListaEntregas() {
     showDriverPage('lista-entregas');
 }
 
 
-/* --- Lógica de API (Envio de Dados - POST) --- */
+/* --- Lógica de API (POST/PUT) --- */
 
-/**
- * (NOVA FUNÇÃO) Submete o formulário de "Mudar Senha" do motorista.
- */
+// ... (handleChangePasswordDriver, handleStartDelivery, handleCompleteDelivery permanecem 100% iguais) ...
 async function handleChangePasswordDriver(e) {
     e.preventDefault();
     const form = e.target;
-    
     const senhaAntiga = document.getElementById('driver-pass-antiga').value;
     const senhaNova = document.getElementById('driver-pass-nova').value;
     const senhaConfirmar = document.getElementById('driver-pass-confirmar').value;
-    
     if (senhaNova !== senhaConfirmar) {
         showCustomAlert('Erro', 'As novas senhas não coincidem.', 'error');
         return;
     }
-    
     try {
         const response = await fetch(`${API_URL}/api/auth/change-password`, {
             method: 'PUT',
             headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify({ senhaAntiga, senhaNova })
         });
-        
         const data = await response.json();
         if (!response.ok) {
             throw new Error(data.message);
         }
-        
         showCustomAlert('Sucesso!', 'A sua senha foi alterada. Por favor, faça login novamente.', 'success');
-        
         setTimeout(() => {
-            handleLogout('driver'); // Faz logout
+            handleLogout('driver');
         }, 2500);
-
     } catch (error) {
         console.error('Falha ao mudar a senha:', error);
         showCustomAlert('Erro', error.message, 'error');
     }
 }
-
-
-// ... (handleStartDelivery e handleCompleteDelivery permanecem 100% iguais) ...
 async function handleStartDelivery(orderId) {
     try {
         const response = await fetch(`${API_URL}/api/orders/${orderId}/start`, {
