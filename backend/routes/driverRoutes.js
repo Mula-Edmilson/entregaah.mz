@@ -3,11 +3,13 @@
 const express = require('express');
 const router = express.Router();
 const driverController = require('../controllers/driverController');
-const { protect, admin } = require('../middleware/authMiddleware');
+// (MUDANÇA) Importamos o middleware 'driver'
+const { protect, admin, driver } = require('../middleware/authMiddleware');
 const User = require('../models/User');
 const { body, param } = require('express-validator');
 const { DRIVER_STATUS } = require('../utils/constants');
 
+// --- Rotas de Admin ---
 // @route   GET /api/drivers
 router.get('/', protect, admin, driverController.getAllDrivers);
 
@@ -25,6 +27,21 @@ router.get('/available', protect, admin, async (req, res) => {
     }
 });
 
+
+// --- (NOVA ROTA DE MOTORISTA) ---
+// @route   GET /api/drivers/my-earnings
+// @desc    Motorista logado obtém o seu extrato de ganhos
+// @access  Privado (Motorista)
+router.get(
+    '/my-earnings',
+    protect, // Protegido
+    driver,  // Apenas para motoristas
+    driverController.getMyEarnings // Nova função
+);
+// --- FIM DA NOVA ROTA ---
+
+
+// --- Mais Rotas de Admin ---
 // @route   GET /api/drivers/:id/report
 router.get(
     '/:id/report', 
@@ -66,12 +83,9 @@ router.put(
                 DRIVER_STATUS.ONLINE_BUSY, 
                 DRIVER_STATUS.OFFLINE
             ]),
-        
-        // --- (NOVA VALIDAÇÃO) ---
         body('commissionRate', 'A comissão deve ser um número entre 0 e 100')
             .optional()
             .isFloat({ min: 0, max: 100 })
-        // --- FIM DA VALIDAÇÃO ---
     ],
     driverController.updateDriver
 );
