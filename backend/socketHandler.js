@@ -1,14 +1,24 @@
 /*
  * Ficheiro: backend/socketHandler.js
- * (MELHORIA: Notificações em Tempo Real)
+ * (Atualizado para exportar o mapa de localizações)
  */
 
 const jwt = require('jsonwebtoken');
 const DriverProfile = require('./models/DriverProfile');
 const { DRIVER_STATUS } = require('./utils/constants');
 
+// --- (MUDANÇA) ---
+// Movemos o mapa para o escopo do módulo (fora da função init)
+// para que ele possa ser acedido pela função de exportação.
 const socketUserMap = new Map();
+// --- FIM DA MUDANÇA ---
 
+/**
+ * Inicializa o gestor de Socket.IO
+ * @param {object} io - A instância do Socket.IO vinda do server.js
+ * @param {string} JWT_SECRET - O segredo JWT
+ * @param {string} ADMIN_ROOM - O nome da sala de admin
+ */
 function initSocketHandler(io, JWT_SECRET, ADMIN_ROOM) {
 
     io.on('connection', (socket) => {
@@ -47,13 +57,8 @@ function initSocketHandler(io, JWT_SECRET, ADMIN_ROOM) {
                 }
 
             } else if (userRole === 'driver') {
-                
-                // --- (A CORREÇÃO ESTÁ AQUI) ---
-                // O motorista junta-se a uma sala privada com o seu próprio ID.
-                // Isto permite-nos enviar-lhe mensagens diretas.
                 socket.join(userId);
                 console.log(`Motorista ${userName} (${userId}) juntou-se à sua sala privada.`);
-                // --- FIM DA CORREÇÃO ---
 
                 DriverProfile.findOneAndUpdate(
                     { user: userId }, 
@@ -149,4 +154,17 @@ function initSocketHandler(io, JWT_SECRET, ADMIN_ROOM) {
     });
 }
 
-module.exports = initSocketHandler;
+// --- (NOVA FUNÇÃO ADICIONADA) ---
+/**
+ * Exporta o mapa de sockets para ser usado por outros controllers (ex: orderController)
+ */
+function getSocketUserMap() {
+    return socketUserMap;
+}
+
+// --- (MUDANÇA NA EXPORTAÇÃO) ---
+// Exportamos ambas as funções
+module.exports = {
+    initSocketHandler,
+    getSocketUserMap
+};

@@ -53,14 +53,12 @@
         <div class="content-area">
             
             <div id="visao-geral" class="content-page">
-                
                 <div class="stats-cards">
                     <div class="card card-warning"><h3>Pendentes</h3><p id="stats-pendentes">...</p></div>
                     <div class="card card-info"><h3>Em Trânsito</h3><p id="stats-em-transito">...</p></div>
                     <div class="card card-success"><h3>Concluídas (Hoje)</h3><p id="stats-concluidas-hoje">...</p></div>
                     <div class="card card-success"><h3>Motoristas Online</h3><p id="stats-motoristas-online">...</p></div>
                 </div>
-
                 <h3 style="margin-top: 2rem; color: var(--text-color); font-weight: 600;">Financeiro (Este Mês)</h3>
                 <div class="stats-cards" style="margin-top: 1rem;">
                     <div class="card card-success">
@@ -88,19 +86,17 @@
                         </div>
                         <canvas id="servicesChart"></canvas>
                     </div>
-                    
                     <div class="chart-container" id="deliveries-chart-container">
                         <h3>Entregas Ativas</h3>
                         <canvas id="deliveriesStatusChart"></canvas>
                     </div>
-                    
                     <div class="chart-container" id="financialChartContainer">
                         <h3>Divisão da Receita (Este Mês)</h3>
                         <canvas id="financialPieChart"></canvas>
                     </div>
                 </div>
-            
             </div>
+
             <div id="form-nova-entrega" class="content-page hidden">
                 <form id="delivery-form">
                     <input type="hidden" id="service-type" name="service_type">
@@ -142,9 +138,17 @@
                     <div id="map"></div>
                     <input type="hidden" id="delivery-lng" name="lng">
                     <input type="hidden" id="delivery-lat" name="lat">
-                    <button type="submit" class="btn-submit">Gerar Pedido e Atribuir</button>
+                    <div class="form-group" style="margin-top: 2rem; display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="autoAssignCheckbox" name="autoAssign" value="true" style="width: auto;">
+                        <label for="autoAssignCheckbox" style="margin-bottom: 0; font-weight: 600; color: var(--primary-color);">
+                            Atribuir automaticamente (motorista mais próximo)
+                        </label>
+                    </div>
+                    <small style="margin-top: -1.5rem; display: block;">Requer que um pin seja definido no mapa.</small>
+                    <button type="submit" class="btn-submit">Gerar Pedido</button>
                 </form>
             </div>
+
             <div id="gestao-motoristas" class="content-page hidden">
                 <button class="btn-submit" onclick="showAddDriverForm(true)" id="btn-show-driver-form"><i class="fas fa-plus"></i> Adicionar Novo Motorista</button>
                 <form id="form-add-motorista" class="hidden">
@@ -175,6 +179,7 @@
                     </table>
                 </div>
             </div>
+
             <div id="gestao-clientes" class="content-page hidden">
                 <button class="btn-submit" onclick="showAddClientForm(true)" id="btn-show-client-form">
                     <i class="fas fa-plus"></i> Adicionar Novo Cliente
@@ -212,6 +217,7 @@
                     </table>
                 </div>
             </div> 
+            
             <div id="entregas-activas" class="content-page hidden">
                 <h3>Gestão de Encomendas Activas</h3>
                 <div class="table-container-responsive">
@@ -285,7 +291,8 @@
                 </div>
             </div>
             
-            <div id="assign-modal" class="modal-backdrop hidden">
+            </div>
+        <div id="assign-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3>Atribuir Encomenda <span id="modal-order-id"></span></h3>
@@ -487,7 +494,7 @@
                         </div>
                     </div>
                     <div class="modal-actions">
-                        <button type="button" class="btn-cancel" onclick="closeStatementModal()">Fechar</button>
+                        <button type="button" class="btn-cancel" onclick="closeStatementModal()">Cancelar</button>
                     </div>
                 </div>
             </div>
@@ -511,7 +518,6 @@
                 </div>
             </div>
 
-            </div>
     </main>
     
     <script src="js/common/api.js"></script>
