@@ -1,41 +1,42 @@
 /* ---
- * NOVO DESIGN: "Dark-Tech" Futurist Dashboard
+ * NOVO DESIGN: "Minimal SaaS" (Light Mode)
  * Ficheiro: style.css (Completo)
 --- */
 
 /* --- Importar Fonte --- */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
-/* --- (NOVA) Paleta de Cores --- */
+/* --- (NOVA) Paleta de Cores "Minimal" --- */
 :root {
-    /* Cor de Destaque (Elétrica) */
-    --primary-color: #7c3aed; /* Violeta */
-    --primary-color-dark: #6d28d9;
-    --primary-color-light: rgba(124, 58, 237, 0.1); /* Fundo de hover */
-    --primary-rgb: 124, 58, 237; /* Para sombras com 'rgba' */
+    /* Cor de Destaque (Profissional) */
+    --primary-color: #3B82F6; /* Azul (Inspirado na imagem) */
+    --primary-color-dark: #2563EB;
+    --primary-color-light: rgba(59, 130, 246, 0.1); /* Fundo de hover */
+    --primary-rgb: 59, 130, 246;
 
-    /* Cores de Fundo (Dark Mode) */
-    --bg-color: #111827; /* Azul-escuro (Quase preto) */
-    --sidebar-color: #1f2937; /* Cinza-azulado (Fundo do Menu) */
-    --card-color: #1f2937; /* Fundo de cartões, tabelas, modais */
+    /* Cores de Fundo (Light Mode) */
+    --bg-color: #F5F7FA; /* Fundo do Body (Cinza-azulado muito claro) */
+    --sidebar-color: #FFFFFF; /* Sidebar Branco */
+    --card-color: #FFFFFF; /* Fundo de cartões, tabelas, modais */
     
     /* Cores de Texto */
-    --text-color: #e5e7eb; /* Branco-acinzentado (Principal) */
-    --text-color-light: #9ca3af; /* Cinza (Secundário/Labels) */
+    --text-color: #1E293B; /* Slate (Quase preto) */
+    --text-color-light: #6B7280; /* Cinza (Secundário/Labels) */
 
     /* Cores de UI */
-    --border-color: #374151; /* Borda subtil */
-    --success-color: #10b981; /* Verde (Mais vibrante) */
-    --danger-color: #ef4444; /* Vermelho (Mais vibrante) */
-    --info-color: #3b82f6; /* Azul (Mais vibrante) */
+    --border-color: #E5E7EB; /* Borda subtil */
+    --success-color: #10B981; /* Verde */
+    --danger-color: #EF4444; /* Vermelho */
+    --warning-color: #F59E0B; /* Amarelo/Laranja */
+    --info-color: #3B82F6; /* Azul (igual ao primário) */
     
     /* Configurações Globais */
     --font-family: 'Poppins', sans-serif;
     --border-radius: 8px;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.2);
-    /* Sombra de Brilho (Glow) */
-    --shadow-glow: 0 0 20px rgba(var(--primary-rgb), 0.3);
+    /* Sombras subtis */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 /* --- Configurações Globais --- */
@@ -51,8 +52,6 @@ body {
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* (NOVO) Transição suave para todas as cores */
-    transition: background-color 0.3s ease, color 0.3s ease;
 }
 .hidden { display: none !important; }
 
@@ -65,9 +64,9 @@ body {
     animation: fadeIn 0.3s ease-out;
 }
 
-/* --- Estilos do Login --- */
+/* --- Estilos do Login (Minimal) --- */
 .login-body { 
-    background: var(--bg-color);
+    background-color: var(--bg-color);
     display: flex; 
     justify-content: center; 
     align-items: center; 
@@ -78,7 +77,7 @@ body {
     padding: 3rem; 
     border-radius: var(--border-radius); 
     border: 1px solid var(--border-color);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.5); 
+    box-shadow: var(--shadow-lg); 
     width: 100%; 
     max-width: 450px;
     text-align: center; 
@@ -89,7 +88,7 @@ body {
     display: block; 
     margin-bottom: 0.5rem; 
     font-weight: 500; 
-    color: var(--text-color-light);
+    color: var(--text-color);
     font-size: 0.9rem;
 }
 .form-group input, .form-group select { 
@@ -99,18 +98,18 @@ body {
     border-radius: 5px; 
     font-size: 1rem; 
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-    background-color: var(--bg-color); /* Fundo mais escuro */
+    background-color: var(--bg-color); /* Fundo cinza claro */
     color: var(--text-color);
 }
 .form-group input:focus, .form-group select:focus {
     outline: none;
     border-color: var(--primary-color);
-    background-color: var(--sidebar-color); /* Fica igual ao sidebar */
-    box-shadow: var(--shadow-glow);
+    background-color: var(--card-color); /* Fica branco */
+    box-shadow: 0 0 0 3px var(--primary-color-light);
 }
 .btn-login { 
     background: var(--primary-color); 
-    color: var(--white-color); 
+    color: #FFFFFF; 
     border: none; 
     padding: 1rem 1.5rem;
     width: 100%; 
@@ -123,10 +122,10 @@ body {
 .btn-login:hover { 
     background: var(--primary-color-dark);
     transform: translateY(-2px); 
-    box-shadow: var(--shadow-glow);
+    box-shadow: 0 4px 15px rgba(var(--primary-rgb), 0.3);
 }
 
-/* --- Dashboard: Layout --- */
+/* --- Dashboard: Layout (Minimal) --- */
 .dashboard-body { display: flex; background: var(--bg-color); }
 
 .sidebar { 
@@ -140,6 +139,7 @@ body {
     top: 0; 
     left: 0; 
     border-right: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
     z-index: 100;
 }
 .sidebar-header { 
@@ -152,52 +152,58 @@ body {
 .menu-item a { 
     display: flex; 
     align-items: center;
-    padding: 1rem 1.5rem; 
+    padding: 0.9rem 1.5rem; /* Um pouco mais fino */
     margin: 0.25rem 1rem;
     color: var(--text-color-light); /* Texto secundário */
     text-decoration: none; 
     font-weight: 500; 
     transition: all 0.2s ease;
     border-radius: var(--border-radius); 
+    border-left: 3px solid transparent; /* Espaço para a borda ativa */
 }
 .menu-item a i { 
     margin-right: 12px; 
     width: 20px; 
     text-align: center; 
     font-size: 1.1rem;
+    color: #9CA3AF; /* Ícones cinza */
 }
-/* Efeito Hover/Active */
+/* Efeito Hover/Active (Inspirado na imagem) */
 .menu-item a:hover { 
     background: var(--primary-color-light); 
-    color: var(--text-color); 
+    color: var(--primary-color); 
 }
 .menu-item.active a { 
-    background: var(--primary-color); 
-    color: var(--white-color);
+    background: var(--primary-color-light); 
+    color: var(--primary-color);
     font-weight: 600;
-    box-shadow: var(--shadow-glow); /* O Brilho! */
+    border-left: 3px solid var(--primary-color); /* Borda ativa! */
+}
+.menu-item.active a i {
+    color: var(--primary-color); /* Ícone ativo */
 }
 .submenu { 
     list-style: none; 
-    background: rgba(0,0,0,0.2); 
+    background: none; 
     max-height: 0; 
     overflow: hidden;
     transition: max-height 0.3s ease-out;
     margin: 0 1rem;
-    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    padding-left: 1rem; /* Indentação */
 }
 .menu-item.has-submenu:hover .submenu { 
     max-height: 500px; 
 }
 .submenu a { 
-    padding-left: 3.5rem; 
+    padding-left: 2.5rem; /* (1.5rem + 1rem) */
     font-size: 0.9rem;
     margin: 0;
     border-radius: 0;
+    border-left: none; /* Submenu não tem borda */
 }
 .submenu a:hover { 
     background: var(--primary-color-light);
-    color: var(--text-color); 
+    color: var(--primary-color); 
 }
 .sidebar-footer { 
     padding: 1.5rem; 
@@ -208,11 +214,11 @@ body {
 .sidebar-footer a:hover { color: var(--primary-color); }
 .menu-item-logout a { color: var(--danger-color) !important; font-weight: 600; }
 .menu-item-logout a:hover { 
-    background: var(--danger-color) !important; 
-    color: var(--white-color) !important;
+    background: rgba(239, 68, 68, 0.1) !important; 
+    color: var(--danger-color) !important;
 }
 
-/* --- Dashboard: Conteúdo Principal --- */
+/* --- Dashboard: Conteúdo Principal (Minimal) --- */
 .main-content { 
     margin-left: 260px; 
     flex-grow: 1; 
@@ -227,35 +233,42 @@ body {
     border-radius: var(--border-radius); 
     margin-bottom: 2rem; 
     border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
 }
 .main-header h1 { font-size: 1.7rem; color: var(--text-color); font-weight: 600; }
 .admin-profile { display: flex; align-items: center; font-weight: 600; }
 .admin-profile i { font-size: 2rem; margin-left: 1rem; color: var(--primary-color); }
 
-/* --- (GRANDE MUDANÇA) Container de Conteúdo --- */
-/* A "folha branca" de fundo foi removida. Os cartões agora flutuam. */
+/* (GRANDE MUDANÇA) O .content-area agora é um cartão branco */
 .content-area { 
-    background: none; 
-    padding: 0;
-    border: none;
-    box-shadow: none; 
+    background: var(--card-color); 
+    padding: 2.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm); 
 }
 
-/* --- Cards de Visão Geral --- */
+/* --- Cards de Visão Geral (Inspirado na Imagem) --- */
 .stats-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; }
 .card { 
     background: var(--card-color); 
     padding: 1.5rem; 
     border-radius: var(--border-radius); 
     border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-md);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    /* (MUDANÇA CHAVE) Borda inferior colorida */
+    border-bottom-width: 4px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .card:hover {
     transform: translateY(-4px);
-    border-color: var(--primary-color);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    box-shadow: var(--shadow-md);
 }
+/* (NOVO) Classes de Cores - VOCÊ PRECISA DE ADICIONAR ISTO AO SEU HTML */
+.card.card-warning { border-bottom-color: var(--warning-color); }
+.card.card-info { border-bottom-color: var(--info-color); }
+.card.card-success { border-bottom-color: var(--success-color); }
+
 .card h3 { 
     font-size: 0.9rem;
     color: var(--text-color-light);
@@ -266,25 +279,25 @@ body {
 }
 .card p { font-size: 2.25rem; font-weight: 700; color: var(--text-color); }
 
-/* --- Gráficos --- */
+/* --- Gráficos (Minimal) --- */
 .charts-grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 1.5rem;
     margin-top: 2rem;
 }
+/* (MUDANÇA) Gráficos não são mais cartões, eles estão DENTRO do content-area */
 .chart-container { 
-    background: var(--card-color); 
-    padding: 2rem; 
-    border-radius: var(--border-radius); 
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-md);
+    background: none; 
+    padding: 0; 
+    border: none;
+    box-shadow: none;
 }
 .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
 .chart-header h3 { font-size: 1.4rem; color: var(--text-color); margin-bottom: 0; font-weight: 600; }
 #servicesChart { width: 100% !important; max-height: 400px; }
 
-#deliveries-chart-container { padding: 2rem; }
+#deliveries-chart-container { padding: 0; }
 #deliveries-chart-container h3 {
     font-size: 1.2rem; text-align: center; margin-bottom: 1.5rem;
     color: var(--text-color); font-weight: 600;
@@ -298,15 +311,13 @@ body {
     #deliveries-chart-container { grid-column: 2 / 3; }
 }
 
-/* --- Formulários --- */
-#form-nova-entrega, #form-add-motorista, #form-add-cliente, #form-change-password {
-    background: var(--card-color); 
-    padding: 2.5rem; 
-    border-radius: var(--border-radius); 
-    margin-top: 1.5rem; 
-    margin-bottom: 2rem; 
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-md);
+/* --- Formulários (Minimal) --- */
+/* (MUDANÇA) Formulários não são mais cartões */
+#form-nova-entrega, #form-add-motorista, #form-add-cliente, #configuracoes {
+    background: none; 
+    padding: 0; 
+    border: none;
+    box-shadow: none;
 }
 #form-nova-entrega h3, #form-add-motorista h3, #form-add-cliente h3, #configuracoes h3 { 
     margin-top: 1rem; 
@@ -332,7 +343,7 @@ body {
 }
 #live-map-container { height: 75vh; }
 .leaflet-grab { cursor: grab; }
-/* (NOVO) Corrigir o fundo dos popups do Leaflet para dark mode */
+/* (NOVO) Corrigir o fundo dos popups do Leaflet para light mode */
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
     background: var(--card-color);
     color: var(--text-color);
@@ -340,7 +351,7 @@ body {
     box-shadow: var(--shadow-md);
 }
 
-/* --- Botões --- */
+/* --- Botões (Minimal) --- */
 .btn-submit, .btn-cancel, .btn-action, .btn-action-small, .btn-action-assign, .btn-logout {
     border: none;
     padding: 0.8rem 1.5rem;
@@ -355,22 +366,23 @@ body {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
+/* (MUDANÇA) Botão submit agora é azul */
 .btn-submit { 
-    background: var(--success-color); 
-    color: var(--white-color); 
+    background: var(--primary-color); 
+    color: #FFFFFF; 
     margin-top: 1.5rem; 
 }
-.btn-submit:hover { background: #059669; }
-.btn-danger { background: var(--danger-color); color: var(--white-color); }
+.btn-submit:hover { background: var(--primary-color-dark); }
+.btn-danger { background: var(--danger-color); color: #FFFFFF; }
 .btn-danger:hover { background: #b91c1c; }
 .btn-cancel { 
-    background: var(--sidebar-color); 
+    background: var(--card-color); 
     color: var(--text-color-light); 
     border: 1px solid var(--border-color);
     margin-top: 1.5rem; 
     margin-left: 1rem; 
 }
-.btn-cancel:hover { background: var(--border-color); color: var(--text-color); }
+.btn-cancel:hover { background: var(--bg-color); color: var(--text-color); }
 .btn-danger:disabled {
     background: var(--border-color);
     color: var(--text-color-light);
@@ -379,8 +391,17 @@ body {
     transform: none;
     box-shadow: none;
 }
+/* (MUDANÇA) Botão de Ação Amarelo (como na imagem) */
+.btn-action-small.btn-danger { background: var(--danger-color); }
+button.btn-action-small {
+    background-color: var(--warning-color);
+    color: #FFFFFF;
+}
+button.btn-action-small:hover {
+    background-color: #d97706;
+}
 
-/* --- Tabelas (Redesenhadas) --- */
+/* --- Tabelas (Minimal) --- */
 .table-motoristas, .table-pedidos { 
     width: 100%; 
     border-collapse: collapse;
@@ -388,13 +409,13 @@ body {
     background: var(--card-color);
     border-radius: var(--border-radius);
     border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-sm);
     overflow: hidden;
 }
 .table-motoristas th, .table-pedidos th { 
     padding: 1rem 1.5rem;
     text-align: left; 
-    background: var(--sidebar-color); /* Fundo do header mais escuro */
+    background: #F8F9FA; /* Fundo do header cinza claro */
     font-weight: 600; 
     color: var(--text-color-light);
     font-size: 0.85rem;
@@ -409,9 +430,8 @@ body {
     border-top: 1px solid var(--border-color);
     color: var(--text-color);
 }
-/* Hover nas linhas */
 .table-motoristas tbody tr:hover, .table-pedidos tbody tr:hover {
-    background-color: var(--primary-color-light);
+    background-color: #F8F9FA; /* Fundo cinza claro */
 }
 
 /* Status (Tags) */
@@ -423,14 +443,13 @@ body {
     text-transform: capitalize; 
     display: inline-block;
 }
-/* (NOVAS CORES) Otimizadas para Dark Mode */
-.status-online-livre, .status-online { background: rgba(16, 185, 129, 0.1); color: var(--success-color); }
-.status-offline { background: rgba(239, 68, 68, 0.1); color: var(--danger-color); }
-.status-online-ocupado, .status-busy { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-.status-pendente { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-.status-atribuido { background: rgba(59, 130, 246, 0.1); color: var(--info-color); }
-.status-em-progresso { background: rgba(16, 185, 129, 0.1); color: var(--success-color); }
-.status-concluido { background: rgba(156, 163, 175, 0.1); color: var(--text-color-light); }
+.status-online-livre, .status-online { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+.status-offline { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
+.status-online-ocupado, .status-busy { background: rgba(245, 159, 11, 0.1); color: #F59E0B; }
+.status-pendente { background: rgba(245, 159, 11, 0.1); color: #F59E0B; }
+.status-atribuido { background: rgba(59, 130, 246, 0.1); color: #3B82F6; }
+.status-em-progresso { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+.status-concluido { background: rgba(107, 114, 128, 0.1); color: #6B7280; }
 
 /* Código de verificação */
 .verification-code {
@@ -444,7 +463,7 @@ body {
 /* Botões de Ação na Tabela */
 .btn-action, .btn-action-small { 
     background: var(--primary-color); 
-    color: var(--white-color); 
+    color: #FFFFFF; 
     padding: 0.5rem 0.75rem; 
     font-size: 0.9rem; 
     margin-right: 0.5rem;
@@ -455,40 +474,49 @@ body {
     color: white; 
 }
 .btn-action:hover, .btn-action-small:hover, .btn-action-assign:hover {
-    box-shadow: var(--shadow-glow);
+    box-shadow: 0 4px 15px rgba(var(--primary-rgb), 0.3);
 }
 
-
-/* --- Painel do Motorista --- */
+/* --- Painel do Motorista (Minimal) --- */
 .motorista-body { background: var(--bg-color); padding-bottom: 2rem; }
 .motorista-header { 
-    background: var(--sidebar-color); 
+    background: var(--card-color); 
     padding: 1rem 1.5rem; 
     display: flex; 
     justify-content: space-between; 
     align-items: center; 
     border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
 }
 .motorista-logo { max-width: 150px; }
 .motorista-profile { display: flex; align-items: center; color: var(--text-color); font-weight: 600; }
 .btn-logout { 
-    background: var(--danger-color); 
-    border: none; 
-    color: var(--white-color); 
+    background: none; 
+    border: 1px solid var(--danger-color); 
+    color: var(--danger-color); 
     font-size: 0.9rem; 
     padding: 0.4rem 0.8rem; 
     margin-left: 1rem; 
+    border-radius: 5px;
 }
 .btn-logout:hover { 
-    background: #b91c1c; 
-    box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+    background: var(--danger-color); 
+    color: #FFFFFF; 
 }
 .motorista-main { padding: 1.5rem; max-width: 800px; margin: 1.5rem auto; }
+/* (MUDANÇA) Títulos do motorista agora estão dentro de um cartão */
 .motorista-main h2 { color: var(--text-color); margin-bottom: 1.5rem; font-weight: 600; }
+#lista-entregas, #detalhe-entrega, #configuracoes-motorista {
+    background: var(--card-color);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
 
 /* Card de Entrega (Motorista) */
 .entrega-card { 
-    background: var(--card-color); 
+    background: #F8F9FA; /* Fundo cinza claro */
     border-radius: var(--border-radius); 
     padding: 1.5rem; 
     margin-bottom: 1rem; 
@@ -499,7 +527,7 @@ body {
 }
 .entrega-card:hover { 
     transform: translateY(-4px); 
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    box-shadow: var(--shadow-md); 
 }
 .entrega-card-header { 
     display: flex; justify-content: space-between; 
@@ -523,7 +551,7 @@ body {
 .btn-voltar i { margin-right: 0.5rem; }
 
 .detalhes-bloco { 
-    background: var(--card-color); 
+    background: #F8F9FA; /* Fundo cinza claro */
     padding: 1.5rem 2rem;
     border-radius: var(--border-radius); 
     margin-bottom: 1.5rem; 
@@ -534,7 +562,7 @@ body {
 
 .btn-mapa { 
     display: inline-flex; align-items: center;
-    background: #4285F4; color: var(--white-color); 
+    background: #4285F4; color: #FFFFFF; 
     padding: 0.75rem 1.25rem; border-radius: 5px; 
     text-decoration: none; font-weight: 600; 
     margin-top: 1rem; transition: all 0.2s ease-in-out; 
@@ -555,35 +583,35 @@ body {
     max-width: 300px; 
     border-radius: var(--border-radius);
     transition: all 0.2s ease;
-    background: var(--bg-color);
+    background: var(--card-color);
     color: var(--text-color);
 }
 #codigo-finalizacao:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: var(--shadow-glow);
+    box-shadow: 0 0 0 3px var(--primary-color-light);
 }
 
 /* Botões Painel Motorista */
 .btn-iniciar { 
-    background: var(--info-color); color: var(--white-color); 
+    background: var(--info-color); color: #FFFFFF; 
     width: 100%; font-size: 1.1rem; padding: 1rem 1.5rem;
 }
-.btn-iniciar:hover { background: #2980b9; }
+.btn-iniciar:hover { background: var(--primary-color-dark); }
 .btn-iniciar i { margin-right: 0.5rem; }
 #entrega-status { font-weight: 600; color: var(--primary-color); font-size: 1.1rem; text-align: center; margin-bottom: 1rem; }
 
 /* --- Upload de Imagem --- */
 .form-group input[type="file"] { 
     font-size: 1rem; 
-    border: 1px dashed var(--border-color);
+    border: 2px dashed var(--border-color);
     padding: 1rem;
     border-radius: var(--border-radius);
     background: var(--bg-color);
 }
 .form-group input[type="file"]::file-selector-button { 
     background-color: var(--primary-color); 
-    color: var(--white-color); 
+    color: #FFFFFF; 
     border: none; padding: 0.75rem 1rem; 
     border-radius: 5px; cursor: pointer; 
     margin-right: 1rem; 
@@ -602,6 +630,7 @@ body {
     align-items: flex-start; 
     gap: 0.5rem; 
     position: relative; 
+    background: var(--bg-color);
 }
 .image-preview .preview-img { max-width: 120px; height: auto; border-radius: 5px; display: block; }
 .remove-image-btn { 
@@ -638,8 +667,7 @@ body {
 .search-container input:focus {
     outline: none;
     border-color: var(--primary-color);
-    background: var(--card-color);
-    box-shadow: var(--shadow-glow);
+    box-shadow: 0 0 0 3px var(--primary-color-light);
 }
 .search-container i { 
     position: absolute; left: 1.25rem; top: 50%; 
@@ -647,11 +675,11 @@ body {
     color: var(--text-color-light); 
 }
 
-/* --- (NOVO) Modals (Pop-ups) com Efeito "Glassmorphism" --- */
+/* --- Modals (Pop-ups) (Minimal) --- */
 .modal-backdrop { 
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-    background: rgba(17, 24, 39, 0.7); /* Fundo escuro */
-    backdrop-filter: blur(8px); /* O Efeito Vidro! */
+    background: rgba(30, 41, 59, 0.7); /* Fundo escuro */
+    backdrop-filter: blur(5px); /* Efeito Vidro */
     display: flex; justify-content: center; align-items: center; 
     z-index: 1000;
     opacity: 0;
@@ -660,11 +688,11 @@ body {
 .modal-backdrop:not(.hidden) { opacity: 1; }
 
 .modal-content { 
-    background: var(--card-color);
+    background: var(--card-color); 
     padding: 0; 
     border-radius: var(--border-radius); 
     width: 90%; max-width: 500px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    box-shadow: var(--shadow-lg);
     border: 1px solid var(--border-color);
     transform: scale(0.95);
     opacity: 0;
@@ -694,7 +722,7 @@ body {
 .modal-body { padding: 2rem; }
 .modal-actions { 
     padding: 1.5rem 2rem;
-    background: var(--sidebar-color); /* Fundo mais escuro */
+    background: #F8F9FA; /* Fundo cinza claro */
     border-top: 1px solid var(--border-color);
     border-radius: 0 0 var(--border-radius) var(--border-radius);
     display: flex; justify-content: flex-end; 
@@ -716,7 +744,6 @@ body {
     white-space: pre-wrap; 
 }
 .modal-alert .modal-actions { justify-content: center; }
-.modal-alert .modal-header.error h3 { color: var(--danger-color); }
 
 /* Modal de Histórico */
 #history-modal-body { display: flex; flex-direction: column; gap: 0.75rem; }
@@ -731,7 +758,7 @@ body {
 /* Modal de Relatório */
 .report-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
 .summary-card { 
-    background: var(--bg-color); /* Fundo mais escuro */
+    background: var(--bg-color);
     padding: 1.5rem; 
     border-radius: var(--border-radius); 
     text-align: center; 
@@ -762,7 +789,7 @@ body {
 .table-responsive .table-pedidos th {
     position: sticky;
     top: 0;
-    background: var(--sidebar-color); /* Garante que o header colado tem fundo */
+    background: #F8F9FA; /* Garante que o header colado tem fundo */
 }
 .table-responsive .table-pedidos tr:first-child td {
     border-top: none;
@@ -770,7 +797,7 @@ body {
 .modal-large h4 { margin-top: 1.5rem; margin-bottom: 1rem; color: var(--text-color); font-weight: 600; }
 
 
-/* --- Responsividade (Sem grandes alterações, o seu já era bom) --- */
+/* --- Responsividade (Minimal) --- */
 .table-container-responsive {
     width: 100%;
     overflow-x: auto;
@@ -803,7 +830,7 @@ body {
     transition: all 0.2s ease;
 }
 .btn-mobile-menu:hover {
-    background: var(--border-color);
+    background: var(--bg-color);
     color: var(--primary-color);
 }
 
@@ -821,10 +848,7 @@ body {
         transform: translateX(-100%); 
         transition: transform 0.3s ease-out;
         z-index: 1001;
-        box-shadow: 0 0 40px rgba(0,0,0,0.5);
-        /* (NOVO) Efeito Vidro no Mobile */
-        background: rgba(31, 41, 55, 0.8); /* --sidebar-color com transparência */
-        backdrop-filter: blur(10px);
+        box-shadow: var(--shadow-lg);
     }
     
     body.mobile-menu-open .sidebar {
@@ -847,7 +871,7 @@ body {
         padding: 1.5rem;
     }
     .content-area {
-        padding: 0;
+        padding: 1.5rem;
     }
     
     .charts-grid {
