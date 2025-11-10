@@ -903,7 +903,7 @@ async function openHistoryDetailModal(orderId) {
             <p><strong>Admin:</strong> ${admin}</p>
             <p><strong>Criado em:</strong> ${new Date(order.timestamp_created).toLocaleString('pt-MZ')}</p>
             <p><strong>Iniciado em:</strong> ${order.timestamp_started ? new Date(order.timestamp_started).toLocaleString('pt-MZ') : 'N/D'}</p>
-            <p><strong>Concluído em:</strong> ${new Date(order.timestamp_completed).toLocaleString('pt-MZ') : 'N/D'}</p>
+            <p><strong>Concluído em:</strong> ${order.timestamp_completed ? new Date(order.timestamp_completed).toLocaleString('pt-MZ') : 'N/D'}</p>
             <p><strong>Duração:</strong> ${formatDuration(order.timestamp_started, order.timestamp_completed)}</p>
         `;
     } catch (error) { 
