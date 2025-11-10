@@ -16,8 +16,13 @@
         <img src="https://i.postimg.cc/VkQKDJ1x/LOGO.png" alt="Logotipo Entregaah Mz" class="motorista-logo">
         <div class="motorista-profile">
             <span id="driver-name-header">Motorista</span>
-            <button class="btn-logout" id="driver-logout">
-                <i class="fas fa-sign-out-alt"></i> Sair
+            
+            <button class="btn-logout" id="driver-settings" title="Configurações" style="background: none; border: none; color: var(--white-color); margin-left: 10px; font-size: 1.2rem;">
+                <i class="fas fa-cog"></i>
+            </button>
+            
+            <button class="btn-logout" id="driver-logout" title="Sair">
+                <i class="fas fa-sign-out-alt"></i>
             </button>
         </div>
     </header>
@@ -32,19 +37,16 @@
                 <i class="fas fa-arrow-left"></i> Voltar à Lista
             </button>
             <h2 id="detalhe-entrega-title">Detalhes do Pedido #123456</h2>
-
             <div class="detalhes-bloco delivery-image-display">
                 <h3>Imagem da Encomenda</h3>
                 <img src="" alt="Imagem da Encomenda" id="encomenda-imagem" class="hidden">
                 <p id="no-image-placeholder" class="hidden">Nenhuma imagem fornecida.</p>
             </div>
-
             <div class="detalhes-bloco">
                 <h3>Destinatário</h3>
                 <p id="detalhe-cliente-nome"><strong>Nome:</strong> ...</p>
                 <p id="detalhe-cliente-telefone"><strong>Telefone:</strong> ...</p>
             </div>
-
             <div class="detalhes-bloco">
                 <h3>Destino</h3>
                 <p id="detalhe-cliente-endereco"><strong>Endereço:</strong> ...</p>
@@ -55,14 +57,11 @@
                     <i class="fas fa-map-location-dot"></i> Abrir no Google Maps
                 </a>
             </div>
-
             <div class="detalhes-bloco">
                 <h3>Ações</h3>
-                
                 <button class="btn-submit btn-iniciar" id="btn-iniciar-entrega">
                     <i class="fas fa-play-circle"></i> Iniciar Entrega
                 </button>
-
                 <form id="form-finalizacao" class="hidden">
                     <p id="entrega-status">Entrega em progresso...</p>
                     <div class="form-group">
@@ -74,6 +73,31 @@
                     </button>
                 </form>
             </div>
+        </section>
+
+        <section id="configuracoes-motorista" class="hidden">
+            <button class="btn-voltar" id="btn-voltar-lista-config">
+                <i class="fas fa-arrow-left"></i> Voltar às Entregas
+            </button>
+            <h2>Configurações da Conta</h2>
+
+            <form id="form-change-password-driver" class="detalhes-bloco">
+                <h3>Alterar minha Senha</h3>
+                <p>Você será desconectado após alterar a senha.</p>
+                <div class="form-group">
+                    <label for="driver-pass-antiga">Senha Antiga</label>
+                    <input type="password" id="driver-pass-antiga" required>
+                </div>
+                <div class="form-group">
+                    <label for="driver-pass-nova">Nova Senha (mín. 6 caracteres)</label>
+                    <input type="password" id="driver-pass-nova" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="driver-pass-confirmar">Confirmar Nova Senha</label>
+                    <input type="password" id="driver-pass-confirmar" required minlength="6">
+                </div>
+                <button type="submit" class="btn-submit">Atualizar Senha</button>
+            </form>
         </section>
     </main>
 
@@ -91,10 +115,12 @@
             </div>
         </div>
     </div>
+    
     <script src="js/common/api.js"></script>
     <script src="js/common/auth.js"></script>
     <script src="js/common/ui.js"></script>
-    
     <script src="js/driver/driverTracking.js"></script>
-    <script src="js/driver/driver.js"></script> </body>
+    <script src="js/driver/driver.js"></script>
+
+</body>
 </html>

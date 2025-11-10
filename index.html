@@ -5,24 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Entregaah Mz</title>
     <link rel="icon" href="https://i.postimg.cc/4xkWBYss/ISOTIPO.png" type="image/png">
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-     crossorigin=""/>
-    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-     crossorigin=""></script>
-    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.socket.io/4.7.0/socket.io.min.js"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    </head>
+</head>
 <body class="dashboard-body">
 
     <nav class="sidebar">
@@ -55,7 +46,6 @@
             <button class="btn-mobile-menu" id="mobile-menu-toggle">
                 <i class="fas fa-bars"></i>
             </button>
-            
             <h1 id="main-title">Visão Geral</h1>
             <div class="admin-profile"><span>Olá, Admin</span><i class="fas fa-user-circle"></i></div>
         </header>
@@ -92,7 +82,7 @@
                     <div class="form-group form-group-large">
                         <label for="delivery-client-select">Cliente Registado (Opcional)</label>
                         <select id="delivery-client-select">
-                            <option value="">-- Ou digite manually abaixo --</option>
+                            <option value="">-- Ou digite manualmente abaixo --</option>
                         </select>
                     </div>
                     <h3>Dados do Cliente/Destinatário</h3>
@@ -264,9 +254,14 @@
 
                 <h3 style="margin-top: 3rem; border-color: var(--danger-color);">Zona de Perigo</h3>
                 <div id="zona-de-perigo">
-                    <p>Ações administrativas perigosas, como apagar dados em massa. (Em desenvolvimento)</p>
-                    <button class="btn-danger" disabled><i class="fas fa-trash"></i> Apagar Histórico de Encomendas</button>
-                    <button class="btn-danger" disabled><i class="fas fa-users-slash"></i> Apagar Todos os Clientes</button>
+                    <p>Ações administrativas perigosas. Estas ações são irreversíveis.</p>
+                    
+                    <button class="btn-danger" id="btn-delete-old-history">
+                        <i class="fas fa-trash"></i> Apagar Histórico Antigo
+                    </button>
+                    <small style="display: block; margin-top: 5px;">Apaga todas as encomendas concluídas com mais de 30 dias.</small>
+                    
+                    <button class="btn-danger" disabled style="margin-top: 1rem;"><i class="fas fa-users-slash"></i> Apagar Clientes Inativos (brevemente)</button>
                 </div>
             </div>
             <div id="assign-modal" class="modal-backdrop hidden">
@@ -471,6 +466,27 @@
                     </div>
                 </div>
             </div>
+
+            <div id="confirmation-modal" class="modal-backdrop hidden">
+                <div class="modal-content modal-alert">
+                    <div class="modal-header error"> <h3 id="confirmation-title">Confirmar Ação</h3>
+                        <button class="modal-close-btn" id="btn-close-confirmation-modal">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="confirmation-message" style="margin-bottom: 1rem;">Tem a certeza? Esta ação não pode ser revertida.</p>
+                        <div class="form-group">
+                            <label for="confirmation-input" id="confirmation-input-label">Para confirmar, digite a palavra:</label>
+                            <input type="text" id="confirmation-input" style="text-align: center; font-weight: bold; text-transform: uppercase;">
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-submit btn-danger" id="btn-confirm-action" disabled>Confirmar e Apagar</button>
+                        <button type="button" class="btn-cancel" id="btn-cancel-confirmation-modal">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+
+
             </div>
     </main>
     

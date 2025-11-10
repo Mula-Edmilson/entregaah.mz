@@ -1,6 +1,6 @@
 /*
  * Ficheiro: js/admin/admin.js
- * (Adicionada página de Configurações)
+ * (Adicionada página de Configurações e Modal de Confirmação)
  */
 
 // ... (Variáveis Globais, DOMContentLoaded - sem alterações) ...
@@ -24,7 +24,7 @@ function attachEventListeners() {
     document.getElementById('form-add-cliente').addEventListener('submit', handleAddClient);
     document.getElementById('form-edit-cliente').addEventListener('submit', handleUpdateClient);
     
-    // --- (MUDANÇA) Adicionado listener para o novo formulário ---
+    // (MUDANÇA) Adicionado listener para o novo formulário
     document.getElementById('form-change-password').addEventListener('submit', handleChangePassword);
 
     // --- Navegação Principal (Sidebar) ---
@@ -41,7 +41,7 @@ function attachEventListeners() {
     document.getElementById('nav-form-rapido').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('rapido'); });
     document.getElementById('nav-form-outros').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('outros'); });
     
-    // --- (MUDANÇA) 'nav-config' agora aponta para a nova página ---
+    // (MUDANÇA) 'nav-config' agora aponta para a nova página
     document.getElementById('nav-config').addEventListener('click', (e) => { e.preventDefault(); showPage('configuracoes', 'nav-config', 'Configurações'); });
 
     // --- Autenticação ---
@@ -62,6 +62,11 @@ function attachEventListeners() {
         btn.addEventListener('click', () => setStatementDates(btn.dataset.range));
     });
 
+    // --- (MUDANÇA) Listeners da Zona de Perigo e Modal de Confirmação ---
+    document.getElementById('btn-delete-old-history').addEventListener('click', handleDeleteOldHistoryClick);
+    document.getElementById('btn-close-confirmation-modal').addEventListener('click', closeConfirmationModal);
+    document.getElementById('btn-cancel-confirmation-modal').addEventListener('click', closeConfirmationModal);
+    
     // --- Lógica do Menu Mobile ---
     // ... (sem alterações) ...
     const menuToggle = document.getElementById('mobile-menu-toggle');
@@ -90,7 +95,6 @@ function attachEventListeners() {
 
 
 /* --- Lógica de Navegação (Router) --- */
-
 function showPage(pageId, navId, title) {
     destroyFormMap();
     destroyLiveMap();
@@ -127,15 +131,13 @@ function showPage(pageId, navId, title) {
         case 'mapa-tempo-real':
             initializeLiveMap();
             break;
-        // (MUDANÇA) Adicionado 'case' para a nova página
         case 'configuracoes':
-            // Não precisa de carregar nada, apenas mostrar
+            // Limpa o formulário de senha
+            document.getElementById('form-change-password').reset();
             break;
     }
 }
-
 function showServiceForm(serviceType) {
-    // (MUDANÇA) Removido 'config' daqui
     const titles = {
         'doc': 'Nova Tramitação de Documentos',
         'farma': 'Novo Pedido Farmacêutico',
@@ -143,59 +145,53 @@ function showServiceForm(serviceType) {
         'rapido': 'Novo Delivery Rápido',
         'outros': 'Outros Serviços'
     };
-    
     showPage('form-nova-entrega', null, titles[serviceType] || 'Nova Entrega');
-    
     document.getElementById('service-type').value = serviceType;
     removeImage();
     resetDeliveryForm();
     loadClientsIntoDropdown();
-    
     setTimeout(initializeFormMap, 100);
 }
 
 
-// ... (connectSocket, Lógica de API (GET) - sem alterações) ...
+/* --- Lógica de Socket.IO --- */
+// ... (sem alterações) ...
 function connectSocket() {
     const token = getAuthToken();
     if (!token) return;
-    
     socket = io(API_URL, { auth: { token: token } });
-    
     socket.on('connect', () => {
         console.log('Conectado ao servidor Socket.io com ID:', socket.id);
         socket.emit('admin_join_room');
     });
-
     const activePage = () => {
         const page = document.querySelector('.content-page:not(.hidden)');
         return page ? page.id : null;
     };
-    
     socket.on('delivery_started', (order) => {
         if (activePage() === 'entregas-activas') loadActiveDeliveries();
         if (activePage() === 'visao-geral') loadOverviewStats();
     });
-    
     socket.on('delivery_completed', (order) => {
         if (activePage() === 'entregas-activas') loadActiveDeliveries();
         if (activePage() === 'historico') loadHistory();
         if (activePage() === 'visao-geral') loadOverviewStats();
     });
-    
     socket.on('driver_status_changed', (data) => {
          if (activePage() === 'gestao-motoristas') loadDrivers();
          if (activePage() === 'visao-geral') loadOverviewStats();
     });
-
     socket.on('driver_location_broadcast', (data) => {
         updateDriverMarker(data);
     });
-    
     socket.on('driver_disconnected_broadcast', (data) => {
         removeDriverMarker(data);
     });
 }
+
+
+/* --- Lógica de API (GET) --- */
+// ... (loadOverviewStats, loadDrivers, loadActiveDeliveries, loadHistory, loadClients, loadClientsIntoDropdown - sem alterações) ...
 async function loadOverviewStats() {
     try {
         const response = await fetch(`${API_URL}/api/stats/overview`, { headers: getAuthHeaders() });
@@ -382,13 +378,8 @@ async function loadClientsIntoDropdown() {
 }
 
 
-/* --- Lógica de API (Envio de Dados - POST/PUT/DELETE) --- */
+/* --- Lógica de API (POST/PUT/DELETE) --- */
 
-// --- (NOVA FUNÇÃO ADICIONADA) ---
-/**
- * Submete o formulário de "Mudar Senha".
- * @param {Event} e - O evento de 'submit' do formulário.
- */
 async function handleChangePassword(e) {
     e.preventDefault();
     const form = e.target;
@@ -419,10 +410,8 @@ async function handleChangePassword(e) {
             throw new Error(data.message);
         }
         
-        // Sucesso
         showCustomAlert('Sucesso!', 'A sua senha foi alterada. Por favor, faça login novamente.', 'success');
         
-        // Faz logout forçado após 2 segundos
         setTimeout(() => {
             handleLogout('admin');
         }, 2500);
@@ -432,466 +421,128 @@ async function handleChangePassword(e) {
         showCustomAlert('Erro', error.message, 'error');
     }
 }
-// --- FIM DA NOVA FUNÇÃO ---
 
+// --- (NOVAS FUNÇÕES PARA A ZONA DE PERIGO) ---
+/**
+ * O 'Click handler' para o botão de apagar.
+ * Isto abre o modal de confirmação e configura-o.
+ */
+function handleDeleteOldHistoryClick() {
+    const confirmWord = 'APAGAR'; // A palavra que o utilizador deve digitar
+    
+    // Abre o modal de confirmação (que está no ui.js)
+    openConfirmationModal({
+        title: "Apagar Histórico Antigo?",
+        message: `Esta ação é irreversível. Todas as encomendas concluídas com mais de 30 dias serão permanentemente apagadas.\n\nPara confirmar, digite <b>${confirmWord}</b> no campo abaixo.`,
+        confirmText: confirmWord,
+        onConfirm: handleDeleteOldHistory // A função que realmente faz o trabalho
+    });
+}
 
-// ... (handleNewDelivery, handleAddDriver, handleUpdateDriver, etc. - sem alterações) ...
-async function handleNewDelivery(e) {
-    e.preventDefault();
-    const form = e.target;
-    const formData = new FormData(form);
+/**
+ * A função de callback que é executada quando o admin confirma a deleção.
+ */
+async function handleDeleteOldHistory() {
+    const btn = document.getElementById('btn-confirm-action');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A apagar...';
+
     try {
-        const response = await fetch(`${API_URL}/api/orders`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: formData
-        });
-        const data = await response.json(); 
-        if (!response.ok) {
-            throw new Error(data.message || 'Erro do servidor');
-        }
-        showCustomAlert('Sucesso!', `Pedido Criado! \nCódigo do Destinatário: ${data.order.verification_code}`, 'success');
-        form.reset();
-        removeImage();
-        destroyFormMap();
-        showPage('entregas-activas', 'nav-entregas', 'Entregas Activas');
-    } catch (error) {
-        console.error('Falha ao criar entrega:', error);
-        showCustomAlert('Erro', error.message, 'error'); 
-    }
-}
-async function handleAddDriver(e) {
-    e.preventDefault();
-    const name = document.getElementById('driver-name').value;
-    const phone = document.getElementById('driver-phone').value;
-    const email = document.getElementById('driver-email').value;
-    const plate = document.getElementById('driver-plate').value;
-    const password = document.getElementById('driver-password').value;
-    if (password.length < 6) {
-        showCustomAlert('Atenção', 'A senha do motorista deve ter pelo menos 6 caracteres.');
-        return;
-    }
-    try {
-        const response = await fetch(`${API_URL}/api/auth/register-driver`, {
-            method: 'POST',
-            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nome: name, email, telefone: phone, password, vehicle_plate: plate })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        showCustomAlert('Sucesso', 'Motorista adicionado com sucesso!', 'success');
-        e.target.reset();
-        showAddDriverForm(false);
-        loadDrivers();
-    } catch (error) {
-        console.error('Falha ao adicionar motorista:', error);
-        showCustomAlert('Erro', error.message, 'error');
-    }
-}
-async function handleUpdateDriver(event) {
-    event.preventDefault();
-    const userId = document.getElementById('edit-driver-id').value;
-    const updatedData = {
-        nome: document.getElementById('edit-driver-name').value,
-        telefone: document.getElementById('edit-driver-phone').value,
-        vehicle_plate: document.getElementById('edit-driver-plate').value,
-        status: document.getElementById('edit-driver-status').value
-    };
-    try {
-        const response = await fetch(`${API_URL}/api/drivers/${userId}`, { 
-            method: 'PUT', 
-            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, 
-            body: JSON.stringify(updatedData) 
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        showCustomAlert('Sucesso', 'Motorista atualizado com sucesso!', 'success');
-        closeEditDriverModal();
-        loadDrivers();
-    } catch (error) {
-        console.error('Falha ao atualizar motorista:', error);
-        showCustomAlert('Erro', error.message, 'error');
-    }
-}
-async function handleAddClient(e) {
-    e.preventDefault();
-    const clientData = {
-        nome: document.getElementById('client-nome').value,
-        telefone: document.getElementById('client-telefone').value,
-        empresa: document.getElementById('client-empresa').value,
-        email: document.getElementById('client-email').value,
-        nuit: document.getElementById('client-nuit').value,
-        endereco: document.getElementById('client-endereco').value
-    };
-    if (!clientData.nome || !clientData.telefone) {
-        showCustomAlert('Atenção', 'Nome e Telefone são obrigatórios.', 'error');
-        return;
-    }
-    try {
-        const response = await fetch(`${API_URL}/api/clients`, {
-            method: 'POST',
-            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify(clientData)
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        showCustomAlert('Sucesso', 'Cliente adicionado com sucesso!', 'success');
-        showAddClientForm(false);
-        loadClients();
-    } catch (error) {
-        console.error('Falha ao adicionar cliente:', error);
-        showCustomAlert('Erro', error.message, 'error');
-    }
-}
-async function handleUpdateClient(e) {
-    e.preventDefault();
-    const clientId = document.getElementById('edit-client-id').value;
-    const updatedData = {
-        nome: document.getElementById('edit-client-nome').value,
-        telefone: document.getElementById('edit-client-telefone').value,
-        empresa: document.getElementById('edit-client-empresa').value,
-        email: document.getElementById('edit-client-email').value,
-        nuit: document.getElementById('edit-client-nuit').value,
-        endereco: document.getElementById('edit-client-endereco').value
-    };
-    if (!updatedData.nome || !updatedData.telefone) {
-        showCustomAlert('Atenção', 'Nome e Telefone são obrigatórios.', 'error');
-        return;
-    }
-    try {
-        const response = await fetch(`${API_URL}/api/clients/${clientId}`, {
-            method: 'PUT',
-            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify(updatedData)
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        showCustomAlert('Sucesso', 'Cliente atualizado com sucesso!', 'success');
-        closeEditClientModal();
-        loadClients();
-    } catch (error) {
-        console.error('Falha ao atualizar cliente:', error);
-        showCustomAlert('Erro', error.message, 'error');
-    }
-}
-async function handleDeleteClient(clientId, clientName) {
-    if (!confirm(`Tem a certeza que quer apagar o cliente "${clientName}"?\nEsta ação não pode ser revertida.`)) {
-        return;
-    }
-    try {
-        const response = await fetch(`${API_URL}/api/clients/${clientId}`, {
+        const response = await fetch(`${API_URL}/api/admin/orders/history`, {
             method: 'DELETE',
             headers: getAuthHeaders()
         });
+
         const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
+        if (!response.ok) {
+            throw new Error(data.message);
+        }
+
+        // Sucesso
+        closeConfirmationModal();
         showCustomAlert('Sucesso', data.message, 'success');
-        loadClients();
+        
+        // Recarrega o histórico (se estivermos nessa página)
+        if(document.getElementById('historico').classList.contains('hidden') === false) {
+            loadHistory();
+        }
+
     } catch (error) {
-        console.error('Falha ao apagar cliente:', error);
+        console.error('Falha ao apagar histórico:', error);
         showCustomAlert('Erro', error.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = 'Confirmar e Apagar';
     }
 }
-async function confirmAssign(orderId, driverId) {
-    try {
-        const response = await fetch(`${API_URL}/api/orders/${orderId}/assign`, { 
-            method: 'PUT', 
-            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ driverId }) 
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        showCustomAlert('Sucesso', 'Encomenda atribuída com sucesso!', 'success');
-        closeAssignModal();
-        loadActiveDeliveries();
-    } catch (error) {
-        console.error('Falha ao atribuir encomenda:', error);
-        showCustomAlert('Erro', error.message, 'error');
-    }
-}
-function handleChartReset() {
-    const password = document.getElementById('chart-reset-password').value;
-    if (password === 'Entregaah.wipe') {
-        console.log('SIMULAÇÃO: A chamar API para resetar estatísticas...');
-        showCustomAlert('Sucesso', 'As estatísticas foram resetadas! (Simulação)', 'success');
-        closeChartResetModal();
-        initServicesChart(true);
-    } else { 
-        showCustomAlert('Erro', 'Senha de reset incorreta.', 'error'); 
-    }
-}
-async function handleGenerateStatement() {
-    const clientId = document.getElementById('statement-client-id').value;
-    const startDate = document.getElementById('statement-start-date').value;
-    const endDate = document.getElementById('statement-end-date').value;
-    if (!startDate || !endDate) {
-        showCustomAlert('Erro', 'Por favor, selecione uma data de início e uma data de fim.', 'error');
-        return;
-    }
-    const resultsDiv = document.getElementById('statement-results');
-    resultsDiv.classList.add('hidden');
-    try {
-        showCustomAlert('A Gerar...', 'A buscar os dados do extrato.', 'info');
-        const response = await fetch(`${API_URL}/api/clients/${clientId}/statement?startDate=${startDate}&endDate=${endDate}`, {
-            headers: getAuthHeaders()
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        closeCustomAlert();
-        populateStatementModal(data, startDate, endDate);
-    } catch (error) {
-        console.error('Falha ao gerar extrato:', error);
-        showCustomAlert('Erro', error.message, 'error');
-    }
-}
+// --- FIM DAS NOVAS FUNÇÕES ---
 
 
-// ... (Lógica de Abertura de Modais e Lógica Auxiliar - sem alterações) ...
-async function openAssignModal(orderId) {
-    const modal = document.getElementById('assign-modal');
-    modal.classList.remove('hidden');
-    document.getElementById('modal-order-id').innerText = `#${orderId.slice(-6)}`;
-    const select = document.getElementById('driver-select-dropdown');
-    select.innerHTML = '<option value="">A carregar...</option>';
-    try {
-        const response = await fetch(`${API_URL}/api/drivers/available`, { headers: getAuthHeaders() });
-        if (response.status === 401) { return handleLogout('admin'); }
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        if (data.drivers.length === 0) { 
-            select.innerHTML = '<option value="">Nenhum motorista disponível</option>'; 
-            return; 
+// ... (handleNewDelivery, handleAddDriver, etc. - sem alterações) ...
+async function handleNewDelivery(e) { e.preventDefault(); const form = e.target; const formData = new FormData(form); try { const response = await fetch(`${API_URL}/api/orders`, { method: 'POST', headers: getAuthHeaders(), body: formData }); const data = await response.json(); if (!response.ok) { throw new Error(data.message || 'Erro do servidor'); } showCustomAlert('Sucesso!', `Pedido Criado! \nCódigo do Destinatário: ${data.order.verification_code}`, 'success'); form.reset(); removeImage(); destroyFormMap(); showPage('entregas-activas', 'nav-entregas', 'Entregas Activas'); } catch (error) { console.error('Falha ao criar entrega:', error); showCustomAlert('Erro', error.message, 'error'); } }
+async function handleAddDriver(e) { e.preventDefault(); const name = document.getElementById('driver-name').value; const phone = document.getElementById('driver-phone').value; const email = document.getElementById('driver-email').value; const plate = document.getElementById('driver-plate').value; const password = document.getElementById('driver-password').value; if (password.length < 6) { showCustomAlert('Atenção', 'A senha do motorista deve ter pelo menos 6 caracteres.'); return; } try { const response = await fetch(`${API_URL}/api/auth/register-driver`, { method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: name, email, telefone: phone, password, vehicle_plate: plate }) }); const data = await response.json(); if (!response.ok) throw new Error(data.message); showCustomAlert('Sucesso', 'Motorista adicionado com sucesso!', 'success'); e.target.reset(); showAddDriverForm(false); loadDrivers(); } catch (error) { console.error('Falha ao adicionar motorista:', error); showCustomAlert('Erro', error.message, 'error'); } }
+async function handleUpdateDriver(event) { event.preventDefault(); const userId = document.getElementById('edit-driver-id').value; const updatedData = { nome: document.getElementById('edit-driver-name').value, telefone: document.getElementById('edit-driver-phone').value, vehicle_plate: document.getElementById('edit-driver-plate').value, status: document.getElementById('edit-driver-status').value }; try { const response = await fetch(`${API_URL}/api/drivers/${userId}`, { method: 'PUT', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) }); const data = await response.json(); if (!response.ok) throw new Error(data.message); showCustomAlert('Sucesso', 'Motorista atualizado com sucesso!', 'success'); closeEditDriverModal(); loadDrivers(); } catch (error) { console.error('Falha ao atualizar motorista:', error); showCustomAlert('Erro', error.message, 'error'); } }
+async function handleAddClient(e) { e.preventDefault(); const clientData = { nome: document.getElementById('client-nome').value, telefone: document.getElementById('client-telefone').value, empresa: document.getElementById('client-empresa').value, email: document.getElementById('client-email').value, nuit: document.getElementById('client-nuit').value, endereco: document.getElementById('client-endereco').value }; if (!clientData.nome || !clientData.telefone) { showCustomAlert('Atenção', 'Nome e Telefone são obrigatórios.', 'error'); return; } try { const response = await fetch(`${API_URL}/api/clients`, { method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(clientData) }); const data = await response.json(); if (!response.ok) throw new Error(data.message); showCustomAlert('Sucesso', 'Cliente adicionado com sucesso!', 'success'); showAddClientForm(false); loadClients(); } catch (error) { console.error('Falha ao adicionar cliente:', error); showCustomAlert('Erro', error.message, 'error'); } }
+async function handleUpdateClient(e) { e.preventDefault(); const clientId = document.getElementById('edit-client-id').value; const updatedData = { nome: document.getElementById('edit-client-nome').value, telefone: document.getElementById('edit-client-telefone').value, empresa: document.getElementById('edit-client-empresa').value, email: document.getElementById('edit-client-email').value, nuit: document.getElementById('edit-client-nuit').value, endereco: document.getElementById('edit-client-endereco').value }; if (!updatedData.nome || !updatedData.telefone) { showCustomAlert('Atenção', 'Nome e Telefone são obrigatórios.', 'error'); return; } try { const response = await fetch(`${API_URL}/api/clients/${clientId}`, { method: 'PUT', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) }); const data = await response.json(); if (!response.ok) throw new Error(data.message); showCustomAlert('Sucesso', 'Cliente atualizado com sucesso!', 'success'); closeEditClientModal(); loadClients(); } catch (error) { console.error('Falha ao atualizar cliente:', error); showCustomAlert('Erro', error.message, 'error'); } }
+async function handleDeleteClient(clientId, clientName) { if (!confirm(`Tem a certeza que quer apagar o cliente "${clientName}"?\nEsta ação não pode ser revertida.`)) { return; } try { const response = await fetch(`${API_URL}/api/clients/${clientId}`, { method: 'DELETE', headers: getAuthHeaders() }); const data = await response.json(); if (!response.ok) throw new Error(data.message); showCustomAlert('Sucesso', data.message, 'success'); loadClients(); } catch (error) { console.error('Falha ao apagar cliente:', error); showCustomAlert('Erro', error.message, 'error'); } }
+async function confirmAssign(orderId, driverId) { try { const response = await fetch(`${API_URL}/api/orders/${orderId}/assign`, { method: 'PUT', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ driverId }) }); const data = await response.json(); if (!response.ok) throw new Error(data.message); showCustomAlert('Sucesso', 'Encomenda atribuída com sucesso!', 'success'); closeAssignModal(); loadActiveDeliveries(); } catch (error) { console.error('Falha ao atribuir encomenda:', error); showCustomAlert('Erro', error.message, 'error'); } }
+function handleChartReset() { const password = document.getElementById('chart-reset-password').value; if (password === 'Entregaah.wipe') { console.log('SIMULAÇÃO: A chamar API para resetar estatísticas...'); showCustomAlert('Sucesso', 'As estatísticas foram resetadas! (Simulação)', 'success'); closeChartResetModal(); initServicesChart(true); } else { showCustomAlert('Erro', 'Senha de reset incorreta.', 'error'); } }
+async function handleGenerateStatement() { const clientId = document.getElementById('statement-client-id').value; const startDate = document.getElementById('statement-start-date').value; const endDate = document.getElementById('statement-end-date').value; if (!startDate || !endDate) { showCustomAlert('Erro', 'Por favor, selecione uma data de início e uma data de fim.', 'error'); return; } const resultsDiv = document.getElementById('statement-results'); resultsDiv.classList.add('hidden'); try { showCustomAlert('A Gerar...', 'A buscar os dados do extrato.', 'info'); const response = await fetch(`${API_URL}/api/clients/${clientId}/statement?startDate=${startDate}&endDate=${endDate}`, { headers: getAuthHeaders() }); const data = await response.json(); if (!response.ok) throw new Error(data.message); closeCustomAlert(); populateStatementModal(data, startDate, endDate); } catch (error) { console.error('Falha ao gerar extrato:', error); showCustomAlert('Erro', error.message, 'error'); } }
+
+
+/* --- Lógica de Abertura de Modais --- */
+
+// --- (NOVA FUNÇÃO ADICIONADA) ---
+/**
+ * Abre o modal de confirmação de ação perigosa.
+ * @param {object} options - { title, message, confirmText, onConfirm }
+ */
+function openConfirmationModal({ title, message, confirmText, onConfirm }) {
+    const modal = document.getElementById('confirmation-modal');
+    document.getElementById('confirmation-title').innerHTML = title;
+    document.getElementById('confirmation-message').innerHTML = message;
+    
+    const input = document.getElementById('confirmation-input');
+    const label = document.getElementById('confirmation-input-label');
+    const confirmBtn = document.getElementById('btn-confirm-action');
+
+    // Configura o campo de confirmação de texto
+    label.innerHTML = `Para confirmar, digite a palavra: <b>${confirmText}</b>`;
+    input.value = '';
+    confirmBtn.disabled = true; // Desativa o botão
+    
+    // Remove listeners antigos para evitar duplicação
+    input.oninput = null;
+    confirmBtn.onclick = null;
+
+    // Adiciona o listener de input para verificar a palavra
+    input.oninput = () => {
+        if (input.value.toUpperCase() === confirmText) {
+            confirmBtn.disabled = false;
+        } else {
+            confirmBtn.disabled = true;
         }
-        select.innerHTML = '<option value="">-- Selecione um motorista --</option>';
-        data.drivers.forEach(driver => { 
-            select.innerHTML += `<option value="${driver.profile._id}">${driver.nome} (${driver.profile.vehicle_plate})</option>`; 
-        });
-        document.getElementById('btn-confirm-assign').onclick = async () => {
-            const driverId = select.value;
-            if (!driverId) { 
-                showCustomAlert('Atenção', 'Por favor, selecione um motorista.'); 
-                return; 
-            }
-            await confirmAssign(orderId, driverId);
-        };
-    } catch (error) { 
-        console.error('Falha ao carregar motoristas disponíveis:', error); 
-        select.innerHTML = '<option value="">Erro ao carregar</option>'; 
-    }
-}
-async function openEditDriverModal(driverUserId) {
-    const modal = document.getElementById('edit-driver-modal');
-    modal.classList.remove('hidden');
-    document.getElementById('edit-driver-id').value = driverUserId;
-    document.getElementById('edit-driver-name').value = 'A carregar...';
-    document.getElementById('edit-driver-phone').value = 'A carregar...';
-    try {
-        const response = await fetch(`${API_URL}/api/drivers/${driverUserId}`, { headers: getAuthHeaders() });
-        if (response.status === 401) { return handleLogout('admin'); }
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        const driver = data.driver;
-        const profile = driver.profile || {};
-        document.getElementById('edit-driver-name').value = driver.nome;
-        document.getElementById('edit-driver-phone').value = driver.telefone;
-        document.getElementById('edit-driver-plate').value = profile.vehicle_plate || '';
-        document.getElementById('edit-driver-status').value = profile.status || 'offline';
-    } catch (error) { 
-        console.error('Falha ao carregar dados do motorista:', error); 
-        showCustomAlert('Erro', 'Erro ao carregar dados do motorista.', 'error'); 
-        closeEditDriverModal(); 
-    }
-}
-async function openHistoryDetailModal(orderId) {
-    const modal = document.getElementById('history-detail-modal');
-    const body = document.getElementById('history-modal-body');
-    modal.classList.remove('hidden');
-    document.getElementById('history-modal-id').innerText = `#${orderId.slice(-6)}`;
-    body.innerHTML = '<p>A carregar detalhes...</p>';
-    try {
-        const response = await fetch(`${API_URL}/api/orders/${orderId}`, { headers: getAuthHeaders() });
-        if (response.status === 401) { return handleLogout('admin'); }
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        const order = data.order;
-        const motorista = order.assigned_to_driver ? order.assigned_to_driver.user.nome : 'N/D';
-        const admin = order.created_by_admin ? order.created_by_admin.nome : 'N/D';
-        let coordsHtml = '<p><strong>Pin do Mapa:</strong> N/D</p>';
-        if (order.address_coords && order.address_coords.lat) {
-            coordsHtml = `<p><strong>Pin do Mapa:</strong> ${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}</p>`;
-        }
-        body.innerHTML = `
-            <p><strong>Cliente:</strong> ${order.client_name}</p>
-            <p><strong>Telefone:</strong> ${order.client_phone1}</p>
-            <p><strong>Endereço:</strong> ${order.address_text || 'N/D'}</p>
-            ${coordsHtml}
-            <p><strong>Valor:</strong> ${order.price ? order.price.toFixed(2) + ' MZN' : 'N/D'}</p>
-            <p><strong>Natureza:</strong> ${SERVICE_NAMES[order.service_type] || order.service_type}</p>
-            <p><strong>Status:</strong> ${order.status}</p>
-            <p><strong>Código:</strong> ${order.verification_code}</p>
-            <p><strong>Motorista:</strong> ${motorista}</p>
-            <p><strong>Admin:</strong> ${admin}</p>
-            <p><strong>Criado em:</strong> ${new Date(order.timestamp_created).toLocaleString('pt-MZ')}</p>
-            <p><strong>Iniciado em:</strong> ${order.timestamp_started ? new Date(order.timestamp_started).toLocaleString('pt-MZ') : 'N/D'}</p>
-            <p><strong>Concluído em:</strong> ${order.timestamp_completed ? new Date(order.timestamp_completed).toLocaleString('pt-MZ') : 'N/D'}</p>
-            <p><strong>Duração:</strong> ${formatDuration(order.timestamp_started, order.timestamp_completed)}</p>
-        `;
-    } catch (error) { 
-        console.error('Falha ao carregar detalhes do histórico:', error); 
-        body.innerHTML = '<p>Erro ao carregar detalhes.</p>'; 
-    }
-}
-async function openDriverReportModal(driverUserId, driverName) {
-    const modal = document.getElementById('driver-report-modal');
-    modal.classList.remove('hidden');
-    document.getElementById('driver-report-title').innerText = `Relatório de ${driverName}`;
-    document.getElementById('report-total-entregas').innerText = '...';
-    document.getElementById('report-total-duracao').innerText = '...';
-    const tableBody = document.getElementById('driver-report-table-body');
-    tableBody.innerHTML = '<tr><td colspan="5">A carregar relatório...</td></tr>';
-    try {
-        const response = await fetch(`${API_URL}/api/drivers/${driverUserId}/report`, { headers: getAuthHeaders() });
-        if (response.status === 401) { return handleLogout('admin'); }
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        const orders = data.orders;
-        let totalMs = 0;
-        orders.forEach(order => {
-            if (order.timestamp_started && order.timestamp_completed) {
-                totalMs += (new Date(order.timestamp_completed) - new Date(order.timestamp_started));
-            }
-        });
-        document.getElementById('report-total-entregas').innerText = orders.length;
-        document.getElementById('report-total-duracao').innerText = formatTotalDuration(totalMs);
-        tableBody.innerHTML = '';
-        if (orders.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="5">Nenhuma entrega concluída encontrada.</td></tr>';
-            return;
-        }
-        orders.forEach(order => {
-            const serviceName = SERVICE_NAMES[order.service_type] || order.service_type;
-            tableBody.innerHTML += `
-                <tr>
-                    <td>#${order._id.slice(-6)}</td>
-                    <td>${order.client_name}</td>
-                    <td>${serviceName}</td>
-                    <td>${new Date(order.timestamp_completed).toLocaleDateString('pt-MZ')}</td>
-                    <td>${formatDuration(order.timestamp_started, order.timestamp_completed)}</td>
-                </tr>
-            `;
-        });
-    } catch (error) { 
-        console.error('Falha ao carregar relatório do motorista:', error); 
-        tableBody.innerHTML = '<tr><td colspan="5">Erro ao carregar relatório.</td></tr>'; 
-    }
-}
-async function openEditClientModal(clientId) {
-    const modal = document.getElementById('edit-client-modal');
-    modal.classList.remove('hidden');
-    try {
-        const response = await fetch(`${API_URL}/api/clients/${clientId}`, { headers: getAuthHeaders() });
-        if (response.status === 401) { return handleLogout('admin'); }
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        const client = data.client;
-        document.getElementById('edit-client-id').value = client._id;
-        document.getElementById('edit-client-nome').value = client.nome;
-        document.getElementById('edit-client-telefone').value = client.telefone;
-        document.getElementById('edit-client-empresa').value = client.empresa || '';
-        document.getElementById('edit-client-email').value = client.email || '';
-        document.getElementById('edit-client-nuit').value = client.nuit || '';
-        document.getElementById('edit-client-endereco').value = client.endereco || '';
-    } catch (error) {
-        console.error('Falha ao carregar dados do cliente:', error);
-        showCustomAlert('Erro', 'Erro ao carregar dados do cliente.', 'error');
-        closeEditClientModal();
-    }
-}
-function openStatementModal(clientId, clientName) {
-    const modal = document.getElementById('statement-modal');
-    document.getElementById('statement-client-name').textContent = `Extrato de ${clientName}`;
-    document.getElementById('statement-client-id').value = clientId;
-    document.getElementById('statement-results').classList.add('hidden');
-    document.getElementById('statement-table-body').innerHTML = '';
-    document.getElementById('statement-start-date').value = '';
-    document.getElementById('statement-end-date').value = '';
+    };
+    
+    // Anexa a função de callback (ex: handleDeleteOldHistory) ao botão
+    confirmBtn.onclick = () => {
+        onConfirm();
+    };
+
     modal.classList.remove('hidden');
 }
-function handleClientSelect(e) {
-    const selectedClientId = e.target.value;
-    const client = clientCache.find(c => c._id === selectedClientId);
-    if (client) {
-        document.getElementById('client-name').value = client.nome;
-        document.getElementById('client-phone1').value = client.telefone;
-        document.getElementById('client-phone2').value = ''; 
-        document.getElementById('delivery-client-id').value = client._id;
-        document.getElementById('client-name').readOnly = true;
-        document.getElementById('client-phone1').readOnly = true;
-    } else {
-        resetDeliveryForm();
-    }
-}
-function resetDeliveryForm() {
-    document.getElementById('delivery-form').reset();
-    document.getElementById('delivery-client-id').value = ''; 
-    document.getElementById('client-name').readOnly = false;
-    document.getElementById('client-phone1').readOnly = false;
-}
-function populateStatementModal(data, startDate, endDate) {
-    const { totalValue, totalOrders, ordersList } = data;
-    const formattedTotal = new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(totalValue);
-    document.getElementById('statement-total-value').textContent = formattedTotal;
-    document.getElementById('statement-total-orders').textContent = `${totalOrders} Pedidos`;
-    const start = new Date(startDate + 'T00:00:00Z').toLocaleDateString('pt-MZ', { timeZone: 'UTC' });
-    const end = new Date(endDate + 'T00:00:00Z').toLocaleDateString('pt-MZ', { timeZone: 'UTC' });
-    document.getElementById('statement-date-range').textContent = `Pedidos Concluídos de ${start} a ${end}`;
-    const tableBody = document.getElementById('statement-table-body');
-    tableBody.innerHTML = '';
-    if (ordersList.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4">Nenhum pedido concluído neste período.</td></tr>';
-    } else {
-        ordersList.forEach(order => {
-            tableBody.innerHTML += `
-                <tr>
-                    <td>${new Date(order.timestamp_completed).toLocaleDateString('pt-MZ')}</td>
-                    <td>#${order._id.slice(-6)}</td>
-                    <td>${SERVICE_NAMES[order.service_type] || order.service_type}</td>
-                    <td>${order.price.toFixed(2)} MZN</td>
-                </tr>
-            `;
-        });
-    }
-    document.getElementById('statement-results').classList.remove('hidden');
-}
-function handleDownloadPDF() {
-    try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const clientName = document.getElementById('statement-client-name').textContent;
-        const cleanClientName = clientName.replace('Extrato de ', '');
-        const dateRange = document.getElementById('statement-date-range').textContent;
-        const totalValue = document.getElementById('statement-total-value').textContent;
-        const totalOrders = document.getElementById('statement-total-orders').textContent;
-        doc.setFontSize(18);
-        doc.text('Extrato de Conta de Cliente', 14, 22);
-        doc.setFontSize(11);
-        doc.setTextColor(100);
-        doc.text(`Cliente: ${cleanClientName}`, 14, 32);
-        doc.text(`Período: ${dateRange}`, 14, 38);
-        doc.setFontSize(12);
-        doc.setTextColor(0);
-        doc.text(`Total de Pedidos: ${totalOrders}`, 14, 50);
-        doc.text(`Valor Total Gasto: ${totalValue}`, 14, 56);
-        doc.autoTable({
-            html: '#statement-results .table-pedidos',
-            startY: 65,
-            theme: 'grid',
-            styles: { fontSize: 9 },
-            headStyles: { fillColor: [44, 62, 80] }
-        });
-        doc.save(`Extrato_${cleanClientName.replace(/ /g, '_')}.pdf`);
-    } catch (error) {
-        console.error('Erro ao gerar PDF:', error);
-        showCustomAlert('Erro', 'Não foi possível gerar o PDF. Tente novamente.', 'error');
-    }
-}
+// --- FIM DA NOVA FUNÇÃO ---
+
+// ... (openAssignModal, openEditDriverModal, etc. - sem alterações) ...
+async function openAssignModal(orderId) { const modal = document.getElementById('assign-modal'); modal.classList.remove('hidden'); document.getElementById('modal-order-id').innerText = `#${orderId.slice(-6)}`; const select = document.getElementById('driver-select-dropdown'); select.innerHTML = '<option value="">A carregar...</option>'; try { const response = await fetch(`${API_URL}/api/drivers/available`, { headers: getAuthHeaders() }); if (response.status === 401) { return handleLogout('admin'); } const data = await response.json(); if (!response.ok) throw new Error(data.message); if (data.drivers.length === 0) { select.innerHTML = '<option value="">Nenhum motorista disponível</option>'; return; } select.innerHTML = '<option value="">-- Selecione um motorista --</option>'; data.drivers.forEach(driver => { select.innerHTML += `<option value="${driver.profile._id}">${driver.nome} (${driver.profile.vehicle_plate})</option>`; }); document.getElementById('btn-confirm-assign').onclick = async () => { const driverId = select.value; if (!driverId) { showCustomAlert('Atenção', 'Por favor, selecione um motorista.'); return; } await confirmAssign(orderId, driverId); }; } catch (error) { console.error('Falha ao carregar motoristas disponíveis:', error); select.innerHTML = '<option value="">Erro ao carregar</option>'; } }
+async function openEditDriverModal(driverUserId) { const modal = document.getElementById('edit-driver-modal'); modal.classList.remove('hidden'); document.getElementById('edit-driver-id').value = driverUserId; document.getElementById('edit-driver-name').value = 'A carregar...'; document.getElementById('edit-driver-phone').value = 'A carregar...'; try { const response = await fetch(`${API_URL}/api/drivers/${driverUserId}`, { headers: getAuthHeaders() }); if (response.status === 401) { return handleLogout('admin'); } const data = await response.json(); if (!response.ok) throw new Error(data.message); const driver = data.driver; const profile = driver.profile || {}; document.getElementById('edit-driver-name').value = driver.nome; document.getElementById('edit-driver-phone').value = driver.telefone; document.getElementById('edit-driver-plate').value = profile.vehicle_plate || ''; document.getElementById('edit-driver-status').value = profile.status || 'offline'; } catch (error) { console.error('Falha ao carregar dados do motorista:', error); showCustomAlert('Erro', 'Erro ao carregar dados do motorista.', 'error'); closeEditDriverModal(); } }
+async function openHistoryDetailModal(orderId) { const modal = document.getElementById('history-detail-modal'); const body = document.getElementById('history-modal-body'); modal.classList.remove('hidden'); document.getElementById('history-modal-id').innerText = `#${orderId.slice(-6)}`; body.innerHTML = '<p>A carregar detalhes...</p>'; try { const response = await fetch(`${API_URL}/api/orders/${orderId}`, { headers: getAuthHeaders() }); if (response.status === 401) { return handleLogout('admin'); } const data = await response.json(); if (!response.ok) throw new Error(data.message); const order = data.order; const motorista = order.assigned_to_driver ? order.assigned_to_driver.user.nome : 'N/D'; const admin = order.created_by_admin ? order.created_by_admin.nome : 'N/D'; let coordsHtml = '<p><strong>Pin do Mapa:</strong> N/D</p>'; if (order.address_coords && order.address_coords.lat) { coordsHtml = `<p><strong>Pin do Mapa:</strong> ${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}</p>`; } body.innerHTML = ` <p><strong>Cliente:</strong> ${order.client_name}</p> <p><strong>Telefone:</strong> ${order.client_phone1}</p> <p><strong>Endereço:</strong> ${order.address_text || 'N/D'}</p> ${coordsHtml} <p><strong>Valor:</strong> ${order.price ? order.price.toFixed(2) + ' MZN' : 'N/D'}</p> <p><strong>Natureza:</strong> ${SERVICE_NAMES[order.service_type] || order.service_type}</p> <p><strong>Status:</strong> ${order.status}</p> <p><strong>Código:</strong> ${order.verification_code}</p> <p><strong>Motorista:</strong> ${motorista}</p> <p><strong>Admin:</strong> ${admin}</p> <p><strong>Criado em:</strong> ${new Date(order.timestamp_created).toLocaleString('pt-MZ')}</p> <p><strong>Iniciado em:</strong> ${order.timestamp_started ? new Date(order.timestamp_started).toLocaleString('pt-MZ') : 'N/D'}</p> <p><strong>Concluído em:</strong> ${order.timestamp_completed ? new Date(order.timestamp_completed).toLocaleString('pt-MZ') : 'N/D'}</p> <p><strong>Duração:</strong> ${formatDuration(order.timestamp_started, order.timestamp_completed)}</p> `; } catch (error) { console.error('Falha ao carregar detalhes do histórico:', error); body.innerHTML = '<p>Erro ao carregar detalhes.</p>'; } }
+async function openDriverReportModal(driverUserId, driverName) { const modal = document.getElementById('driver-report-modal'); modal.classList.remove('hidden'); document.getElementById('driver-report-title').innerText = `Relatório de ${driverName}`; document.getElementById('report-total-entregas').innerText = '...'; document.getElementById('report-total-duracao').innerText = '...'; const tableBody = document.getElementById('driver-report-table-body'); tableBody.innerHTML = '<tr><td colspan="5">A carregar relatório...</td></tr>'; try { const response = await fetch(`${API_URL}/api/drivers/${driverUserId}/report`, { headers: getAuthHeaders() }); if (response.status === 401) { return handleLogout('admin'); } const data = await response.json(); if (!response.ok) throw new Error(data.message); const orders = data.orders; let totalMs = 0; orders.forEach(order => { if (order.timestamp_started && order.timestamp_completed) { totalMs += (new Date(order.timestamp_completed) - new Date(order.timestamp_started)); } }); document.getElementById('report-total-entregas').innerText = orders.length; document.getElementById('report-total-duracao').innerText = formatTotalDuration(totalMs); tableBody.innerHTML = ''; if (orders.length === 0) { tableBody.innerHTML = '<tr><td colspan="5">Nenhuma entrega concluída encontrada.</td></tr>'; return; } orders.forEach(order => { const serviceName = SERVICE_NAMES[order.service_type] || order.service_type; tableBody.innerHTML += ` <tr> <td>#${order._id.slice(-6)}</td> <td>${order.client_name}</td> <td>${serviceName}</td> <td>${new Date(order.timestamp_completed).toLocaleDateString('pt-MZ')}</td> <td>${formatDuration(order.timestamp_started, order.timestamp_completed)}</td> </tr> `; }); } catch (error) { console.error('Falha ao carregar relatório do motorista:', error); tableBody.innerHTML = '<tr><td colspan="5">Erro ao carregar relatório.</td></tr>'; } }
+async function openEditClientModal(clientId) { const modal = document.getElementById('edit-client-modal'); modal.classList.remove('hidden'); try { const response = await fetch(`${API_URL}/api/clients/${clientId}`, { headers: getAuthHeaders() }); if (response.status === 401) { return handleLogout('admin'); } const data = await response.json(); if (!response.ok) throw new Error(data.message); const client = data.client; document.getElementById('edit-client-id').value = client._id; document.getElementById('edit-client-nome').value = client.nome; document.getElementById('edit-client-telefone').value = client.telefone; document.getElementById('edit-client-empresa').value = client.empresa || ''; document.getElementById('edit-client-email').value = client.email || ''; document.getElementById('edit-client-nuit').value = client.nuit || ''; document.getElementById('edit-client-endereco').value = client.endereco || ''; } catch (error) { console.error('Falha ao carregar dados do cliente:', error); showCustomAlert('Erro', 'Erro ao carregar dados do cliente.', 'error'); closeEditClientModal(); } }
+function openStatementModal(clientId, clientName) { const modal = document.getElementById('statement-modal'); document.getElementById('statement-client-name').textContent = `Extrato de ${clientName}`; document.getElementById('statement-client-id').value = clientId; document.getElementById('statement-results').classList.add('hidden'); document.getElementById('statement-table-body').innerHTML = ''; document.getElementById('statement-start-date').value = ''; document.getElementById('statement-end-date').value = ''; modal.classList.remove('hidden'); }
+
+
+// ... (Lógica Auxiliar - sem alterações) ...
+function handleClientSelect(e) { const selectedClientId = e.target.value; const client = clientCache.find(c => c._id === selectedClientId); if (client) { document.getElementById('client-name').value = client.nome; document.getElementById('client-phone1').value = client.telefone; document.getElementById('client-phone2').value = ''; document.getElementById('delivery-client-id').value = client._id; document.getElementById('client-name').readOnly = true; document.getElementById('client-phone1').readOnly = true; } else { resetDeliveryForm(); } }
+function resetDeliveryForm() { document.getElementById('delivery-form').reset(); document.getElementById('delivery-client-id').value = ''; document.getElementById('client-name').readOnly = false; document.getElementById('client-phone1').readOnly = false; }
+function populateStatementModal(data, startDate, endDate) { const { totalValue, totalOrders, ordersList } = data; const formattedTotal = new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(totalValue); document.getElementById('statement-total-value').textContent = formattedTotal; document.getElementById('statement-total-orders').textContent = `${totalOrders} Pedidos`; const start = new Date(startDate + 'T00:00:00Z').toLocaleDateString('pt-MZ', { timeZone: 'UTC' }); const end = new Date(endDate + 'T00:00:00Z').toLocaleDateString('pt-MZ', { timeZone: 'UTC' }); document.getElementById('statement-date-range').textContent = `Pedidos Concluídos de ${start} a ${end}`; const tableBody = document.getElementById('statement-table-body'); tableBody.innerHTML = ''; if (ordersList.length === 0) { tableBody.innerHTML = '<tr><td colspan="4">Nenhum pedido concluído neste período.</td></tr>'; } else { ordersList.forEach(order => { tableBody.innerHTML += ` <tr> <td>${new Date(order.timestamp_completed).toLocaleDateString('pt-MZ')}</td> <td>#${order._id.slice(-6)}</td> <td>${SERVICE_NAMES[order.service_type] || order.service_type}</td> <td>${order.price.toFixed(2)} MZN</td> </tr> `; }); } document.getElementById('statement-results').classList.remove('hidden'); }
+function handleDownloadPDF() { try { const { jsPDF } = window.jspdf; const doc = new jsPDF(); const clientName = document.getElementById('statement-client-name').textContent; const cleanClientName = clientName.replace('Extrato de ', ''); const dateRange = document.getElementById('statement-date-range').textContent; const totalValue = document.getElementById('statement-total-value').textContent; const totalOrders = document.getElementById('statement-total-orders').textContent; doc.setFontSize(18); doc.text('Extrato de Conta de Cliente', 14, 22); doc.setFontSize(11); doc.setTextColor(100); doc.text(`Cliente: ${cleanClientName}`, 14, 32); doc.text(`Período: ${dateRange}`, 14, 38); doc.setFontSize(12); doc.setTextColor(0); doc.text(`Total de Pedidos: ${totalOrders}`, 14, 50); doc.text(`Valor Total Gasto: ${totalValue}`, 14, 56); doc.autoTable({ html: '#statement-results .table-pedidos', startY: 65, theme: 'grid', styles: { fontSize: 9 }, headStyles: { fillColor: [44, 62, 80] } }); doc.save(`Extrato_${cleanClientName.replace(/ /g, '_')}.pdf`); } catch (error) { console.error('Erro ao gerar PDF:', error); showCustomAlert('Erro', 'Não foi possível gerar o PDF. Tente novamente.', 'error'); } }

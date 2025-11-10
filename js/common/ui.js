@@ -90,6 +90,19 @@ function closeStatementModal() {
     document.getElementById('statement-modal').classList.add('hidden');
 }
 
+// --- (NOVA FUNÇÃO ADICIONADA) ---
+/**
+ * Fecha o modal genérico de confirmação.
+ */
+function closeConfirmationModal() {
+    const modal = document.getElementById('confirmation-modal');
+    if(modal) {
+        modal.classList.add('hidden');
+        // Limpa o input para a próxima vez
+        document.getElementById('confirmation-input').value = '';
+    }
+}
+
 
 /* --- Funções de Toggle de Formulários --- */
 

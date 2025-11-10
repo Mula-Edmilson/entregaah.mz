@@ -87,12 +87,15 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log("Conectado ao MongoDB com sucesso!"))
     .catch(err => console.error("Erro ao conectar ao MongoDB:", err));
 
+    
+
 // --- Rotas da API (Sem alterações) ---
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/drivers', require('./routes/driverRoutes'));
 app.use('/api/stats', require('./routes/statsRoutes'));
 app.use('/api/clients', require('./routes/clientRoutes'));
+app.use('/api/admin', protect, admin, require('./routes/adminRoutes'));
 
 app.get('/', (req, res) => {
     res.send('<h1>Servidor Backend da Entregaah Mz está no ar! (v2.5 - Helmet/Socket.IO Fix)</h1>');
