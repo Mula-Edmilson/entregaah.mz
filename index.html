@@ -53,11 +53,32 @@
         <div class="content-area">
             
             <div id="visao-geral" class="content-page">
+                
                 <div class="stats-cards">
                     <div class="card card-warning"><h3>Pendentes</h3><p id="stats-pendentes">...</p></div>
                     <div class="card card-info"><h3>Em Trânsito</h3><p id="stats-em-transito">...</p></div>
                     <div class="card card-success"><h3>Concluídas (Hoje)</h3><p id="stats-concluidas-hoje">...</p></div>
                     <div class="card card-success"><h3>Motoristas Online</h3><p id="stats-motoristas-online">...</p></div>
+                </div>
+
+                <h3 style="margin-top: 2rem; color: var(--text-color); font-weight: 600;">Financeiro (Este Mês)</h3>
+                <div class="stats-cards" style="margin-top: 1rem;">
+                    <div class="card card-success">
+                        <h3><i class="fas fa-dollar-sign"></i> Receita Total</h3>
+                        <p id="stats-receita-total">...</p>
+                    </div>
+                    <div class="card card-info">
+                        <h3><i class="fas fa-wallet"></i> Lucro da Empresa</h3>
+                        <p id="stats-lucro-empresa">...</p>
+                    </div>
+                    <div class="card card-warning">
+                        <h3><i class="fas fa-motorcycle"></i> Ganhos (Motoristas)</h3>
+                        <p id="stats-ganhos-motorista">...</p>
+                    </div>
+                    <div class="card">
+                        <h3><i class="fas fa-trophy"></i> Top Motorista</h3>
+                        <p id="stats-top-driver" style="font-size: 1.5rem; color: var(--primary-color);">...</p>
+                    </div>
                 </div>
                 <div class="charts-grid">
                     <div class="chart-container" id="main-chart-container">
@@ -67,13 +88,19 @@
                         </div>
                         <canvas id="servicesChart"></canvas>
                     </div>
+                    
                     <div class="chart-container" id="deliveries-chart-container">
                         <h3>Entregas Ativas</h3>
                         <canvas id="deliveriesStatusChart"></canvas>
                     </div>
+                    
+                    <div class="chart-container" id="financialChartContainer">
+                        <h3>Divisão da Receita (Este Mês)</h3>
+                        <canvas id="financialPieChart"></canvas>
+                    </div>
                 </div>
+            
             </div>
-
             <div id="form-nova-entrega" class="content-page hidden">
                 <form id="delivery-form">
                     <input type="hidden" id="service-type" name="service_type">
@@ -118,7 +145,6 @@
                     <button type="submit" class="btn-submit">Gerar Pedido e Atribuir</button>
                 </form>
             </div>
-
             <div id="gestao-motoristas" class="content-page hidden">
                 <button class="btn-submit" onclick="showAddDriverForm(true)" id="btn-show-driver-form"><i class="fas fa-plus"></i> Adicionar Novo Motorista</button>
                 <form id="form-add-motorista" class="hidden">
@@ -133,7 +159,6 @@
                     </div>
                     <div class="form-row">
                          <div class="form-group"><label for="driver-plate">Viatura (Placa)</label><input type="text" id="driver-plate" placeholder="Ex: MXX-123-MP"></div>
-                         
                          <div class="form-group">
                             <label for="driver-commission">Comissão (%)</label>
                             <input type="number" id="driver-commission" value="20" min="0" max="100" step="1">
@@ -150,7 +175,6 @@
                     </table>
                 </div>
             </div>
-
             <div id="gestao-clientes" class="content-page hidden">
                 <button class="btn-submit" onclick="showAddClientForm(true)" id="btn-show-client-form">
                     <i class="fas fa-plus"></i> Adicionar Novo Cliente
@@ -277,7 +301,6 @@
                     </div>
                 </div>
             </div>
-
             <div id="edit-driver-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -290,12 +313,10 @@
                             <div class="form-group"><label for="edit-driver-name">Nome Completo</label><input type="text" id="edit-driver-name" required></div>
                             <div class="form-group"><label for="edit-driver-phone">Telefone</label><input type="tel" id="edit-driver-phone" required></div>
                             <div class="form-group"><label for="edit-driver-plate">Viatura (Placa)</label><input type="text" id="edit-driver-plate"></div>
-                            
                             <div class="form-group">
                                 <label for="edit-driver-commission">Comissão (%)</label>
                                 <input type="number" id="edit-driver-commission" value="20" min="0" max="100" step="1">
                             </div>
-
                             <div class="form-group">
                                 <label for="edit-driver-status">Estado</label>
                                 <select id="edit-driver-status" required>
@@ -312,7 +333,6 @@
                     </form>
                 </div>
             </div>
-            
             <div id="history-detail-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">

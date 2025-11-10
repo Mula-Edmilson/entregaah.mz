@@ -1,27 +1,25 @@
 /*
  * Ficheiro: js/admin/adminCharts.js
- * (MELHORIA) Atualizado com a paleta de cores "Minimal SaaS"
+ * (Atualizado com o novo Gráfico Financeiro)
  */
 
 // --- Variáveis de estado globais para os gráficos ---
 let myServicesChart = null;
 let myDeliveriesStatusChart = null;
+let myFinancialPieChart = null; // (NOVA VARIÁVEL)
 
 // (NOVAS) Cores do tema Minimal
 const chartColors = {
-    primary: 'rgba(59, 130, 246, 0.8)',  // Azul (Cor sólida para barras)
-    primaryLight: 'rgba(59, 130, 246, 0.2)', // Azul (Cor de fundo/borda)
-    
-    success: 'rgba(16, 185, 129, 0.8)',  // Verde (Cor sólida)
-    successLight: 'rgba(16, 185, 129, 0.2)', // Verde (Cor de fundo/borda)
-    
+    primary: 'rgba(59, 130, 246, 0.8)',  // Azul
+    primaryLight: 'rgba(59, 130, 246, 0.2)',
+    success: 'rgba(16, 185, 129, 0.8)',  // Verde
+    successLight: 'rgba(16, 185, 129, 0.2)',
     warning: 'rgba(245, 159, 11, 0.8)', // Amarelo
     warningLight: 'rgba(245, 159, 11, 0.2)',
     
-    // Cores de Texto e Grelha para Light Mode
-    textColor: '#1E293B',         // --text-color
-    textLight: '#6B7280',         // --text-color-light
-    borderColor: '#E5E7EB'        // --border-color
+    textColor: '#1E293B',
+    textLight: '#6B7280',
+    borderColor: '#E5E7EB'
 };
 
 
@@ -37,21 +35,24 @@ function destroyCharts() {
         myDeliveriesStatusChart.destroy();
         myDeliveriesStatusChart = null;
     }
+    // (MUDANÇA) Destrói o novo gráfico
+    if (myFinancialPieChart) {
+        myFinancialPieChart.destroy();
+        myFinancialPieChart = null;
+    }
 }
 
 /**
  * Inicializa o gráfico de barras (Desempenho dos Serviços).
  */
 async function initServicesChart(reset = false) {
+    // ... (Esta função permanece 100% igual) ...
     const ctx = document.getElementById('servicesChart');
     if (!ctx) return; 
-
     if (myServicesChart) {
         myServicesChart.destroy();
     }
-
     let dataValues = [0], adesaoValues = [0], labels = ['A carregar...'];
-
     if (reset) {
         labels = ['N/D'];
         console.log('SIMULAÇÃO: Resetando dados do gráfico...');
@@ -62,7 +63,6 @@ async function initServicesChart(reset = false) {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message);
-
             if (data.labels.length > 0) {
                 labels = data.labels;
                 dataValues = data.dataValues;
@@ -75,75 +75,66 @@ async function initServicesChart(reset = false) {
             labels = ['Erro ao carregar'];
         }
     }
-    
-    // (MUDANÇA) O gráfico da imagem de inspiração (Traffic Sources) é um Bar/Line misto.
-    // Vamos replicar isso.
-    
     const chartData = {
         labels: labels,
         datasets: [
             { 
                 label: 'Nº de Pedidos (Adesão)', 
-                type: 'bar', // (MUDANÇA) Adesão agora é Barras
+                type: 'bar',
                 data: adesaoValues, 
                 backgroundColor: chartColors.primary,
                 borderColor: chartColors.primary,
                 borderWidth: 1,
-                order: 2 // Desenha as barras *atrás* da linha
+                order: 2
             },
             { 
                 label: 'Valor Rendido (MZN)', 
-                type: 'line', // (MUDANÇA) Receita agora é Linha
+                type: 'line',
                 data: dataValues, 
                 backgroundColor: chartColors.success,
                 borderColor: chartColors.success,
-                borderWidth: 3, // Linha mais grossa
+                borderWidth: 3,
                 fill: false,
-                tension: 0.4, // Linha curva
-                order: 1 // Desenha a linha *à frente* das barras
+                tension: 0.4,
+                order: 1
             }
         ]
     };
-
     myServicesChart = new Chart(ctx, { 
-        type: 'bar', // Tipo base
+        type: 'bar',
         data: chartData, 
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            // (MUDANÇA) Cores dos Eixos (Light Mode)
             scales: { 
                 y: { 
                     beginAtZero: true, 
                     ticks: { 
-                        color: chartColors.textLight, // Cor do texto
+                        color: chartColors.textLight,
                         callback: function(value) { 
                             if (value >= 1000) return value / 1000 + 'k'; 
                             return value; 
                         } 
                     },
                     grid: {
-                        color: chartColors.borderColor // Cor da grelha
+                        color: chartColors.borderColor
                     }
                 },
                 x: {
                     ticks: {
-                        color: chartColors.textLight // Cor do texto
+                        color: chartColors.textLight
                     },
                     grid: {
-                        display: false // Remove grelha X
+                        display: false
                     }
                 }
             },
-            // (MUDANÇA) Cores da Legenda e Título (Light Mode)
             plugins: {
-                title: { 
-                    display: false, // O H3 no HTML já faz isto
-                },
+                title: { display: false },
                 legend: {
                     position: 'bottom',
                     labels: {
-                        color: chartColors.textLight // Cor da legenda
+                        color: chartColors.textLight
                     }
                 },
                 tooltip: { 
@@ -176,13 +167,12 @@ async function initServicesChart(reset = false) {
  * Inicializa/Atualiza o gráfico de donut (Entregas Ativas).
  */
 function initDeliveriesStatusChart(pendentes, emTransito) {
+    // ... (Esta função permanece 100% igual) ...
     const ctx = document.getElementById('deliveriesStatusChart');
     if (!ctx) return;
-
     if (myDeliveriesStatusChart) {
         myDeliveriesStatusChart.destroy();
     }
-
     const total = pendentes + emTransito;
     const data = {
         labels: [
@@ -193,8 +183,8 @@ function initDeliveriesStatusChart(pendentes, emTransito) {
             label: 'Entregas Ativas',
             data: [pendentes, emTransito],
             backgroundColor: [
-                chartColors.warning, // (MUDANÇA) Amarelo
-                chartColors.success  // (MUDANÇA) Verde
+                chartColors.warning,
+                chartColors.success
             ],
             borderColor: [
                 chartColors.warning,
@@ -203,20 +193,18 @@ function initDeliveriesStatusChart(pendentes, emTransito) {
             borderWidth: 1
         }]
     };
-
     myDeliveriesStatusChart = new Chart(ctx, {
         type: 'doughnut',
         data: data,
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '70%', // (MUDANÇA) Faz o "buraco" maior, como na imagem
+            cutout: '70%',
             plugins: {
-                // (MUDANÇA) Cores da Legenda (Light Mode)
                 legend: {
                     position: 'bottom',
                     labels: {
-                        color: chartColors.textLight // Cor da legenda
+                        color: chartColors.textLight
                     }
                 },
                 tooltip: {
@@ -243,3 +231,80 @@ function initDeliveriesStatusChart(pendentes, emTransito) {
         }
     });
 }
+
+
+// --- (NOVA FUNÇÃO ADICIONADA) ---
+/**
+ * Inicializa/Atualiza o gráfico de "pizza" (Divisão Financeira).
+ * @param {number} lucroEmpresa - O lucro líquido da empresa.
+ * @param {number} ganhosMotorista - O total pago aos motoristas.
+ */
+function initFinancialPieChart(lucroEmpresa, ganhosMotorista) {
+    const ctx = document.getElementById('financialPieChart');
+    if (!ctx) return; // Sai se o elemento não estiver na página
+
+    if (myFinancialPieChart) {
+        myFinancialPieChart.destroy(); // Destrói o anterior
+    }
+
+    const total = lucroEmpresa + ganhosMotorista;
+    const data = {
+        labels: [
+            `Lucro da Empresa (MZN ${lucroEmpresa.toFixed(2)})`,
+            `Ganhos de Motoristas (MZN ${ganhosMotorista.toFixed(2)})`
+        ],
+        datasets: [{
+            label: 'Divisão da Receita',
+            data: [lucroEmpresa, ganhosMotorista],
+            backgroundColor: [
+                chartColors.primary, // Azul (Lucro)
+                chartColors.success  // Verde (Ganhos Motoristas)
+            ],
+            borderColor: [
+                chartColors.primary,
+                chartColors.success
+            ],
+            borderWidth: 1
+        }]
+    };
+
+    myFinancialPieChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: chartColors.textLight
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#FFFFFF',
+                    titleColor: chartColors.textColor,
+                    bodyColor: chartColors.textLight,
+                    borderColor: chartColors.borderColor,
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label.split('(')[0].trim() || ''; // Pega só o nome
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                // Mostra a percentagem
+                                const percentage = total > 0 ? (context.parsed / total * 100).toFixed(1) : 0;
+                                label += `${percentage}%`;
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+// --- FIM DA NOVA FUNÇÃO ---
