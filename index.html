@@ -63,14 +63,12 @@
         <div class="content-area">
             
             <div id="visao-geral" class="content-page">
-    
                 <div class="stats-cards">
                     <div class="card"><h3>Pendentes</h3><p id="stats-pendentes">...</p></div>
                     <div class="card"><h3>Em Trânsito</h3><p id="stats-em-transito">...</p></div>
                     <div class="card"><h3>Concluídas (Hoje)</h3><p id="stats-concluidas-hoje">...</p></div>
                     <div class="card"><h3>Motoristas Online</h3><p id="stats-motoristas-online">...</p></div>
                 </div>
-
                 <div class="charts-grid">
                     <div class="chart-container" id="main-chart-container">
                         <div class="chart-header">
@@ -79,35 +77,30 @@
                         </div>
                         <canvas id="servicesChart"></canvas>
                     </div>
-                    
                     <div class="chart-container" id="deliveries-chart-container">
                         <h3>Entregas Ativas</h3>
                         <canvas id="deliveriesStatusChart"></canvas>
                     </div>
                 </div>
-            
             </div>
 
             <div id="form-nova-entrega" class="content-page hidden">
                 <form id="delivery-form">
                     <input type="hidden" id="service-type" name="service_type">
                     <input type="hidden" id="delivery-client-id" name="clientId">
-                    
                     <h3>Cliente</h3>
                     <div class="form-group form-group-large">
                         <label for="delivery-client-select">Cliente Registado (Opcional)</label>
                         <select id="delivery-client-select">
-                            <option value="">-- Ou digite manualmente abaixo --</option>
+                            <option value="">-- Ou digite manually abaixo --</option>
                         </select>
                     </div>
-                    
                     <h3>Dados do Cliente/Destinatário</h3>
                     <div class="form-row">
                         <div class="form-group"><label for="client-name">Nome Completo</label><input type="text" id="client-name" name="client_name" required></div>
                         <div class="form-group"><label for="client-phone1">Número Principal</label><input type="tel" id="client-phone1" name="client_phone1" required></div>
                         <div class="form-group"><label for="client-phone2">Número Alternativo</label><input type="tel" id="client-phone2" name="client_phone2"></div>
                     </div>
-                    
                     <h3>Detalhes da Encomenda</h3>
                     <div class="form-row">
                         <div class="form-group">
@@ -167,7 +160,6 @@
                 <button class="btn-submit" onclick="showAddClientForm(true)" id="btn-show-client-form">
                     <i class="fas fa-plus"></i> Adicionar Novo Cliente
                 </button>
-
                 <form id="form-add-cliente" class="hidden">
                     <h3>Dados do Novo Cliente</h3>
                     <div class="form-row">
@@ -185,7 +177,6 @@
                     <button type="submit" class="btn-submit">Salvar Cliente</button>
                     <button type="button" class="btn-cancel" onclick="showAddClientForm(false)">Cancelar</button>
                 </form>
-
                 <h3>Clientes Registados</h3>
                 <div class="table-container-responsive">
                     <table class="table-motoristas">
@@ -202,7 +193,6 @@
                     </table>
                 </div>
             </div> 
-
 
             <div id="entregas-activas" class="content-page hidden">
                 <h3>Gestão de Encomendas Activas</h3>
@@ -225,12 +215,10 @@
 
             <div id="historico" class="content-page hidden">
                 <h3>Histórico de Encomendas</h3>
-                
                 <div class="search-container">
                     <input type="text" id="history-search-input" placeholder="Pesquisar no histórico (ID, Cliente, Motorista...)">
                     <i class="fas fa-search"></i>
                 </div>
-                
                 <div class="table-container-responsive">
                     <table class="table-pedidos">
                         <thead>
@@ -254,6 +242,33 @@
             </div>
 
             
+            <div id="configuracoes" class="content-page hidden">
+                <h3>Segurança da Conta</h3>
+                
+                <form id="form-change-password">
+                    <p>Altere a sua senha de administrador. Você será desconectado após a alteração.</p>
+                    <div class="form-group">
+                        <label for="admin-pass-antiga">Senha Antiga</label>
+                        <input type="password" id="admin-pass-antiga" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="admin-pass-nova">Nova Senha (mín. 6 caracteres)</label>
+                        <input type="password" id="admin-pass-nova" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="admin-pass-confirmar">Confirmar Nova Senha</label>
+                        <input type="password" id="admin-pass-confirmar" required minlength="6">
+                    </div>
+                    <button type="submit" class="btn-submit">Atualizar Senha</button>
+                </form>
+
+                <h3 style="margin-top: 3rem; border-color: var(--danger-color);">Zona de Perigo</h3>
+                <div id="zona-de-perigo">
+                    <p>Ações administrativas perigosas, como apagar dados em massa. (Em desenvolvimento)</p>
+                    <button class="btn-danger" disabled><i class="fas fa-trash"></i> Apagar Histórico de Encomendas</button>
+                    <button class="btn-danger" disabled><i class="fas fa-users-slash"></i> Apagar Todos os Clientes</button>
+                </div>
+            </div>
             <div id="assign-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -270,7 +285,6 @@
                     </div>
                 </div>
             </div>
-
             <div id="edit-driver-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -299,7 +313,6 @@
                     </form>
                 </div>
             </div>
-            
             <div id="history-detail-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -314,7 +327,6 @@
                     </div>
                 </div>
             </div>
-
             <div id="chart-reset-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -334,7 +346,6 @@
                     </div>
                 </div>
             </div>
-
             <div id="custom-alert-modal" class="modal-backdrop hidden">
                 <div class="modal-content modal-alert">
                     <div class="modal-header">
@@ -349,7 +360,6 @@
                     </div>
                 </div>
             </div>
-
             <div id="driver-report-modal" class="modal-backdrop hidden">
                 <div class="modal-content modal-large">
                     <div class="modal-header">
@@ -374,7 +384,6 @@
                     </div>
                 </div>
             </div>
-
             <div id="edit-client-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -398,7 +407,6 @@
                     </form>
                 </div>
             </div>
-
             <div id="statement-modal" class="modal-backdrop hidden">
                 <div class="modal-content modal-large">
                     <div class="modal-header">
@@ -407,7 +415,6 @@
                     </div>
                     <div class="modal-body">
                         <input type="hidden" id="statement-client-id">
-                        
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="statement-start-date">De:</label>
@@ -422,11 +429,9 @@
                             <button type="button" class="btn-action-small btn-set-date" data-range="this_week">Esta Semana</button>
                             <button type="button" class="btn-action-small btn-set-date" data-range="this_month">Este Mês</button>
                         </div>
-                        
                         <button type="button" class="btn-submit" id="btn-generate-statement">
                             <i class="fas fa-search"></i> Gerar Extrato
                         </button>
-                        
                         <div id="statement-results" class="hidden" style="margin-top: 2rem;">
                             <hr>
                             <div class="report-summary">
@@ -460,7 +465,6 @@
                                 </table>
                             </div>
                         </div>
-
                     </div>
                     <div class="modal-actions">
                         <button type="button" class="btn-cancel" onclick="closeStatementModal()">Fechar</button>
@@ -475,5 +479,7 @@
     <script src="js/common/ui.js"></script>
     <script src="js/admin/adminCharts.js"></script>
     <script src="js/admin/adminMap.js"></script>
-    <script src="js/admin/admin.js"></script> </body>
+    <script src="js/admin/admin.js"></script>
+
+</body>
 </html>

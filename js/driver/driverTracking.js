@@ -1,6 +1,6 @@
 /*
  * Ficheiro: js/driver/driverTracking.js
- * (Correção de Áudio Autoplay)
+ * (Correção de Áudio Autoplay e Notificações)
  */
 
 let socket = null;
@@ -13,7 +13,6 @@ let audioUnblocked = false;
 
 /**
  * (MELHORIA) Função dedicada para tocar o som.
- * Tenta tocar; se falhar, regista que precisamos de interação.
  */
 function playNotificationSound() {
     // Tenta tocar o som
@@ -21,10 +20,10 @@ function playNotificationSound() {
     
     if (playPromise !== undefined) {
         playPromise.then(() => {
-            // Sucesso! O áudio está desbloqueado.
+            // Sucesso!
             audioUnblocked = true;
         }).catch(error => {
-            // Falha. O browser bloqueou.
+            // Falha (provavelmente bloqueado).
             console.warn("Áudio bloqueado pelo browser. Esperando interação do utilizador.");
             audioUnblocked = false;
         });
@@ -32,8 +31,8 @@ function playNotificationSound() {
 }
 
 /**
- * (MELHORIA) Esta função é chamada pelo 'driver.js'
- * no PRIMEIRO clique do utilizador, para "acordar" o áudio.
+ * (MELHORIA) Esta função é chamada no PRIMEIRO clique do utilizador
+ * em qualquer sítio, para "acordar" o áudio.
  */
 function unlockAudio() {
     if (!audioUnblocked) {
@@ -67,10 +66,10 @@ function connectDriverSocket() {
         socket.on('nova_entrega_atribuida', (data) => {
             console.log('Nova entrega recebida:', data);
             
-            // 1. (MUDANÇA) Chama a nossa nova função
+            // 1. Toca o som
             playNotificationSound();
             
-            // 2. Mostra o alerta visual (isto já devia estar a funcionar)
+            // 2. Mostra o alerta visual
             showCustomAlert(
                 'Nova Entrega!', 
                 `Novo pedido de ${data.clientName} (${SERVICE_NAMES[data.serviceType] || 'Serviço'}).`, 
@@ -80,6 +79,13 @@ function connectDriverSocket() {
             // 3. Envia o evento para o 'driver.js' recarregar a lista
             document.dispatchEvent(new Event('nova_entrega'));
         });
+
+        // --- (A CORREÇÃO DO ÁUDIO ESTÁ AQUI) ---
+        // Adiciona o listener para "acordar" o áudio no primeiro clique.
+        // O { once: true } faz com que este listener se auto-remova após o primeiro clique.
+        document.body.addEventListener('click', unlockAudio, { once: true });
+        document.body.addEventListener('touchstart', unlockAudio, { once: true });
+        // --- FIM DA CORREÇÃO ---
     });
     
     socket.on('disconnect', () => {

@@ -1,6 +1,6 @@
 /*
  * Ficheiro: js/driver/driver.js
- * (Correção de Áudio Autoplay)
+ * (Correção do Link do Mapa e remoção de listener duplicado)
  */
 
 /* --- PONTO DE ENTRADA (Entry Point) --- */
@@ -38,19 +38,12 @@ function attachDriverEventListeners() {
         }
     });
     
-    // --- (A CORREÇÃO ESTÁ AQUI) ---
-    // Adiciona um listener "once" (só corre uma vez)
-    // ao documento. No primeiro clique ou toque do utilizador
-    // em qualquer sítio, chama a função unlockAudio().
-    document.body.addEventListener('click', unlockAudio, { once: true });
-    document.body.addEventListener('touchstart', unlockAudio, { once: true });
-    // --- FIM DA CORREÇÃO ---
+    // (MUDANÇA) Os listeners 'unlockAudio' foram REMOVIDOS daqui
 }
 
 
 /* --- Lógica de API (Carregamento de Dados - GET) --- */
 async function loadMyDeliveries() {
-    // ... (Esta função permanece 100% igual) ...
     const listaEntregas = document.getElementById('lista-entregas');
     if (!listaEntregas) return;
     
@@ -103,7 +96,6 @@ async function loadMyDeliveries() {
 
 /* --- Lógica de UI (Mostrar/Esconder Secções) --- */
 function showDetalheEntrega(order) {
-    // ... (Esta função permanece 100% igual) ...
     document.getElementById('lista-entregas').classList.add('hidden');
     
     const detalheSection = document.getElementById('detalhe-entrega');
@@ -130,7 +122,12 @@ function showDetalheEntrega(order) {
     if (order.address_coords && order.address_coords.lat) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
-        mapButton.href = `http://googleusercontent.com/maps/google.com/0{order.address_coords.lat},${order.address_coords.lng}`;
+        
+        // --- (A CORREÇÃO DO MAPA ESTÁ AQUI) ---
+        // O link antigo estava quebrado. Este é o formato universal correto.
+        mapButton.href = `https://www.google.com/maps/search/?api=1&query=${order.address_coords.lat},${order.address_coords.lng}`;
+        // --- FIM DA CORREÇÃO ---
+        
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
@@ -158,7 +155,6 @@ function showDetalheEntrega(order) {
 }
 
 function showListaEntregas() {
-    // ... (Esta função permanece 100% igual) ...
     document.getElementById('lista-entregas').classList.remove('hidden');
     document.getElementById('detalhe-entrega').classList.add('hidden');
     loadMyDeliveries();
@@ -167,7 +163,6 @@ function showListaEntregas() {
 
 /* --- Lógica de API (Envio de Dados - POST) --- */
 async function handleStartDelivery(orderId) {
-    // ... (Esta função permanece 100% igual) ...
     try {
         const response = await fetch(`${API_URL}/api/orders/${orderId}/start`, {
             method: 'POST',
@@ -192,7 +187,6 @@ async function handleStartDelivery(orderId) {
 }
 
 async function handleCompleteDelivery(event, orderId) {
-    // ... (Esta função permanece 100% igual) ...
     event.preventDefault();
     const form = event.target;
     const verification_code = form.querySelector('#codigo-finalizacao').value.toUpperCase();
