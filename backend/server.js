@@ -1,4 +1,4 @@
-// Ficheiro: backend/server.js (Correção Definitiva de Helmet + Socket.IO)
+// Ficheiro: backend/server.js (Atualizado para incluir adminRoutes)
 
 require('dotenv').config();
 
@@ -13,6 +13,8 @@ const helmet = require('helmet');
 const initSocketHandler = require('./socketHandler');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 const { ADMIN_ROOM } = require('./utils/constants');
+// (MUDANÇA) Precisamos disto para a nova rota
+const { protect, admin } = require('./middleware/authMiddleware');
 
 // --- Configuração Inicial ---
 const app = express();
@@ -46,32 +48,16 @@ const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // --- Middlewares ---
-
-// 1. Aplicamos o CORS (com as nossas opções) GLOBALMENTE.
 app.use(cors(corsOptions));
-
-// 2. Aplicamos o Helmet com configurações específicas
 app.use(
     helmet({
-        // (MELHORIA) Permite que a app carregue recursos de outros domínios (ex: imagens)
         crossOriginResourcePolicy: { policy: "cross-origin" },
-        
-        // --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
-        // O Helmet por defeito bloqueia o Socket.IO (erro 400).
-        // Estas duas linhas relaxam essa política para
-        // permitir que o Socket.IO (que é cross-origin) funcione.
         crossOriginEmbedderPolicy: false,
         crossOriginOpenerPolicy: false,
-        // --- FIM DA CORREÇÃO ---
     })
 );
-
-// 3. Aplicamos os parsers de body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-
-// Servir a pasta 'uploads' de forma estática
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // --- Conexão ao MongoDB (Sem alterações) ---
@@ -87,18 +73,20 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log("Conectado ao MongoDB com sucesso!"))
     .catch(err => console.error("Erro ao conectar ao MongoDB:", err));
 
-    
-
-// --- Rotas da API (Sem alterações) ---
+// --- Rotas da API ---
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/drivers', require('./routes/driverRoutes'));
 app.use('/api/stats', require('./routes/statsRoutes'));
 app.use('/api/clients', require('./routes/clientRoutes'));
+
+// --- (A CORREÇÃO ESTÁ AQUI) ---
+// Adicionamos a nova rota de admin, protegida por 'protect' e 'admin'
 app.use('/api/admin', protect, admin, require('./routes/adminRoutes'));
+// --- FIM DA CORREÇÃO ---
 
 app.get('/', (req, res) => {
-    res.send('<h1>Servidor Backend da Entregaah Mz está no ar! (v2.5 - Helmet/Socket.IO Fix)</h1>');
+    res.send('<h1>Servidor Backend da Entregaah Mz está no ar! (v2.6 - Zona de Perigo Ativa)</h1>');
 });
 
 // --- Lógica de Socket e Erros (Sem alterações) ---
