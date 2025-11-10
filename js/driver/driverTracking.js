@@ -1,18 +1,20 @@
 /*
  * Ficheiro: js/driver/driverTracking.js
- * (Correção de Áudio Autoplay e Notificações)
+ * (Correção de Áudio Autoplay)
  */
 
 let socket = null;
 
+// Criamos o objeto de Áudio uma vez
 const notificationSound = new Audio('https://www.myinstants.com/media/sounds/notification-sound.mp3');
-notificationSound.volume = 0.5;
+notificationSound.volume = 0.5; // Define o volume
 
-// (MELHORIA) Esta variável controla se o browser nos deu permissão de áudio
+// Esta variável controla se o browser nos deu permissão de áudio
 let audioUnblocked = false;
 
 /**
- * (MELHORIA) Função dedicada para tocar o som.
+ * Função dedicada para tocar o som.
+ * Tenta tocar; se falhar, regista que precisamos de interação.
  */
 function playNotificationSound() {
     // Tenta tocar o som
@@ -20,7 +22,7 @@ function playNotificationSound() {
     
     if (playPromise !== undefined) {
         playPromise.then(() => {
-            // Sucesso!
+            // Sucesso! O áudio está desbloqueado.
             audioUnblocked = true;
         }).catch(error => {
             // Falha (provavelmente bloqueado).
@@ -31,7 +33,7 @@ function playNotificationSound() {
 }
 
 /**
- * (MELHORIA) Esta função é chamada no PRIMEIRO clique do utilizador
+ * Esta função é chamada no PRIMEIRO clique do utilizador
  * em qualquer sítio, para "acordar" o áudio.
  */
 function unlockAudio() {
@@ -66,7 +68,7 @@ function connectDriverSocket() {
         socket.on('nova_entrega_atribuida', (data) => {
             console.log('Nova entrega recebida:', data);
             
-            // 1. Toca o som
+            // 1. (MUDANÇA) Chama a nossa nova função
             playNotificationSound();
             
             // 2. Mostra o alerta visual

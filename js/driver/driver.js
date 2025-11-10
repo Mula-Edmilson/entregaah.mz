@@ -1,6 +1,6 @@
 /*
  * Ficheiro: js/driver/driver.js
- * (Correção do Link do Mapa e remoção de listener duplicado)
+ * (Remoção de listener duplicado)
  */
 
 /* --- PONTO DE ENTRADA (Entry Point) --- */
@@ -123,10 +123,8 @@ function showDetalheEntrega(order) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
         
-        // --- (A CORREÇÃO DO MAPA ESTÁ AQUI) ---
-        // O link antigo estava quebrado. Este é o formato universal correto.
+        // (MUDANÇA) Corrigido o link do Google Maps
         mapButton.href = `https://www.google.com/maps/search/?api=1&query=${order.address_coords.lat},${order.address_coords.lng}`;
-        // --- FIM DA CORREÇÃO ---
         
         mapButton.classList.remove('hidden');
     } else {
