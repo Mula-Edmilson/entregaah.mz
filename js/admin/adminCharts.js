@@ -1,22 +1,32 @@
 /*
  * Ficheiro: js/admin/adminCharts.js
- *
- * (Dependência #4) - Precisa de 'api.js', 'auth.js'
+ * (MELHORIA) Atualizado com a paleta de cores "Dark-Tech"
  *
  * Contém toda a lógica de gestão dos gráficos da "Visão Geral".
- * - myServicesChart (Gráfico de Barras - Desempenho)
- * - myDeliveriesStatusChart (Gráfico de Donut - Ativas)
  */
 
-// --- (MELHORIA) Variáveis de estado globais para os gráficos ---
-// Mantemos uma referência aos gráficos para podermos destruí-los
-// antes de os redesenhar, evitando bugs de memória.
+// --- Variáveis de estado globais para os gráficos ---
 let myServicesChart = null;
 let myDeliveriesStatusChart = null;
 
+// (NOVAS) Cores do tema Dark-Tech
+const chartColors = {
+    primary: 'rgba(124, 58, 237, 0.7)',  // Violeta
+    primaryHover: 'rgba(124, 58, 237, 1)',
+    success: 'rgba(16, 185, 129, 0.7)',  // Verde
+    successHover: 'rgba(16, 185, 129, 1)',
+    info: 'rgba(59, 130, 246, 0.7)',     // Azul
+    infoHover: 'rgba(59, 130, 246, 1)',
+    
+    // Cores de Texto e Grelha para Dark Mode
+    textColor: '#e5e7eb',         // --text-color
+    textLight: '#9ca3af',         // --text-color-light
+    borderColor: '#374151'        // --border-color
+};
+
+
 /**
  * Destrói as instâncias dos gráficos existentes.
- * Chamado pela função showPage() sempre que saímos da "Visão Geral".
  */
 function destroyCharts() {
     if (myServicesChart) {
@@ -31,15 +41,13 @@ function destroyCharts() {
 
 /**
  * Inicializa o gráfico de barras (Desempenho dos Serviços).
- * Busca os dados na API /api/stats/services.
- * @param {boolean} reset - Se true, força o reset dos dados.
  */
 async function initServicesChart(reset = false) {
     const ctx = document.getElementById('servicesChart');
-    if (!ctx) return; // Se o elemento não existir, não faz nada
+    if (!ctx) return; 
 
     if (myServicesChart) {
-        myServicesChart.destroy(); // Destrói o gráfico anterior
+        myServicesChart.destroy();
     }
 
     let dataValues = [0], adesaoValues = [0], labels = ['A carregar...'];
@@ -47,7 +55,6 @@ async function initServicesChart(reset = false) {
     if (reset) {
         labels = ['N/D'];
         console.log('SIMULAÇÃO: Resetando dados do gráfico...');
-        // Aqui você faria a chamada real à API para resetar
     } else {
         try {
             const response = await fetch(`${API_URL}/api/stats/services`, { 
@@ -75,15 +82,15 @@ async function initServicesChart(reset = false) {
             { 
                 label: 'Valor Rendido (MZN)', 
                 data: dataValues, 
-                backgroundColor: 'rgba(255, 102, 0, 0.7)', // --primary-color
-                borderColor: 'rgba(255, 102, 0, 1)',
+                backgroundColor: chartColors.primary, // (MUDANÇA)
+                borderColor: chartColors.primaryHover,
                 borderWidth: 1 
             },
             { 
                 label: 'Nº de Pedidos (Adesão)', 
                 data: adesaoValues, 
-                backgroundColor: 'rgba(44, 62, 80, 0.7)', // --dark-color
-                borderColor: 'rgba(44, 62, 80, 1)',
+                backgroundColor: chartColors.success, // (MUDANÇA)
+                borderColor: chartColors.successHover,
                 borderWidth: 1 
             }
         ]
@@ -95,20 +102,47 @@ async function initServicesChart(reset = false) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            // (MUDANÇA) Cores dos Eixos (Dark Mode)
             scales: { 
                 y: { 
                     beginAtZero: true, 
                     ticks: { 
+                        color: chartColors.textLight, // Cor do texto
                         callback: function(value) { 
                             if (value >= 1000) return value / 1000 + 'k'; 
                             return value; 
                         } 
-                    } 
-                } 
+                    },
+                    grid: {
+                        color: chartColors.borderColor // Cor da grelha
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: chartColors.textLight // Cor do texto
+                    },
+                    grid: {
+                        display: false // Remove grelha X
+                    }
+                }
             },
+            // (MUDANÇA) Cores da Legenda e Título (Dark Mode)
             plugins: {
-                title: { display: true, text: 'Receita vs. Número de Pedidos por Serviço' },
+                title: { 
+                    display: true, 
+                    text: 'Receita vs. Número de Pedidos por Serviço',
+                    color: chartColors.textColor, // Cor do título
+                    font: { size: 16, weight: '600' }
+                },
+                legend: {
+                    labels: {
+                        color: chartColors.textLight // Cor da legenda
+                    }
+                },
                 tooltip: { 
+                    backgroundColor: '#111827', // Fundo escuro
+                    titleColor: chartColors.textColor,
+                    bodyColor: chartColors.textLight,
                     callbacks: { 
                         label: function(context) { 
                             let l = context.dataset.label || ''; 
@@ -131,16 +165,13 @@ async function initServicesChart(reset = false) {
 
 /**
  * Inicializa/Atualiza o gráfico de donut (Entregas Ativas).
- * Recebe os dados diretamente da função loadOverviewStats (em admin.js).
- * @param {number} pendentes - Número de entregas pendentes.
- * @param {number} emTransito - Número de entregas em trânsito.
  */
 function initDeliveriesStatusChart(pendentes, emTransito) {
     const ctx = document.getElementById('deliveriesStatusChart');
-    if (!ctx) return; // Sai se o elemento não estiver na página
+    if (!ctx) return;
 
     if (myDeliveriesStatusChart) {
-        myDeliveriesStatusChart.destroy(); // Destrói o anterior
+        myDeliveriesStatusChart.destroy();
     }
 
     const total = pendentes + emTransito;
@@ -153,12 +184,12 @@ function initDeliveriesStatusChart(pendentes, emTransito) {
             label: 'Entregas Ativas',
             data: [pendentes, emTransito],
             backgroundColor: [
-                'rgba(255, 102, 0, 0.7)', // Laranja (--primary-color)
-                'rgba(52, 152, 219, 0.7)' // Azul (--info-color)
+                chartColors.primary, // (MUDANÇA) Violeta
+                chartColors.info     // (MUDANÇA) Azul
             ],
             borderColor: [
-                'rgba(255, 102, 0, 1)',
-                'rgba(52, 152, 219, 1)'
+                chartColors.primaryHover,
+                chartColors.infoHover
             ],
             borderWidth: 1
         }]
@@ -171,10 +202,17 @@ function initDeliveriesStatusChart(pendentes, emTransito) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
+                // (MUDANÇA) Cores da Legenda (Dark Mode)
                 legend: {
-                    position: 'bottom', // Legenda em baixo
+                    position: 'bottom',
+                    labels: {
+                        color: chartColors.textLight // Cor da legenda
+                    }
                 },
                 tooltip: {
+                    backgroundColor: '#111827', // Fundo escuro
+                    titleColor: chartColors.textColor,
+                    bodyColor: chartColors.textLight,
                     callbacks: {
                         label: function(context) {
                             let label = context.label || '';

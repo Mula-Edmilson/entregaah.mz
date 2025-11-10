@@ -13,7 +13,7 @@ exports.deleteOldHistory = asyncHandler(async (req, res) => {
     
     // 1. Define a data de corte (1 minuto atrás) - APENAS PARA TESTE
 const cutoffDate = new Date();
-cutoffDate.setMinutes(cutoffDate.getMinutes() - 1); // 1 minuto no passado
+cutoffDate.setMinutes(cutoffDate.getMinutes() - 30); // 1 minuto no passado
     // 2. Define o critério de busca
     const query = {
         status: { $in: [ORDER_STATUS.COMPLETED, ORDER_STATUS.CANCELED] },
