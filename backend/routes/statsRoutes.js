@@ -1,4 +1,4 @@
-// Ficheiro: backend/routes/statsRoutes.js (Completo e Atualizado)
+// Ficheiro: backend/routes/statsRoutes.js (Atualizado)
 
 const express = require('express');
 const router = express.Router();
@@ -7,16 +7,17 @@ const { protect, admin } = require('../middleware/authMiddleware');
 
 // @route   GET /api/stats/overview
 // @desc    Admin obtém as estatísticas para a visão geral
-// (Esta rota alimenta os 4 cartões)
 router.get('/overview', protect, admin, statsController.getOverviewStats);
 
-
-// --- (NOVA ADIÇÃO - Ponto 1) ---
 // @route   GET /api/stats/services
 // @desc    Admin obtém dados para o gráfico de desempenho
-// @access  Privado (Admin)
 router.get('/services', protect, admin, statsController.getServicePerformanceStats);
-// --- FIM DA ADIÇÃO ---
 
+// --- (NOVA MELHORIA) ---
+// @route   GET /api/stats/financials
+// @desc    Admin obtém os dados financeiros (Receita, Lucro, Ganhos Motorista)
+// @access  Privado (Admin)
+router.get('/financials', protect, admin, statsController.getFinancialStats);
+// --- FIM DA MELHORIA ---
 
 module.exports = router;
