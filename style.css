@@ -1,6 +1,7 @@
 /* ---
- * NOVO DESIGN: "Minimal SaaS" (Light Mode)
  * Ficheiro: style.css (Completo)
+ * Design: "Minimal SaaS" (Light Mode)
+ * (Corrigido para responsividade e tamanhos de fonte)
 --- */
 
 /* --- Importar Fonte --- */
@@ -8,32 +9,27 @@
 
 /* --- (NOVA) Paleta de Cores "Minimal" --- */
 :root {
-    /* Cor de Destaque (Profissional) */
-    --primary-color: #3B82F6; /* Azul (Inspirado na imagem) */
+    --primary-color: #3B82F6; /* Azul */
     --primary-color-dark: #2563EB;
-    --primary-color-light: rgba(59, 130, 246, 0.1); /* Fundo de hover */
+    --primary-color-light: rgba(59, 130, 246, 0.1);
     --primary-rgb: 59, 130, 246;
 
-    /* Cores de Fundo (Light Mode) */
     --bg-color: #F5F7FA; /* Fundo do Body (Cinza-azulado muito claro) */
     --sidebar-color: #FFFFFF; /* Sidebar Branco */
     --card-color: #FFFFFF; /* Fundo de cartões, tabelas, modais */
     
-    /* Cores de Texto */
     --text-color: #1E293B; /* Slate (Quase preto) */
     --text-color-light: #6B7280; /* Cinza (Secundário/Labels) */
 
-    /* Cores de UI */
     --border-color: #E5E7EB; /* Borda subtil */
     --success-color: #10B981; /* Verde */
     --danger-color: #EF4444; /* Vermelho */
     --warning-color: #F59E0B; /* Amarelo/Laranja */
     --info-color: #3B82F6; /* Azul (igual ao primário) */
     
-    /* Configurações Globais */
     --font-family: 'Poppins', sans-serif;
     --border-radius: 8px;
-    /* Sombras subtis */
+    
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -46,6 +42,12 @@
     box-sizing: border-box; 
     font-family: var(--font-family); 
 }
+
+/* (CORREÇÃO DE FONTE) Define o tamanho base */
+html {
+    font-size: 16px; /* 1rem = 16px */
+}
+
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
@@ -89,22 +91,22 @@ body {
     margin-bottom: 0.5rem; 
     font-weight: 500; 
     color: var(--text-color);
-    font-size: 0.9rem;
+    font-size: 0.9rem; /* 14.4px */
 }
 .form-group input, .form-group select { 
     width: 100%; 
     padding: 0.9rem 1rem;
     border: 1px solid var(--border-color); 
     border-radius: 5px; 
-    font-size: 1rem; 
+    font-size: 1rem; /* 16px */
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-    background-color: var(--bg-color); /* Fundo cinza claro */
+    background-color: var(--bg-color);
     color: var(--text-color);
 }
 .form-group input:focus, .form-group select:focus {
     outline: none;
     border-color: var(--primary-color);
-    background-color: var(--card-color); /* Fica branco */
+    background-color: var(--card-color);
     box-shadow: 0 0 0 3px var(--primary-color-light);
 }
 .btn-login { 
@@ -114,7 +116,7 @@ body {
     padding: 1rem 1.5rem;
     width: 100%; 
     border-radius: 5px; 
-    font-size: 1.1rem; 
+    font-size: 1.1rem; /* 17.6px */
     font-weight: 600; 
     cursor: pointer; 
     transition: all 0.2s ease-in-out; 
@@ -157,6 +159,7 @@ body {
     color: var(--text-color-light); /* Texto secundário */
     text-decoration: none; 
     font-weight: 500; 
+    font-size: 0.95rem; /* 15.2px */
     transition: all 0.2s ease;
     border-radius: var(--border-radius); 
     border-left: 3px solid transparent; /* Espaço para a borda ativa */
@@ -165,10 +168,9 @@ body {
     margin-right: 12px; 
     width: 20px; 
     text-align: center; 
-    font-size: 1.1rem;
+    font-size: 1.1rem; /* 17.6px */
     color: #9CA3AF; /* Ícones cinza */
 }
-/* Efeito Hover/Active (Inspirado na imagem) */
 .menu-item a:hover { 
     background: var(--primary-color-light); 
     color: var(--primary-color); 
@@ -196,7 +198,7 @@ body {
 }
 .submenu a { 
     padding-left: 2.5rem; /* (1.5rem + 1rem) */
-    font-size: 0.9rem;
+    font-size: 0.9rem; /* 14.4px */
     margin: 0;
     border-radius: 0;
     border-left: none; /* Submenu não tem borda */
@@ -223,6 +225,7 @@ body {
     margin-left: 260px; 
     flex-grow: 1; 
     padding: 2.5rem;
+    transition: margin-left 0.3s ease-out; /* (CORREÇÃO) Adiciona transição */
 }
 .main-header { 
     display: flex; 
@@ -235,11 +238,10 @@ body {
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
 }
-.main-header h1 { font-size: 1.7rem; color: var(--text-color); font-weight: 600; }
+.main-header h1 { font-size: 1.5rem; color: var(--text-color); font-weight: 600; } /* (CORREÇÃO) Fonte H1 reduzida */
 .admin-profile { display: flex; align-items: center; font-weight: 600; }
-.admin-profile i { font-size: 2rem; margin-left: 1rem; color: var(--primary-color); }
+.admin-profile i { font-size: 1.75rem; margin-left: 1rem; color: var(--primary-color); } /* (CORREÇÃO) Ícone reduzido */
 
-/* (GRANDE MUDANÇA) O .content-area agora é um cartão branco */
 .content-area { 
     background: var(--card-color); 
     padding: 2.5rem;
@@ -248,14 +250,13 @@ body {
     box-shadow: var(--shadow-sm); 
 }
 
-/* --- Cards de Visão Geral (Inspirado na Imagem) --- */
+/* --- Cards de Visão Geral --- */
 .stats-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; }
 .card { 
     background: var(--card-color); 
     padding: 1.5rem; 
     border-radius: var(--border-radius); 
     border: 1px solid var(--border-color);
-    /* (MUDANÇA CHAVE) Borda inferior colorida */
     border-bottom-width: 4px;
     box-shadow: var(--shadow-sm);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -264,29 +265,37 @@ body {
     transform: translateY(-4px);
     box-shadow: var(--shadow-md);
 }
-/* (NOVO) Classes de Cores - VOCÊ PRECISA DE ADICIONAR ISTO AO SEU HTML */
 .card.card-warning { border-bottom-color: var(--warning-color); }
 .card.card-info { border-bottom-color: var(--info-color); }
 .card.card-success { border-bottom-color: var(--success-color); }
 
 .card h3 { 
-    font-size: 0.9rem;
+    font-size: 0.85rem; /* (CORREÇÃO) Fonte H3 reduzida */
     color: var(--text-color-light);
     margin-bottom: 0.5rem; 
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
-.card p { font-size: 2.25rem; font-weight: 700; color: var(--text-color); }
+.card p { font-size: 2rem; font-weight: 700; color: var(--text-color); } /* (CORREÇÃO) Fonte P reduzida */
+/* (CORREÇÃO) Fonte especial para o Top Driver */
+#stats-top-driver { 
+    font-size: 1.25rem; /* 20px */
+    color: var(--primary-color);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#stats-top-driver small { font-size: 0.9rem; }
 
-/* --- Gráficos (Minimal) --- */
+/* --- Gráficos --- */
 .charts-grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 1.5rem;
     margin-top: 2rem;
 }
-/* (MUDANÇA) Gráficos não são mais cartões, eles estão DENTRO do content-area */
 .chart-container { 
     background: none; 
     padding: 0; 
@@ -294,25 +303,46 @@ body {
     box-shadow: none;
 }
 .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-.chart-header h3 { font-size: 1.4rem; color: var(--text-color); margin-bottom: 0; font-weight: 600; }
+.chart-header h3 { font-size: 1.25rem; color: var(--text-color); margin-bottom: 0; font-weight: 600; } /* (CORREÇÃO) Fonte H3 reduzida */
 #servicesChart { width: 100% !important; max-height: 400px; }
 
 #deliveries-chart-container { padding: 0; }
 #deliveries-chart-container h3 {
-    font-size: 1.2rem; text-align: center; margin-bottom: 1.5rem;
+    font-size: 1.1rem; text-align: center; margin-bottom: 1.5rem; /* (CORREÇÃO) Fonte H3 reduzida */
     color: var(--text-color); font-weight: 600;
 }
 #deliveriesStatusChart { max-height: 280px; margin: 0 auto; }
+#financialChartContainer { 
+    grid-column: 1 / -1; /* Ocupa a linha inteira */
+    text-align: center;
+}
+#financialChartContainer h3 {
+    font-size: 1.1rem; text-align: center; margin-bottom: 1.5rem; /* (CORREÇÃO) Fonte H3 reduzida */
+    color: var(--text-color); font-weight: 600;
+}
+#financialPieChart { max-height: 280px; margin: 0 auto; }
 
 /* Grid de Gráficos (Desktop) */
 @media (min-width: 992px) {
     .charts-grid { grid-template-columns: 2fr 1fr; }
     #main-chart-container { grid-column: 1 / 2; }
     #deliveries-chart-container { grid-column: 2 / 3; }
+    #financialChartContainer { 
+        grid-column: 1 / -1; 
+        margin-top: 1rem;
+    }
+}
+@media (min-width: 1200px) {
+    .charts-grid { grid-template-columns: 2fr 1fr 1fr; }
+    #main-chart-container { grid-column: 1 / 2; }
+    #deliveries-chart-container { grid-column: 2 / 3; }
+    #financialChartContainer { 
+        grid-column: 3 / 4; 
+        margin-top: 0;
+    }
 }
 
-/* --- Formulários (Minimal) --- */
-/* (MUDANÇA) Formulários não são mais cartões */
+/* --- Formulários --- */
 #form-nova-entrega, #form-add-motorista, #form-add-cliente, #configuracoes {
     background: none; 
     padding: 0; 
@@ -327,6 +357,7 @@ body {
     border-bottom: 2px solid var(--primary-color);
     display: inline-block;
     font-weight: 600;
+    font-size: 1.2rem; /* (CORREÇÃO) Fonte H3 reduzida */
 }
 #form-add-motorista h3, #form-add-cliente h3, #configuracoes h3 { margin-top: 0; }
 #configuracoes h3[style*="border-color"] { border-color: var(--danger-color) !important; }
@@ -343,7 +374,6 @@ body {
 }
 #live-map-container { height: 75vh; }
 .leaflet-grab { cursor: grab; }
-/* (NOVO) Corrigir o fundo dos popups do Leaflet para light mode */
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
     background: var(--card-color);
     color: var(--text-color);
@@ -351,12 +381,12 @@ body {
     box-shadow: var(--shadow-md);
 }
 
-/* --- Botões (Minimal) --- */
+/* --- Botões --- */
 .btn-submit, .btn-cancel, .btn-action, .btn-action-small, .btn-action-assign, .btn-logout {
     border: none;
     padding: 0.8rem 1.5rem;
     border-radius: 5px;
-    font-size: 0.95rem;
+    font-size: 0.95rem; /* 15.2px */
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
@@ -366,7 +396,6 @@ body {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
-/* (MUDANÇA) Botão submit agora é azul */
 .btn-submit { 
     background: var(--primary-color); 
     color: #FFFFFF; 
@@ -391,14 +420,23 @@ body {
     transform: none;
     box-shadow: none;
 }
-/* (MUDANÇA) Botão de Ação Amarelo (como na imagem) */
-.btn-action-small.btn-danger { background: var(--danger-color); }
 button.btn-action-small {
     background-color: var(--warning-color);
     color: #FFFFFF;
+    padding: 0.5rem 0.75rem; 
+    font-size: 0.85rem; /* (CORREÇÃO) Botão pequeno */
+    margin-right: 0.5rem;
 }
 button.btn-action-small:hover {
     background-color: #d97706;
+}
+.btn-action-report { background: var(--info-color); }
+.btn-action-assign { 
+    background: var(--primary-color); 
+    color: white; 
+}
+.btn-action:hover, .btn-action-small:hover, .btn-action-assign:hover {
+    box-shadow: 0 4px 15px rgba(var(--primary-rgb), 0.3);
 }
 
 /* --- Tabelas (Minimal) --- */
@@ -415,10 +453,10 @@ button.btn-action-small:hover {
 .table-motoristas th, .table-pedidos th { 
     padding: 1rem 1.5rem;
     text-align: left; 
-    background: #F8F9FA; /* Fundo do header cinza claro */
+    background: #F8F9FA;
     font-weight: 600; 
     color: var(--text-color-light);
-    font-size: 0.85rem;
+    font-size: 0.8rem; /* (CORREÇÃO) Fonte de cabeçalho reduzida */
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 2px solid var(--border-color);
@@ -429,9 +467,10 @@ button.btn-action-small:hover {
     vertical-align: middle;
     border-top: 1px solid var(--border-color);
     color: var(--text-color);
+    font-size: 0.95rem; /* (CORREÇÃO) Fonte da tabela reduzida */
 }
 .table-motoristas tbody tr:hover, .table-pedidos tbody tr:hover {
-    background-color: #F8F9FA; /* Fundo cinza claro */
+    background-color: #F8F9FA;
 }
 
 /* Status (Tags) */
@@ -451,30 +490,12 @@ button.btn-action-small:hover {
 .status-em-progresso { background: rgba(16, 185, 129, 0.1); color: #10B981; }
 .status-concluido { background: rgba(107, 114, 128, 0.1); color: #6B7280; }
 
-/* Código de verificação */
 .verification-code {
     font-weight: 600;
     color: var(--primary-color);
     font-family: 'Courier New', Courier, monospace;
     letter-spacing: 1px;
     font-size: 0.95rem;
-}
-
-/* Botões de Ação na Tabela */
-.btn-action, .btn-action-small { 
-    background: var(--primary-color); 
-    color: #FFFFFF; 
-    padding: 0.5rem 0.75rem; 
-    font-size: 0.9rem; 
-    margin-right: 0.5rem;
-}
-.btn-action-report { background: var(--info-color); }
-.btn-action-assign { 
-    background: var(--primary-color); 
-    color: white; 
-}
-.btn-action:hover, .btn-action-small:hover, .btn-action-assign:hover {
-    box-shadow: 0 4px 15px rgba(var(--primary-rgb), 0.3);
 }
 
 /* --- Painel do Motorista (Minimal) --- */
@@ -504,9 +525,8 @@ button.btn-action-small:hover {
     color: #FFFFFF; 
 }
 .motorista-main { padding: 1.5rem; max-width: 800px; margin: 1.5rem auto; }
-/* (MUDANÇA) Títulos do motorista agora estão dentro de um cartão */
-.motorista-main h2 { color: var(--text-color); margin-bottom: 1.5rem; font-weight: 600; }
-#lista-entregas, #detalhe-entrega, #configuracoes-motorista {
+.motorista-main h2 { color: var(--text-color); margin-bottom: 1.5rem; font-weight: 600; font-size: 1.25rem; }
+#lista-entregas, #detalhe-entrega, #configuracoes-motorista, #meus-ganhos {
     background: var(--card-color);
     padding: 2rem;
     border-radius: var(--border-radius);
@@ -516,7 +536,7 @@ button.btn-action-small:hover {
 
 /* Card de Entrega (Motorista) */
 .entrega-card { 
-    background: #F8F9FA; /* Fundo cinza claro */
+    background: #F8F9FA;
     border-radius: var(--border-radius); 
     padding: 1.5rem; 
     margin-bottom: 1rem; 
@@ -534,7 +554,7 @@ button.btn-action-small:hover {
     align-items: center; margin-bottom: 1rem; 
     font-size: 1.1rem; font-weight: 600;
 }
-.entrega-card p { margin-bottom: 0.5rem; color: var(--text-color); }
+.entrega-card p { margin-bottom: 0.5rem; color: var(--text-color); font-size: 0.95rem; }
 .ver-detalhes-btn { 
     display: inline-block; margin-top: 1rem; 
     color: var(--primary-color); font-weight: 600; 
@@ -551,14 +571,14 @@ button.btn-action-small:hover {
 .btn-voltar i { margin-right: 0.5rem; }
 
 .detalhes-bloco { 
-    background: #F8F9FA; /* Fundo cinza claro */
+    background: #F8F9FA;
     padding: 1.5rem 2rem;
     border-radius: var(--border-radius); 
     margin-bottom: 1.5rem; 
     border: 1px solid var(--border-color);
 }
-.detalhes-bloco h3 { color: var(--primary-color); margin-bottom: 1rem; font-weight: 600; }
-.detalhes-bloco p { font-size: 1.05rem; line-height: 1.7; }
+.detalhes-bloco h3 { color: var(--primary-color); margin-bottom: 1rem; font-weight: 600; font-size: 1.1rem; }
+.detalhes-bloco p { font-size: 1rem; line-height: 1.7; }
 
 .btn-mapa { 
     display: inline-flex; align-items: center;
@@ -678,8 +698,8 @@ button.btn-action-small:hover {
 /* --- Modals (Pop-ups) (Minimal) --- */
 .modal-backdrop { 
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-    background: rgba(30, 41, 59, 0.7); /* Fundo escuro */
-    backdrop-filter: blur(5px); /* Efeito Vidro */
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(5px);
     display: flex; justify-content: center; align-items: center; 
     z-index: 1000;
     opacity: 0;
@@ -709,7 +729,7 @@ button.btn-action-small:hover {
     padding: 1.5rem 2rem;
     border-bottom: 1px solid var(--border-color);
 }
-.modal-header h3 { margin: 0; color: var(--text-color); font-weight: 600; }
+.modal-header h3 { margin: 0; color: var(--text-color); font-weight: 600; font-size: 1.15rem; } /* (CORREÇÃO) Fonte H3 reduzida */
 .modal-close-btn {
     font-size: 2.5rem; font-weight: 300;
     color: var(--text-color-light); background: none;
@@ -722,7 +742,7 @@ button.btn-action-small:hover {
 .modal-body { padding: 2rem; }
 .modal-actions { 
     padding: 1.5rem 2rem;
-    background: #F8F9FA; /* Fundo cinza claro */
+    background: #F8F9FA;
     border-top: 1px solid var(--border-color);
     border-radius: 0 0 var(--border-radius) var(--border-radius);
     display: flex; justify-content: flex-end; 
@@ -739,7 +759,8 @@ button.btn-action-small:hover {
 .modal-alert.success .modal-header h3 { color: var(--success-color); }
 .modal-alert.error .modal-header h3 { color: var(--danger-color); }
 .modal-alert .modal-body p { 
-    font-size: 1.1rem; line-height: 1.6;
+    font-size: 1rem; /* (CORREÇÃO) Fonte reduzida */
+    line-height: 1.6;
     color: var(--text-color);
     white-space: pre-wrap; 
 }
@@ -748,7 +769,8 @@ button.btn-action-small:hover {
 /* Modal de Histórico */
 #history-modal-body { display: flex; flex-direction: column; gap: 0.75rem; }
 #history-modal-body p { 
-    font-size: 1.05rem; line-height: 1.6; 
+    font-size: 1rem; /* (CORREÇÃO) Fonte reduzida */
+    line-height: 1.6; 
     border-bottom: 1px solid var(--border-color); 
     padding-bottom: 0.75rem; 
 }
@@ -768,7 +790,7 @@ button.btn-action-small:hover {
     display: block; font-weight: 600; 
     color: var(--text-color-light); 
     margin-bottom: 0.5rem; 
-    font-size: 0.9rem;
+    font-size: 0.85rem; /* (CORREÇÃO) Fonte reduzida */
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -789,15 +811,15 @@ button.btn-action-small:hover {
 .table-responsive .table-pedidos th {
     position: sticky;
     top: 0;
-    background: #F8F9FA; /* Garante que o header colado tem fundo */
+    background: #F8F9FA;
 }
 .table-responsive .table-pedidos tr:first-child td {
     border-top: none;
 }
-.modal-large h4 { margin-top: 1.5rem; margin-bottom: 1rem; color: var(--text-color); font-weight: 600; }
+.modal-large h4 { margin-top: 1.5rem; margin-bottom: 1rem; color: var(--text-color); font-weight: 600; font-size: 1.1rem; }
 
 
-/* --- Responsividade (Minimal) --- */
+/* --- (CORREÇÃO) Responsividade Mobile --- */
 .table-container-responsive {
     width: 100%;
     overflow-x: auto;
@@ -817,7 +839,6 @@ button.btn-action-small:hover {
     border-radius: 0;
 }
 
-/* Botão Hamburger */
 .btn-mobile-menu {
     display: none;
     background: none;
@@ -878,12 +899,23 @@ button.btn-action-small:hover {
         grid-template-columns: 1fr !important;
     }
     .charts-grid #main-chart-container,
-    .charts-grid #deliveries-chart-container {
+    .charts-grid #deliveries-chart-container,
+    .charts-grid #financialChartContainer { /* (CORREÇÃO) Adicionado */
         grid-column: 1 / -1;
     }
     
     .stats-cards {
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+    /* (CORREÇÃO) Força 2 colunas no financeiro mobile */
+    h3 + .stats-cards {
+        grid-template-columns: 1fr 1fr;
+    }
+    .card p {
+        font-size: 1.5rem; /* (CORREÇÃO) Fonte P mais pequena no mobile */
+    }
+    #stats-top-driver {
+        font-size: 1rem; /* (CORREÇÃO) Fonte Top Driver mais pequena */
     }
 
     .modal-content {

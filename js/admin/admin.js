@@ -1,6 +1,6 @@
 /*
  * Ficheiro: js/admin/admin.js
- * (Corrigido - Formatação de código)
+ * (Corrigido - Formatação de código e sintaxe)
  */
 
 // --- Variáveis de Estado Globais do Admin ---
