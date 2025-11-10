@@ -1,7 +1,7 @@
 /* ---
  * Ficheiro: style.css (Completo)
  * Design: "Minimal SaaS" (Light Mode)
- * (Corrigido para responsividade e tamanhos de fonte)
+ * (Corrigido para scroll do sidebar e fontes)
 --- */
 
 /* --- Importar Fonte --- */
@@ -25,7 +25,7 @@
     --success-color: #10B981; /* Verde */
     --danger-color: #EF4444; /* Vermelho */
     --warning-color: #F59E0B; /* Amarelo/Laranja */
-    --info-color: #3B82F6; /* Azul (igual ao primário) */
+    --info-color: #3B82F6;
     
     --font-family: 'Poppins', sans-serif;
     --border-radius: 8px;
@@ -43,7 +43,6 @@
     font-family: var(--font-family); 
 }
 
-/* (CORREÇÃO DE FONTE) Define o tamanho base */
 html {
     font-size: 16px; /* 1rem = 16px */
 }
@@ -130,11 +129,12 @@ body {
 /* --- Dashboard: Layout (Minimal) --- */
 .dashboard-body { display: flex; background: var(--bg-color); }
 
+/* (CORREÇÃO DO SCROLL) */
 .sidebar { 
     width: 260px; 
     background: var(--sidebar-color); 
     color: var(--text-color); 
-    min-height: 100vh; 
+    height: 100vh; /* (MUDANÇA) de min-height para height */
     display: flex; 
     flex-direction: column; 
     position: fixed; 
@@ -143,6 +143,7 @@ body {
     border-right: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
     z-index: 100;
+    overflow-y: auto; /* (MUDANÇA) Adiciona scroll se o conteúdo for maior */
 }
 .sidebar-header { 
     padding: 1.5rem; 
@@ -150,26 +151,33 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 .dashboard-logo { max-width: 160px; }
-.sidebar-menu { list-style: none; flex-grow: 1; padding-top: 1rem; }
+.sidebar-menu { 
+    list-style: none; 
+    flex-grow: 1; 
+    padding-top: 1rem;
+    padding-bottom: 5rem; /* (MUDANÇA) Espaço no fundo para o scroll */
+}
+/* (FIM DA CORREÇÃO DO SCROLL) */
+
 .menu-item a { 
     display: flex; 
     align-items: center;
-    padding: 0.9rem 1.5rem; /* Um pouco mais fino */
+    padding: 0.9rem 1.5rem;
     margin: 0.25rem 1rem;
-    color: var(--text-color-light); /* Texto secundário */
+    color: var(--text-color-light);
     text-decoration: none; 
     font-weight: 500; 
-    font-size: 0.95rem; /* 15.2px */
+    font-size: 0.95rem;
     transition: all 0.2s ease;
     border-radius: var(--border-radius); 
-    border-left: 3px solid transparent; /* Espaço para a borda ativa */
+    border-left: 3px solid transparent;
 }
 .menu-item a i { 
     margin-right: 12px; 
     width: 20px; 
     text-align: center; 
-    font-size: 1.1rem; /* 17.6px */
-    color: #9CA3AF; /* Ícones cinza */
+    font-size: 1.1rem;
+    color: #9CA3AF;
 }
 .menu-item a:hover { 
     background: var(--primary-color-light); 
@@ -179,10 +187,10 @@ body {
     background: var(--primary-color-light); 
     color: var(--primary-color);
     font-weight: 600;
-    border-left: 3px solid var(--primary-color); /* Borda ativa! */
+    border-left: 3px solid var(--primary-color);
 }
 .menu-item.active a i {
-    color: var(--primary-color); /* Ícone ativo */
+    color: var(--primary-color);
 }
 .submenu { 
     list-style: none; 
@@ -191,17 +199,17 @@ body {
     overflow: hidden;
     transition: max-height 0.3s ease-out;
     margin: 0 1rem;
-    padding-left: 1rem; /* Indentação */
+    padding-left: 1rem;
 }
 .menu-item.has-submenu:hover .submenu { 
     max-height: 500px; 
 }
 .submenu a { 
-    padding-left: 2.5rem; /* (1.5rem + 1rem) */
-    font-size: 0.9rem; /* 14.4px */
+    padding-left: 2.5rem;
+    font-size: 0.9rem;
     margin: 0;
     border-radius: 0;
-    border-left: none; /* Submenu não tem borda */
+    border-left: none;
 }
 .submenu a:hover { 
     background: var(--primary-color-light);
@@ -211,6 +219,8 @@ body {
     padding: 1.5rem; 
     text-align: center; 
     border-top: 1px solid var(--border-color); 
+    margin-top: auto; /* (MUDANÇA) Empurra o footer para o fundo */
+    background: var(--sidebar-color); /* Garante que fica por cima do scroll */
 }
 .sidebar-footer a { color: var(--text-color-light); text-decoration: none; transition: color 0.3s ease; font-size: 0.9rem; }
 .sidebar-footer a:hover { color: var(--primary-color); }
@@ -225,7 +235,7 @@ body {
     margin-left: 260px; 
     flex-grow: 1; 
     padding: 2.5rem;
-    transition: margin-left 0.3s ease-out; /* (CORREÇÃO) Adiciona transição */
+    transition: margin-left 0.3s ease-out;
 }
 .main-header { 
     display: flex; 
@@ -238,9 +248,9 @@ body {
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
 }
-.main-header h1 { font-size: 1.5rem; color: var(--text-color); font-weight: 600; } /* (CORREÇÃO) Fonte H1 reduzida */
+.main-header h1 { font-size: 1.5rem; color: var(--text-color); font-weight: 600; }
 .admin-profile { display: flex; align-items: center; font-weight: 600; }
-.admin-profile i { font-size: 1.75rem; margin-left: 1rem; color: var(--primary-color); } /* (CORREÇÃO) Ícone reduzido */
+.admin-profile i { font-size: 1.75rem; margin-left: 1rem; color: var(--primary-color); }
 
 .content-area { 
     background: var(--card-color); 
@@ -270,17 +280,17 @@ body {
 .card.card-success { border-bottom-color: var(--success-color); }
 
 .card h3 { 
-    font-size: 0.85rem; /* (CORREÇÃO) Fonte H3 reduzida */
+    font-size: 0.85rem;
     color: var(--text-color-light);
     margin-bottom: 0.5rem; 
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
-.card p { font-size: 2rem; font-weight: 700; color: var(--text-color); } /* (CORREÇÃO) Fonte P reduzida */
-/* (CORREÇÃO) Fonte especial para o Top Driver */
+.card h3 i { margin-right: 0.25rem; }
+.card p { font-size: 2rem; font-weight: 700; color: var(--text-color); }
 #stats-top-driver { 
-    font-size: 1.25rem; /* 20px */
+    font-size: 1.25rem;
     color: var(--primary-color);
     line-height: 1.4;
     white-space: nowrap;
@@ -303,26 +313,25 @@ body {
     box-shadow: none;
 }
 .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-.chart-header h3 { font-size: 1.25rem; color: var(--text-color); margin-bottom: 0; font-weight: 600; } /* (CORREÇÃO) Fonte H3 reduzida */
+.chart-header h3 { font-size: 1.25rem; color: var(--text-color); margin-bottom: 0; font-weight: 600; }
 #servicesChart { width: 100% !important; max-height: 400px; }
 
 #deliveries-chart-container { padding: 0; }
 #deliveries-chart-container h3 {
-    font-size: 1.1rem; text-align: center; margin-bottom: 1.5rem; /* (CORREÇÃO) Fonte H3 reduzida */
+    font-size: 1.1rem; text-align: center; margin-bottom: 1.5rem;
     color: var(--text-color); font-weight: 600;
 }
 #deliveriesStatusChart { max-height: 280px; margin: 0 auto; }
 #financialChartContainer { 
-    grid-column: 1 / -1; /* Ocupa a linha inteira */
+    grid-column: 1 / -1;
     text-align: center;
 }
 #financialChartContainer h3 {
-    font-size: 1.1rem; text-align: center; margin-bottom: 1.5rem; /* (CORREÇÃO) Fonte H3 reduzida */
+    font-size: 1.1rem; text-align: center; margin-bottom: 1.5rem;
     color: var(--text-color); font-weight: 600;
 }
 #financialPieChart { max-height: 280px; margin: 0 auto; }
 
-/* Grid de Gráficos (Desktop) */
 @media (min-width: 992px) {
     .charts-grid { grid-template-columns: 2fr 1fr; }
     #main-chart-container { grid-column: 1 / 2; }
@@ -357,10 +366,17 @@ body {
     border-bottom: 2px solid var(--primary-color);
     display: inline-block;
     font-weight: 600;
-    font-size: 1.2rem; /* (CORREÇÃO) Fonte H3 reduzida */
+    font-size: 1.2rem;
 }
 #form-add-motorista h3, #form-add-cliente h3, #configuracoes h3 { margin-top: 0; }
 #configuracoes h3[style*="border-color"] { border-color: var(--danger-color) !important; }
+#zona-de-perigo {
+    border: 1px solid var(--danger-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    background: rgba(239, 68, 68, 0.05);
+}
+#zona-de-perigo p { font-weight: 500; }
 
 .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
 .form-group-large { grid-column: 1 / -1; }
@@ -386,7 +402,7 @@ body {
     border: none;
     padding: 0.8rem 1.5rem;
     border-radius: 5px;
-    font-size: 0.95rem; /* 15.2px */
+    font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
@@ -424,7 +440,7 @@ button.btn-action-small {
     background-color: var(--warning-color);
     color: #FFFFFF;
     padding: 0.5rem 0.75rem; 
-    font-size: 0.85rem; /* (CORREÇÃO) Botão pequeno */
+    font-size: 0.85rem;
     margin-right: 0.5rem;
 }
 button.btn-action-small:hover {
@@ -456,7 +472,7 @@ button.btn-action-small:hover {
     background: #F8F9FA;
     font-weight: 600; 
     color: var(--text-color-light);
-    font-size: 0.8rem; /* (CORREÇÃO) Fonte de cabeçalho reduzida */
+    font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 2px solid var(--border-color);
@@ -467,7 +483,7 @@ button.btn-action-small:hover {
     vertical-align: middle;
     border-top: 1px solid var(--border-color);
     color: var(--text-color);
-    font-size: 0.95rem; /* (CORREÇÃO) Fonte da tabela reduzida */
+    font-size: 0.95rem;
 }
 .table-motoristas tbody tr:hover, .table-pedidos tbody tr:hover {
     background-color: #F8F9FA;
@@ -729,7 +745,7 @@ button.btn-action-small:hover {
     padding: 1.5rem 2rem;
     border-bottom: 1px solid var(--border-color);
 }
-.modal-header h3 { margin: 0; color: var(--text-color); font-weight: 600; font-size: 1.15rem; } /* (CORREÇÃO) Fonte H3 reduzida */
+.modal-header h3 { margin: 0; color: var(--text-color); font-weight: 600; font-size: 1.15rem; }
 .modal-close-btn {
     font-size: 2.5rem; font-weight: 300;
     color: var(--text-color-light); background: none;
@@ -759,7 +775,7 @@ button.btn-action-small:hover {
 .modal-alert.success .modal-header h3 { color: var(--success-color); }
 .modal-alert.error .modal-header h3 { color: var(--danger-color); }
 .modal-alert .modal-body p { 
-    font-size: 1rem; /* (CORREÇÃO) Fonte reduzida */
+    font-size: 1rem;
     line-height: 1.6;
     color: var(--text-color);
     white-space: pre-wrap; 
@@ -769,7 +785,7 @@ button.btn-action-small:hover {
 /* Modal de Histórico */
 #history-modal-body { display: flex; flex-direction: column; gap: 0.75rem; }
 #history-modal-body p { 
-    font-size: 1rem; /* (CORREÇÃO) Fonte reduzida */
+    font-size: 1rem;
     line-height: 1.6; 
     border-bottom: 1px solid var(--border-color); 
     padding-bottom: 0.75rem; 
@@ -790,7 +806,7 @@ button.btn-action-small:hover {
     display: block; font-weight: 600; 
     color: var(--text-color-light); 
     margin-bottom: 0.5rem; 
-    font-size: 0.85rem; /* (CORREÇÃO) Fonte reduzida */
+    font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
