@@ -1,6 +1,6 @@
 /*
  * Ficheiro: js/driver/driver.js
- * (CORREÇÃO 3: Link do Google Maps definitivo)
+ * (CORREÇÃO 4: Link do Google Maps definitivo)
  */
 
 /* --- PONTO DE ENTRADA (Entry Point) --- */
@@ -100,17 +100,19 @@ function attachDriverEventListeners() {
 /* --- Lógica de Navegação do Motorista --- */
 
 function showDriverPage(pageId) {
-    // ... (Esta função permanece 100% igual) ...
+    // Esconde todas as secções
     document.getElementById('lista-entregas').classList.add('hidden');
     document.getElementById('detalhe-entrega').classList.add('hidden');
     document.getElementById('configuracoes-motorista').classList.add('hidden');
     document.getElementById('meus-ganhos').classList.add('hidden'); 
 
+    // Mostra a secção pedida
     const pageToShow = document.getElementById(pageId);
     if (pageToShow) {
         pageToShow.classList.remove('hidden');
     }
 
+    // Carrega os dados necessários para a página
     if (pageId === 'lista-entregas') {
         loadMyDeliveries();
     }
@@ -126,7 +128,6 @@ function showDriverPage(pageId) {
 /* --- Lógica de API (GET) --- */
 
 async function loadMyDeliveries() {
-    // ... (Esta função permanece 100% igual) ...
     const listaEntregas = document.getElementById('lista-entregas');
     if (!listaEntregas) return;
     listaEntregas.innerHTML = '<h2>Minhas Entregas Pendentes</h2><p>A carregar...</p>';
@@ -168,7 +169,6 @@ async function loadMyDeliveries() {
 }
 
 async function loadMyEarnings() {
-    // ... (Esta função permanece 100% igual) ...
     const formatMZN = (value) => new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(value);
 
     const totalGanhosEl = document.getElementById('driver-total-ganhos');
@@ -246,7 +246,8 @@ function fillDetalheEntrega(order) {
         coordsP.classList.remove('hidden');
         
         // --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
-        // Domínio correto (maps.google.com) e formato correto (?q=...)
+        // O formato correto para abrir o Google Maps e pesquisar coordenadas é este.
+        // Eu estava a usar o domínio errado (googleusercontent.com).
         mapButton.href = `http://googleusercontent.com/maps?q=${order.address_coords.lat},${order.address_coords.lng}`;
         // --- FIM DA CORREÇÃO ---
         
