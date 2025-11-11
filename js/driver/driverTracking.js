@@ -1,12 +1,13 @@
 /*
  * Ficheiro: js/driver/driverTracking.js
  * (Correção de Áudio Autoplay)
+ * (MELHORIA: Adicionado listener para reatribuição)
  */
 
 let socket = null;
 
 // Criamos o objeto de Áudio uma vez
-const notificationSound = new Audio('https://www.myinstants.com/media/sounds/notification-sound.mp3');
+const notificationSound = new Audio('https://www.myinstants.com/en/instant/oplata-27021/?utm_source=copy&utm_medium=share');
 notificationSound.volume = 0.5; // Define o volume
 
 // Esta variável controla se o browser nos deu permissão de áudio
@@ -68,7 +69,7 @@ function connectDriverSocket() {
         socket.on('nova_entrega_atribuida', (data) => {
             console.log('Nova entrega recebida:', data);
             
-            // 1. (MUDANÇA) Chama a nossa nova função
+            // 1. Toca o som
             playNotificationSound();
             
             // 2. Mostra o alerta visual
@@ -82,12 +83,27 @@ function connectDriverSocket() {
             document.dispatchEvent(new Event('nova_entrega'));
         });
 
-        // --- (A CORREÇÃO DO ÁUDIO ESTÁ AQUI) ---
+        // --- (A CORREÇÃO ESTÁ AQUI) ---
+        // Novo listener para quando o admin remove a entrega
+        socket.on('entrega_cancelada', (data) => {
+            console.log('Entrega foi reatribuída/cancelada:', data);
+            
+            // 1. Mostra um alerta informativo
+            showCustomAlert(
+                'Entrega Reatribuída', 
+                `O pedido #${data.orderId.slice(-6)} foi reatribuído a outro motorista pelo admin.`, 
+                'info' // Tipo 'info' (azul)
+            );
+            
+            // 2. Envia o evento para o 'driver.js' recarregar a lista
+            // (Podemos reutilizar o mesmo evento, pois o efeito é o mesmo: recarregar)
+            document.dispatchEvent(new Event('nova_entrega'));
+        });
+        // --- FIM DA CORREÇÃO ---
+
         // Adiciona o listener para "acordar" o áudio no primeiro clique.
-        // O { once: true } faz com que este listener se auto-remova após o primeiro clique.
         document.body.addEventListener('click', unlockAudio, { once: true });
         document.body.addEventListener('touchstart', unlockAudio, { once: true });
-        // --- FIM DA CORREÇÃO ---
     });
     
     socket.on('disconnect', () => {

@@ -1,9 +1,8 @@
-// Ficheiro: backend/controllers/orderController.js (Corrigido)
+// Ficheiro: backend/controllers/orderController.js (Atualizado com Reatribuição)
 
 const Order = require('../models/Order');
 const DriverProfile = require('../models/DriverProfile');
-// (CORREÇÃO) A linha abaixo estava errada. Foi corrigida para importar o módulo.
-const asyncHandler = require('express-async-handler');
+const asyncHandler = require('express-async-handler'); // (Corrigido da última vez)
 const { validationResult } = require('express-validator');
 const { DRIVER_STATUS, ORDER_STATUS, ADMIN_ROOM } = require('../utils/constants');
 const mongoose = require('mongoose');
@@ -11,12 +10,8 @@ const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
-// --- (NOVA MELHORIA) ---
-// Importa a nossa função de cálculo de distância
 const { getDistanceFromLatLonInKm } = require('../utils/helpers');
-// Importa o mapa de sockets (precisa de uma pequena mudança no socketHandler)
 const { getSocketUserMap } = require('../socketHandler');
-// --- FIM DA MELHORIA ---
 
 
 function generateVerificationCode() {
@@ -33,13 +28,13 @@ function generateVerificationCode() {
  * Cria uma nova encomenda (Pedido)
  */
 exports.createOrder = asyncHandler(async (req, res) => {
+    // ... (Esta função permanece 100% igual à versão anterior) ...
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         res.status(400);
         throw new Error(errors.array()[0].msg);
     }
     
-    // (MUDANÇA) Lemos o novo campo 'autoAssign' do body
     const { 
         service_type, client_name, client_phone1, client_phone2, 
         address_text, price, lat, lng, clientId, autoAssign 
@@ -47,7 +42,6 @@ exports.createOrder = asyncHandler(async (req, res) => {
 
     let imageUrl = null;
     if (req.files && req.files.length > 0) {
-        // ... (lógica de imagem sem alterações) ...
         const file = req.files[0];
         const newFilename = `${Date.now()}.jpeg`;
         const outputPath = path.join('uploads', newFilename);
@@ -70,26 +64,19 @@ exports.createOrder = asyncHandler(async (req, res) => {
         coordinates = { lat: parseFloat(lat), lng: parseFloat(lng) };
     }
 
-    // --- (LÓGICA DE ATRIBUIÇÃO MELHORADA) ---
-    
-    // Se o admin clicou em "Atribuição Automática" E forneceu um PIN no mapa
     if (autoAssign === 'true' && coordinates) {
         console.log('Modo de Atribuição Automática ativado...');
         
-        // 1. Buscar todos os motoristas 'online_livre'
         const availableDriverProfiles = await DriverProfile.find({ status: DRIVER_STATUS.ONLINE_FREE });
-        const socketUserMap = getSocketUserMap(); // Pega o mapa de localizações
+        const socketUserMap = getSocketUserMap(); 
         
         let bestDriverId = null;
-        let minDistance = Infinity; // Começa com distância infinita
+        let minDistance = Infinity; 
 
-        // 2. Calcular a distância para cada um
         for (const profile of availableDriverProfiles) {
             const driverIdStr = profile.user.toString();
             let driverLocation = null;
 
-            // Encontra a localização em tempo real do motorista
-            // (Iteramos o socketUserMap para encontrar o 'userId')
             for (const [socketId, data] of socketUserMap.entries()) {
                 if (data.userId === driverIdStr && data.lastLocation) {
                     driverLocation = data.lastLocation;
@@ -107,10 +94,9 @@ exports.createOrder = asyncHandler(async (req, res) => {
                 
                 console.log(`Distância para ${profile.user}: ${distance.toFixed(2)} km`);
 
-                // 3. Encontrar o mais próximo
                 if (distance < minDistance) {
                     minDistance = distance;
-                    bestDriverId = profile._id; // Este é o ID do *Perfil*
+                    bestDriverId = profile._id; 
                 }
             }
         }
@@ -127,8 +113,6 @@ exports.createOrder = asyncHandler(async (req, res) => {
         console.log('Atribuição automática falhou (sem pin no mapa). A encomenda ficará pendente.');
     }
     
-    // --- FIM DA LÓGICA DE ATRIBUIÇÃO ---
-    
     const numericPrice = parseFloat(price);
     const newOrder = new Order({
         service_type, 
@@ -142,12 +126,11 @@ exports.createOrder = asyncHandler(async (req, res) => {
         image_url: imageUrl, 
         verification_code: verification_code,
         created_by_admin: req.user._id, 
-        assigned_to_driver: driverId, // Será 'null' ou o 'bestDriverId'
-        status: orderStatus // Será 'pendente' ou 'atribuido'
+        assigned_to_driver: driverId, 
+        status: orderStatus 
     });
     await newOrder.save();
     
-    // Se foi atribuído, envia a notificação para o motorista
     if (orderStatus === ORDER_STATUS.ASSIGNED) {
         const assignedProfile = await DriverProfile.findById(driverId);
         const io = req.app.get('socketio');
@@ -162,7 +145,80 @@ exports.createOrder = asyncHandler(async (req, res) => {
     res.status(201).json({ message: 'Encomenda criada com sucesso!', order: newOrder });
 });
 
-// ... (getMyDeliveries, startDelivery, completeDelivery - sem alterações) ...
+
+// @desc    Admin atribui ou reatribui uma encomenda
+// @route   PUT /api/orders/:orderId/assign
+exports.assignOrder = asyncHandler(async (req, res) => {
+    // ... (Validação sem alterações) ...
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400);
+        throw new Error(errors.array()[0].msg);
+    }
+
+    const { orderId } = req.params;
+    const { driverId } = req.body; // ID do NOVO motorista (vem do Profile)
+    const io = req.app.get('socketio');
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+        res.status(404);
+        throw new Error('Encomenda não encontrada');
+    }
+
+    // (MELHORIA) Não permite reatribuir se já estiver em progresso
+    if (order.status === ORDER_STATUS.IN_PROGRESS) {
+        res.status(400);
+        throw new Error('Não é possível reatribuir uma encomenda que já está em progresso.');
+    }
+
+    // (MELHORIA) Pega o ID do motorista antigo (se existir)
+    const oldDriverProfileId = order.assigned_to_driver;
+
+    // Busca o perfil do NOVO motorista
+    const newDriverProfile = await DriverProfile.findById(driverId);
+    if (!newDriverProfile) {
+        res.status(404);
+        throw new Error('Novo perfil de motorista não encontrado');
+    }
+
+    // --- (A CORREÇÃO ESTÁ AQUI) ---
+    // 1. Notificar o motorista ANTIGO (se houver um e for diferente do novo)
+    if (oldDriverProfileId && oldDriverProfileId.toString() !== newDriverProfile._id.toString()) {
+        try {
+            const oldProfile = await DriverProfile.findById(oldDriverProfileId);
+            if (oldProfile) {
+                const oldUserId = oldProfile.user.toString();
+                console.log(`A notificar motorista antigo ${oldUserId} sobre reatribuição...`);
+                io.to(oldUserId).emit('entrega_cancelada', { orderId: order._id });
+            }
+        } catch (e) {
+            console.error("Erro ao notificar motorista antigo:", e.message);
+        }
+    }
+
+    // 2. Atribuir o NOVO motorista
+    order.assigned_to_driver = driverId;
+    order.status = ORDER_STATUS.ASSIGNED;
+    await order.save();
+
+    // 3. Notificar o NOVO motorista
+    const newUserId = newDriverProfile.user.toString();
+    console.log(`A notificar novo motorista ${newUserId} sobre atribuição...`);
+    io.to(newUserId).emit('nova_entrega_atribuida', {
+        orderId: order._id,
+        clientName: order.client_name,
+        serviceType: order.service_type
+    });
+    // --- FIM DA CORREÇÃO ---
+
+    res.status(200).json({ message: 'Encomenda atribuída com sucesso', order });
+});
+
+
+// --- Restante do Ficheiro (sem alterações) ---
+
+// @desc    Motorista obtém as suas encomendas ativas
 exports.getMyDeliveries = asyncHandler(async (req, res) => {
     const driverProfile = await DriverProfile.findOne({ user: req.user._id });
     if (!driverProfile) {
@@ -175,6 +231,8 @@ exports.getMyDeliveries = asyncHandler(async (req, res) => {
     }).sort({ timestamp_created: -1 });
     res.status(200).json({ orders });
 });
+
+// @desc    Motorista inicia uma entrega
 exports.startDelivery = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -209,6 +267,8 @@ exports.startDelivery = asyncHandler(async (req, res) => {
     });
     res.status(200).json({ message: 'Entrega iniciada', order: order });
 });
+
+// @desc    Motorista completa uma entrega
 exports.completeDelivery = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -256,7 +316,7 @@ exports.completeDelivery = asyncHandler(async (req, res) => {
     res.status(200).json({ message: 'Entrega finalizada com sucesso!' });
 });
 
-// ... (getAllOrders, getActiveOrders, assignOrder, getHistoryOrders, getOrderById - sem alterações) ...
+// @desc    Admin obtém todas as encomendas
 exports.getAllOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find()
         .populate('assigned_to_driver') 
@@ -264,6 +324,8 @@ exports.getAllOrders = asyncHandler(async (req, res) => {
         .sort({ timestamp_created: -1 });
     res.status(200).json({ orders });
 });
+
+// @desc    Admin obtém encomendas ativas
 exports.getActiveOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find({
         status: { $in: [ORDER_STATUS.PENDING, ORDER_STATUS.ASSIGNED, ORDER_STATUS.IN_PROGRESS] }
@@ -276,36 +338,8 @@ exports.getActiveOrders = asyncHandler(async (req, res) => {
     .sort({ timestamp_created: -1 });
     res.status(200).json({ orders });
 });
-exports.assignOrder = asyncHandler(async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        res.status(400);
-        throw new Error(errors.array()[0].msg);
-    }
-    const { orderId } = req.params;
-    const { driverId } = req.body;
-    const order = await Order.findById(orderId);
-    if (!order) {
-        res.status(404);
-        throw new Error('Encomenda não encontrada');
-    }
-    const driverProfile = await DriverProfile.findById(driverId);
-    if (!driverProfile) {
-        res.status(404);
-        throw new Error('Perfil de motorista não encontrado');
-    }
-    order.assigned_to_driver = driverId;
-    order.status = ORDER_STATUS.ASSIGNED;
-    await order.save();
-    const io = req.app.get('socketio');
-    const assignedUserId = driverProfile.user.toString(); 
-    io.to(assignedUserId).emit('nova_entrega_atribuida', {
-        orderId: order._id,
-        clientName: order.client_name,
-        serviceType: order.service_type
-    });
-    res.status(200).json({ message: 'Encomenda atribuída com sucesso', order });
-});
+
+// @desc    Admin obtém o histórico de encomendas
 exports.getHistoryOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find({
         status: { $in: [ORDER_STATUS.COMPLETED, ORDER_STATUS.CANCELED] }
@@ -317,6 +351,8 @@ exports.getHistoryOrders = asyncHandler(async (req, res) => {
     .sort({ timestamp_completed: -1 });
     res.status(200).json({ orders });
 });
+
+// @desc    Admin obtém uma encomenda por ID
 exports.getOrderById = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

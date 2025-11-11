@@ -1,6 +1,7 @@
 /*
  * Ficheiro: js/admin/admin.js
  * (Corrigido - Formatação de código e sintaxe)
+ * (MELHORIA: Adicionada lógica de Reatribuição)
  */
 
 // --- Variáveis de Estado Globais do Admin ---
@@ -303,7 +304,21 @@ async function loadActiveDeliveries() {
         data.orders.forEach(order => {
             const motoristaNome = order.assigned_to_driver ? order.assigned_to_driver.user.nome : 'N/D';
             const statusClass = `status-${order.status.replace('_', '-')}`;
-            let acaoBotao = (order.status === 'pendente') ? `<button class="btn-action-assign" onclick="openAssignModal('${order._id}')">Atribuir</button>` : 'Em Curso';
+            
+            // --- (A CORREÇÃO ESTÁ AQUI) ---
+            let acaoBotao = '';
+            if (order.status === 'pendente') {
+                acaoBotao = `<button class="btn-action-assign" onclick="openAssignModal('${order._id}')">Atribuir</button>`;
+            } else if (order.status === 'atribuido') {
+                // Se está 'atribuido' mas não 'em_progresso', permite Reatribuir
+                acaoBotao = `<button class="btn-action-small btn-action-report" onclick="openAssignModal('${order._id}')" title="Reatribuir">
+                                <i class="fas fa-exchange-alt"></i> Reatribuir
+                             </button>`;
+            } else { // em_progresso
+                acaoBotao = 'Em Curso';
+            }
+            // --- FIM DA CORREÇÃO ---
+
             tableBody.innerHTML += `
                 <tr>
                     <td>#${order._id.slice(-6)}</td>
