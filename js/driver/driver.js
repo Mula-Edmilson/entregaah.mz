@@ -1,6 +1,6 @@
 /*
  * Ficheiro: js/driver/driver.js
- * (CORREÇÃO 6: Link do Google Maps - http://googleusercontent.com/search/)
+ * (CORREÇÃO 7: Link do Google Maps - http://googleusercontent.com/maps)
  */
 
 /* --- PONTO DE ENTRADA (Entry Point) --- */
@@ -246,8 +246,9 @@ function fillDetalheEntrega(order) {
         coordsP.classList.remove('hidden');
         
         // --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
-        // O domínio correto é 'http://googleusercontent.com' e a rota é 'search/'
-        mapButton.href = `http://googleusercontent.com/search/?api=1&query=${order.address_coords.lat},${order.address_coords.lng}`;
+        // O domínio correto é 'http://googleusercontent.com'
+        // O formato correto é '/maps?q=LAT,LNG'
+        mapButton.href = `http://googleusercontent.com/maps?q=${order.address_coords.lat},${order.address_coords.lng}`;
         // --- FIM DA CORREÇÃO ---
         
         mapButton.classList.remove('hidden');
