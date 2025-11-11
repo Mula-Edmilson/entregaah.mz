@@ -1,6 +1,6 @@
 /*
  * Ficheiro: js/driver/driver.js
- * (CORREÇÃO 4: Link do Google Maps definitivo)
+ * (CORREÇÃO 6: Link do Google Maps - http://googleusercontent.com/search/)
  */
 
 /* --- PONTO DE ENTRADA (Entry Point) --- */
@@ -246,9 +246,8 @@ function fillDetalheEntrega(order) {
         coordsP.classList.remove('hidden');
         
         // --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
-        // O formato correto para abrir o Google Maps e pesquisar coordenadas é este.
-        // Eu estava a usar o domínio errado (googleusercontent.com).
-        mapButton.href = `http://googleusercontent.com/maps?q=${order.address_coords.lat},${order.address_coords.lng}`;
+        // O domínio correto é 'http://googleusercontent.com' e a rota é 'search/'
+        mapButton.href = `http://googleusercontent.com/search/?api=1&query=${order.address_coords.lat},${order.address_coords.lng}`;
         // --- FIM DA CORREÇÃO ---
         
         mapButton.classList.remove('hidden');
