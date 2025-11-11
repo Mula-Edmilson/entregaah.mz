@@ -1,6 +1,8 @@
 /*
  * Ficheiro: js/driver/driver.js
+ * (CORRIGIDO: Link do Google Maps)
  * (MELHORIA: Adicionada página 'Meus Ganhos')
+ * (MELHORIA: Adicionada lógica do menu mobile)
  */
 
 /* --- PONTO DE ENTRADA (Entry Point) --- */
@@ -18,18 +20,57 @@ document.addEventListener('DOMContentLoaded', () => {
  * Anexa todos os event listeners do painel do motorista.
  */
 function attachDriverEventListeners() {
-    // Botão de Logout
+    
+    // --- (NOVO) Lógica do Menu Mobile ---
+    const menuToggle = document.getElementById('mobile-driver-menu-toggle');
+    const mobileMenu = document.getElementById('driver-mobile-nav');
+    const mainContent = document.querySelector('.motorista-main');
+
+    if (menuToggle && mobileMenu) {
+        // Abre/Fecha o menu ao clicar no hamburger
+        menuToggle.addEventListener('click', (e) => {
+            e.stopPropagation(); // Impede que o clique feche o menu imediatamente
+            mobileMenu.classList.toggle('open');
+        });
+
+        // Fecha o menu se clicar fora dele (na área principal)
+        mainContent.addEventListener('click', () => {
+            if (mobileMenu.classList.contains('open')) {
+                mobileMenu.classList.remove('open');
+            }
+        });
+    }
+    
+    // Links do menu mobile
+    document.getElementById('mobile-nav-ganhos').addEventListener('click', (e) => {
+        e.preventDefault();
+        showDriverPage('meus-ganhos');
+        mobileMenu.classList.remove('open');
+    });
+    document.getElementById('mobile-nav-config').addEventListener('click', (e) => {
+        e.preventDefault();
+        showDriverPage('configuracoes-motorista');
+        mobileMenu.classList.remove('open');
+    });
+    document.getElementById('mobile-nav-logout').addEventListener('click', (e) => {
+        e.preventDefault();
+        handleLogout('driver');
+    });
+    // --- FIM DA LÓGICA DO MENU MOBILE ---
+
+
+    // Botão de Logout (Desktop)
     document.getElementById('driver-logout').addEventListener('click', (e) => {
         e.preventDefault();
         handleLogout('driver');
     });
     
-    // Botão de Configurações
+    // Botão de Configurações (Desktop)
     document.getElementById('driver-settings').addEventListener('click', () => {
         showDriverPage('configuracoes-motorista');
     });
     
-    // (NOVO) Botão de Ganhos
+    // Botão de Ganhos (Desktop)
     document.getElementById('driver-earnings').addEventListener('click', () => {
         showDriverPage('meus-ganhos');
     });
@@ -41,7 +82,6 @@ function attachDriverEventListeners() {
     document.getElementById('btn-voltar-lista-config').addEventListener('click', () => {
         showDriverPage('lista-entregas');
     });
-    // (NOVO) Botão Voltar da pág. Ganhos
     document.getElementById('btn-voltar-lista-ganhos').addEventListener('click', () => {
         showDriverPage('lista-entregas');
     });
@@ -74,7 +114,7 @@ function showDriverPage(pageId) {
     document.getElementById('lista-entregas').classList.add('hidden');
     document.getElementById('detalhe-entrega').classList.add('hidden');
     document.getElementById('configuracoes-motorista').classList.add('hidden');
-    document.getElementById('meus-ganhos').classList.add('hidden'); // (NOVO)
+    document.getElementById('meus-ganhos').classList.add('hidden'); 
 
     // Mostra a secção pedida
     const pageToShow = document.getElementById(pageId);
@@ -90,14 +130,13 @@ function showDriverPage(pageId) {
         document.getElementById('form-change-password-driver').reset();
     }
     if (pageId === 'meus-ganhos') {
-        loadMyEarnings(); // (NOVO)
+        loadMyEarnings(); 
     }
 }
 
 
 /* --- Lógica de API (GET) --- */
 
-// ... (loadMyDeliveries permanece 100% igual) ...
 async function loadMyDeliveries() {
     const listaEntregas = document.getElementById('lista-entregas');
     if (!listaEntregas) return;
@@ -139,22 +178,14 @@ async function loadMyDeliveries() {
     }
 }
 
-
-// --- (NOVA FUNÇÃO ADICIONADA) ---
-/**
- * Carrega e exibe o extrato de ganhos do motorista.
- */
 async function loadMyEarnings() {
-    // Formata um número para moeda MZN
     const formatMZN = (value) => new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(value);
 
-    // Seleciona os elementos da UI
     const totalGanhosEl = document.getElementById('driver-total-ganhos');
     const totalOrdersEl = document.getElementById('driver-total-entregas');
     const commissionEl = document.getElementById('driver-commission-rate');
     const tableBody = document.getElementById('driver-earnings-table-body');
     
-    // Feedback de carregamento
     totalGanhosEl.innerText = '...';
     totalOrdersEl.innerText = '...';
     commissionEl.innerText = '... %';
@@ -166,7 +197,6 @@ async function loadMyEarnings() {
             headers: getAuthHeaders()
         });
 
-        // Se o token estiver inválido, força o logout
         if (response.status === 401) {
             return handleLogout('driver');
         }
@@ -174,13 +204,11 @@ async function loadMyEarnings() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
-        // Preenche os cartões de resumo
         totalGanhosEl.innerText = formatMZN(data.totalGanhos);
         totalOrdersEl.innerText = data.totalOrders;
         commissionEl.innerText = `${data.commissionRate} %`;
         
-        // Preenche a tabela
-        tableBody.innerHTML = ''; // Limpa o "A carregar..."
+        tableBody.innerHTML = ''; 
         if (data.ordersList.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="4">Nenhuma entrega concluída este mês.</td></tr>';
             return;
@@ -202,12 +230,9 @@ async function loadMyEarnings() {
         tableBody.innerHTML = `<tr><td colspan="4" style="color: var(--danger-color);">Erro ao carregar extrato. Tente novamente.</td></tr>`;
     }
 }
-// --- FIM DA NOVA FUNÇÃO ---
-
 
 /* --- Lógica de UI (Mostrar/Esconder Secções) --- */
 
-// ... (fillDetalheEntrega e showListaEntregas permanecem 100% iguais) ...
 function fillDetalheEntrega(order) {
     const detalheSection = document.getElementById('detalhe-entrega');
     detalheSection.querySelector('#detalhe-entrega-title').innerText = `Detalhes do Pedido #${order._id.slice(-6)}`;
@@ -229,7 +254,10 @@ function fillDetalheEntrega(order) {
     if (order.address_coords && order.address_coords.lat) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
-        mapButton.href = `http://googleusercontent.com/maps/google.com/0{order.address_coords.lat},${order.address_coords.lng}`;
+        
+        // (CORREÇÃO 2) O link do mapa
+        mapButton.href = `http://googleusercontent.com/maps/google.com/4{order.address_coords.lat},${order.address_coords.lng}`;
+        
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
@@ -257,7 +285,6 @@ function showListaEntregas() {
 
 /* --- Lógica de API (POST/PUT) --- */
 
-// ... (handleChangePasswordDriver, handleStartDelivery, handleCompleteDelivery permanecem 100% iguais) ...
 async function handleChangePasswordDriver(e) {
     e.preventDefault();
     const form = e.target;

@@ -1,8 +1,9 @@
-// Ficheiro: backend/controllers/orderController.js (Atualizado com Auto-Assign)
+// Ficheiro: backend/controllers/orderController.js (Corrigido)
 
 const Order = require('../models/Order');
 const DriverProfile = require('../models/DriverProfile');
-const asyncHandler = 'express-async-handler';
+// (CORREÇÃO) A linha abaixo estava errada. Foi corrigida para importar o módulo.
+const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const { DRIVER_STATUS, ORDER_STATUS, ADMIN_ROOM } = require('../utils/constants');
 const mongoose = require('mongoose');
