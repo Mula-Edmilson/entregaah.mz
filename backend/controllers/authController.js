@@ -1,4 +1,4 @@
-// Ficheiro: backend/controllers/authController.js (Atualizado)
+// Ficheiro: backend/controllers/authController.js (Corrigido para Segurança)
 
 const User = require('../models/User');
 const DriverProfile = require('../models/DriverProfile');
@@ -8,7 +8,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { DRIVER_STATUS } = require('../utils/constants');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'a-minha-chave-secreta-para-a-entregaah-mz-2024';
+// --- (A CORREÇÃO ESTÁ AQUI) ---
+// Removemos a chave secreta escrita no código ("hardcoded").
+// Agora, o JWT_SECRET *deve* estar definido no seu ficheiro .env
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Função auxiliar para gerar um Token JWT
 const generateToken = (id, role, nome) => {
@@ -30,7 +33,6 @@ exports.registerDriver = asyncHandler(async (req, res) => {
         throw new Error(errors.array()[0].msg);
     }
 
-    // (MUDANÇA) Adicionámos 'commissionRate' vindo do req.body
     const { nome, email, telefone, password, vehicle_plate, commissionRate } = req.body;
 
     const userExists = await User.findOne({ email });
@@ -55,7 +57,6 @@ exports.registerDriver = asyncHandler(async (req, res) => {
         throw new Error('Falha ao criar o utilizador motorista');
     }
 
-    // (MUDANÇA) Adicionámos 'commissionRate' à criação do Perfil
     const driverProfile = await DriverProfile.create({
         user: user._id,
         vehicle_plate: vehicle_plate || '',

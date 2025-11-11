@@ -1,8 +1,11 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Esta é a mesma chave secreta que usou no authController
-const JWT_SECRET = 'a-minha-chave-secreta-para-a-entregaah-mz-2024';
+// --- (A CORREÇÃO ESTÁ AQUI) ---
+// Removemos a chave secreta e lemos do 'process.env'
+// O 'server.js' já tem uma verificação que impede o arranque
+// se esta variável não estiver definida.
+const JWT_SECRET = process.env.JWT_SECRET;
 
 /**
  * Middleware 'protect': Verifica se o utilizador está logado (se tem um token válido)

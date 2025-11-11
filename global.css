@@ -1,0 +1,402 @@
+/* ---
+ * Ficheiro: global.css
+ * Contém todos os estilos partilhados:
+ * - Paleta de cores (:root), fontes, globais (*)
+ * - Estilos genéricos de formulários (.form-group)
+ * - Estilos genéricos de botões (.btn-submit, .btn-cancel)
+ * - Estilos de todos os Modais (.modal-backdrop)
+--- */
+
+/* --- Importar Fonte --- */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* --- Paleta de Cores --- */
+:root {
+    --primary-color: #3B82F6; /* Azul */
+    --primary-color-dark: #2563EB;
+    --primary-color-light: rgba(59, 130, 246, 0.1);
+    --primary-rgb: 59, 130, 246;
+
+    --bg-color: #F5F7FA; /* Fundo do Body (Cinza-azulado muito claro) */
+    --sidebar-color: #FFFFFF; /* Sidebar Branco */
+    --card-color: #FFFFFF; /* Fundo de cartões, tabelas, modais */
+    
+    --text-color: #1E293B; /* Slate (Quase preto) */
+    --text-color-light: #6B7280; /* Cinza (Secundário/Labels) */
+
+    --border-color: #E5E7EB; /* Borda subtil */
+    --success-color: #10B981; /* Verde */
+    --danger-color: #EF4444; /* Vermelho */
+    --warning-color: #F59E0B; /* Amarelo/Laranja */
+    --info-color: #3B82F6;
+    
+    --font-family: 'Poppins', sans-serif;
+    --border-radius: 8px;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* --- Configurações Globais --- */
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+    font-family: var(--font-family); 
+}
+
+html {
+    font-size: 16px; /* 1rem = 16px */
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+.hidden { display: none !important; }
+
+/* Animação de Fade-in */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.content-page {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* --- Formulários (Genérico) --- */
+.form-group { margin-bottom: 1.5rem; text-align: left; }
+.form-group label { 
+    display: block; 
+    margin-bottom: 0.5rem; 
+    font-weight: 500; 
+    color: var(--text-color);
+    font-size: 0.9rem; /* 14.4px */
+}
+.form-group input, .form-group select { 
+    width: 100%; 
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border-color); 
+    border-radius: 5px; 
+    font-size: 1rem; /* 16px */
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+.form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background-color: var(--card-color);
+    box-shadow: 0 0 0 3px var(--primary-color-light);
+}
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+.form-group-large { grid-column: 1 / -1; }
+
+/* --- Upload de Imagem --- */
+.form-group input[type="file"] { 
+    font-size: 1rem; 
+    border: 2px dashed var(--border-color);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    background: var(--bg-color);
+}
+.form-group input[type="file"]::file-selector-button { 
+    background-color: var(--primary-color); 
+    color: #FFFFFF; 
+    border: none; padding: 0.75rem 1rem; 
+    border-radius: 5px; cursor: pointer; 
+    margin-right: 1rem; 
+    transition: background-color 0.3s ease; 
+    font-weight: 600;
+}
+.form-group input[type="file"]::file-selector-button:hover { background-color: var(--primary-color-dark); }
+.form-group small { display: block; margin-top: 0.5rem; color: var(--text-color-light); font-size: 0.85rem; }
+
+.image-preview { 
+    margin-top: 1rem; 
+    border: 1px solid var(--border-color); 
+    border-radius: var(--border-radius); 
+    padding: 0.5rem; 
+    display: inline-flex; 
+    align-items: flex-start; 
+    gap: 0.5rem; 
+    position: relative; 
+    background: var(--bg-color);
+}
+.image-preview .preview-img { max-width: 120px; height: auto; border-radius: 5px; display: block; }
+.remove-image-btn { 
+    position: absolute; top: -10px; right: -10px; 
+    background: #e74c3c; color: white; 
+    border: none; border-radius: 50%; 
+    width: 25px; height: 25px; 
+    display: flex; justify-content: center; 
+    align-items: center; cursor: pointer; 
+    font-size: 0.8rem; font-weight: bold; 
+    line-height: 1;
+    box-shadow: var(--shadow-md);
+}
+
+
+/* --- Botões (Genérico) --- */
+.btn-submit, .btn-cancel, .btn-action, .btn-action-small, .btn-action-assign, .btn-logout {
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 5px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    line-height: 1.5;
+}
+.btn-submit:hover, .btn-cancel:hover, .btn-action:hover, .btn-action-small:hover, .btn-action-assign:hover, .btn-logout:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+.btn-submit { 
+    background: var(--primary-color); 
+    color: #FFFFFF; 
+    margin-top: 1.5rem; 
+}
+.btn-submit:hover { background: var(--primary-color-dark); }
+.btn-danger { background: var(--danger-color); color: #FFFFFF; }
+.btn-danger:hover { background: #b91c1c; }
+.btn-cancel { 
+    background: var(--card-color); 
+    color: var(--text-color-light); 
+    border: 1px solid var(--border-color);
+    margin-top: 1.5rem; 
+    margin-left: 1rem; 
+}
+.btn-cancel:hover { background: var(--bg-color); color: var(--text-color); }
+.btn-danger:disabled, .btn-submit:disabled {
+    background: var(--border-color);
+    color: var(--text-color-light);
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+button.btn-action-small {
+    background-color: var(--warning-color);
+    color: #FFFFFF;
+    padding: 0.5rem 0.75rem; 
+    font-size: 0.85rem;
+    margin-right: 0.5rem;
+}
+button.btn-action-small:hover {
+    background-color: #d97706;
+}
+.btn-action-report { background: var(--info-color); }
+.btn-action-assign { 
+    background: var(--primary-color); 
+    color: white; 
+}
+.btn-action:hover, .btn-action-small:hover, .btn-action-assign:hover {
+    box-shadow: 0 4px 15px rgba(var(--primary-rgb), 0.3);
+}
+
+/* --- Modals (Pop-ups) (Genérico) --- */
+.modal-backdrop { 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex; justify-content: center; align-items: center; 
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+.modal-backdrop:not(.hidden) { opacity: 1; }
+
+.modal-content { 
+    background: var(--card-color); 
+    padding: 0; 
+    border-radius: var(--border-radius); 
+    width: 90%; max-width: 500px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    transform: scale(0.95);
+    opacity: 0;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.modal-backdrop:not(.hidden) .modal-content {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.modal-header {
+    display: flex; justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.modal-header h3 { margin: 0; color: var(--text-color); font-weight: 600; font-size: 1.15rem; }
+.modal-close-btn {
+    font-size: 2.5rem; font-weight: 300;
+    color: var(--text-color-light); background: none;
+    border: none; cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+.modal-close-btn:hover { color: var(--primary-color); transform: rotate(90deg); }
+
+.modal-body { padding: 2rem; }
+.modal-actions { 
+    padding: 1.5rem 2rem;
+    background: #F8F9FA;
+    border-top: 1px solid var(--border-color);
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    display: flex; justify-content: flex-end; 
+    gap: 1rem; 
+}
+.modal-actions .btn-submit, .modal-actions .btn-cancel { margin-top: 0; }
+.modal-large { max-width: 800px; }
+
+/* Modal de Alerta Customizado */
+.modal-alert { text-align: center; }
+.modal-alert .modal-header h3 {
+    width: 100%; text-align: center; font-weight: 600;
+}
+.modal-alert.success .modal-header h3 { color: var(--success-color); }
+.modal-alert.error .modal-header h3 { color: var(--danger-color); }
+.modal-alert .modal-body p { 
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-color);
+    white-space: pre-wrap; 
+}
+.modal-alert .modal-actions { justify-content: center; }
+
+/* Modal de Histórico */
+#history-modal-body { display: flex; flex-direction: column; gap: 0.75rem; }
+#history-modal-body p { 
+    font-size: 1rem;
+    line-height: 1.6; 
+    border-bottom: 1px solid var(--border-color); 
+    padding-bottom: 0.75rem; 
+}
+#history-modal-body p:last-child { border-bottom: none; }
+#history-modal-body p strong { color: var(--primary-color); margin-right: 0.5rem; font-weight: 600; }
+
+/* Modal de Relatório */
+.report-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
+.summary-card { 
+    background: var(--bg-color);
+    padding: 1.5rem; 
+    border-radius: var(--border-radius); 
+    text-align: center; 
+    border: 1px solid var(--border-color);
+}
+.summary-card span { 
+    display: block; font-weight: 600; 
+    color: var(--text-color-light); 
+    margin-bottom: 0.5rem; 
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.summary-card strong { font-size: 1.75rem; color: var(--primary-color); }
+
+.modal-large h4 { margin-top: 1.5rem; margin-bottom: 1rem; color: var(--text-color); font-weight: 600; font-size: 1.1rem; }
+
+/* --- Barra de Pesquisa (Genérico) --- */
+.search-container { position: relative; margin-bottom: 1.5rem; }
+.search-container input { 
+    width: 100%; 
+    padding: 1rem;
+    padding-left: 3rem; 
+    font-size: 1rem; 
+    border: 1px solid var(--border-color); 
+    border-radius: 5px;
+    background: var(--card-color);
+    color: var(--text-color);
+}
+.search-container input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-color-light);
+}
+.search-container i { 
+    position: absolute; left: 1.25rem; top: 50%; 
+    transform: translateY(-50%); 
+    color: var(--text-color-light); 
+}
+
+/* --- Tabelas (Genérico) --- */
+.table-motoristas, .table-pedidos { 
+    width: 100%; 
+    border-collapse: collapse;
+    margin-top: 1.5rem; 
+    background: var(--card-color);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+.table-motoristas th, .table-pedidos th { 
+    padding: 1rem 1.5rem;
+    text-align: left; 
+    background: #F8F9FA;
+    font-weight: 600; 
+    color: var(--text-color-light);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--border-color);
+}
+.table-motoristas td, .table-pedidos td { 
+    padding: 1rem 1.5rem;
+    text-align: left; 
+    vertical-align: middle;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-size: 0.95rem;
+}
+.table-motoristas tbody tr:hover, .table-pedidos tbody tr:hover {
+    background-color: #F8F9FA;
+}
+
+/* Tabela Responsiva (Wrapper) */
+.table-container-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+}
+.table-container-responsive .table-pedidos {
+    border: none;
+    margin-top: 0;
+    box-shadow: none;
+    border-radius: 0;
+}
+.table-container-responsive .table-pedidos tr td:first-child,
+.table-container-responsive .table-pedidos tr th:first-child {
+    border-radius: 0;
+}
+
+/* Scroll de Tabela (Modal) */
+.table-responsive { 
+    max-height: 300px; 
+    overflow-y: auto; 
+    border: 1px solid var(--border-color); 
+    border-radius: var(--border-radius); 
+}
+.table-responsive .table-pedidos {
+    margin-top: 0;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+}
+.table-responsive .table-pedidos th {
+    position: sticky;
+    top: 0;
+    background: #F8F9FA;
+}
+.table-responsive .table-pedidos tr:first-child td {
+    border-top: none;
+}

@@ -1,4 +1,4 @@
-// Ficheiro: backend/models/Order.js (Atualizado)
+// Ficheiro: backend/models/Order.js (Otimizado com Índices)
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
@@ -33,7 +33,8 @@ const orderSchema = new mongoose.Schema({
     },
     assigned_to_driver: { 
         type: mongoose.Schema.Types.ObjectId, 
-        ref: 'DriverProfile' 
+        ref: 'DriverProfile',
+        index: true // <-- (MELHORIA 3) Índice para pesquisas rápidas por motorista
     },
     client: {
         type: mongoose.Schema.Types.ObjectId,
@@ -45,12 +46,13 @@ const orderSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: ['pendente', 'atribuido', 'em_progresso', 'concluido', 'cancelado'],
-        default: 'pendente'
+        default: 'pendente',
+        index: true // <-- (MELHORIA 3) Índice para pesquisas rápidas por status
     },
     timestamp_started: { type: Date }, 
     timestamp_completed: { type: Date },
 
-    // --- (NOVA MELHORIA FINANCEIRA) ---
+    // --- (MELHORIA FINANCEIRA) ---
     // Estes valores são calculados quando a entrega é 'concluida'
     valor_motorista: {
         type: Number,

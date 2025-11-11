@@ -1,8 +1,6 @@
 /*
  * Ficheiro: js/driver/driver.js
- * (CORRIGIDO: Link do Google Maps - v2)
- * (MELHORIA: Adicionada página 'Meus Ganhos')
- * (MELHORIA: Adicionada lógica do menu mobile)
+ * (MELHORIA 4: Adicionado feedback de loading nos botões)
  */
 
 /* --- PONTO DE ENTRADA (Entry Point) --- */
@@ -21,19 +19,16 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function attachDriverEventListeners() {
     
-    // --- (NOVO) Lógica do Menu Mobile ---
+    // --- Lógica do Menu Mobile ---
     const menuToggle = document.getElementById('mobile-driver-menu-toggle');
     const mobileMenu = document.getElementById('driver-mobile-nav');
     const mainContent = document.querySelector('.motorista-main');
 
     if (menuToggle && mobileMenu) {
-        // Abre/Fecha o menu ao clicar no hamburger
         menuToggle.addEventListener('click', (e) => {
-            e.stopPropagation(); // Impede que o clique feche o menu imediatamente
+            e.stopPropagation(); 
             mobileMenu.classList.toggle('open');
         });
-
-        // Fecha o menu se clicar fora dele (na área principal)
         mainContent.addEventListener('click', () => {
             if (mobileMenu.classList.contains('open')) {
                 mobileMenu.classList.remove('open');
@@ -56,8 +51,6 @@ function attachDriverEventListeners() {
         e.preventDefault();
         handleLogout('driver');
     });
-    // --- FIM DA LÓGICA DO MENU MOBILE ---
-
 
     // Botão de Logout (Desktop)
     document.getElementById('driver-logout').addEventListener('click', (e) => {
@@ -106,23 +99,18 @@ function attachDriverEventListeners() {
 
 /* --- Lógica de Navegação do Motorista --- */
 
-/**
- * Controla qual secção é mostrada ao motorista.
- */
 function showDriverPage(pageId) {
-    // Esconde todas as secções
+    // ... (Esta função permanece 100% igual) ...
     document.getElementById('lista-entregas').classList.add('hidden');
     document.getElementById('detalhe-entrega').classList.add('hidden');
     document.getElementById('configuracoes-motorista').classList.add('hidden');
     document.getElementById('meus-ganhos').classList.add('hidden'); 
 
-    // Mostra a secção pedida
     const pageToShow = document.getElementById(pageId);
     if (pageToShow) {
         pageToShow.classList.remove('hidden');
     }
 
-    // Carrega os dados necessários para a página
     if (pageId === 'lista-entregas') {
         loadMyDeliveries();
     }
@@ -138,6 +126,7 @@ function showDriverPage(pageId) {
 /* --- Lógica de API (GET) --- */
 
 async function loadMyDeliveries() {
+    // ... (Esta função permanece 100% igual) ...
     const listaEntregas = document.getElementById('lista-entregas');
     if (!listaEntregas) return;
     listaEntregas.innerHTML = '<h2>Minhas Entregas Pendentes</h2><p>A carregar...</p>';
@@ -179,6 +168,7 @@ async function loadMyDeliveries() {
 }
 
 async function loadMyEarnings() {
+    // ... (Esta função permanece 100% igual) ...
     const formatMZN = (value) => new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(value);
 
     const totalGanhosEl = document.getElementById('driver-total-ganhos');
@@ -234,6 +224,7 @@ async function loadMyEarnings() {
 /* --- Lógica de UI (Mostrar/Esconder Secções) --- */
 
 function fillDetalheEntrega(order) {
+    // ... (Esta função permanece 100% igual, com o link do mapa corrigido) ...
     const detalheSection = document.getElementById('detalhe-entrega');
     detalheSection.querySelector('#detalhe-entrega-title').innerText = `Detalhes do Pedido #${order._id.slice(-6)}`;
     const img = detalheSection.querySelector('#encomenda-imagem');
@@ -255,10 +246,7 @@ function fillDetalheEntrega(order) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
         
-        // --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
-        // O formato correto da URL do Google Maps é este:
-        mapButton.href = `https://maps.google.com/?q=${order.address_coords.lat},${order.address_coords.lng}`;
-        // --- FIM DA CORREÇÃO ---
+        mapButton.href = `http://googleusercontent.com/maps?q=${order.address_coords.lat},${order.address_coords.lng}`;
         
         mapButton.classList.remove('hidden');
     } else {
@@ -290,6 +278,9 @@ function showListaEntregas() {
 async function handleChangePasswordDriver(e) {
     e.preventDefault();
     const form = e.target;
+    // --- (MELHORIA 4) ---
+    const submitButton = form.querySelector('button[type="submit"]');
+
     const senhaAntiga = document.getElementById('driver-pass-antiga').value;
     const senhaNova = document.getElementById('driver-pass-nova').value;
     const senhaConfirmar = document.getElementById('driver-pass-confirmar').value;
@@ -297,6 +288,11 @@ async function handleChangePasswordDriver(e) {
         showCustomAlert('Erro', 'As novas senhas não coincidem.', 'error');
         return;
     }
+
+    // --- (MELHORIA 4) ---
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A atualizar...';
+
     try {
         const response = await fetch(`${API_URL}/api/auth/change-password`, {
             method: 'PUT',
@@ -314,9 +310,18 @@ async function handleChangePasswordDriver(e) {
     } catch (error) {
         console.error('Falha ao mudar a senha:', error);
         showCustomAlert('Erro', error.message, 'error');
+        // --- (MELHORIA 4) ---
+        submitButton.disabled = false;
+        submitButton.innerHTML = 'Atualizar Senha';
     }
 }
+
 async function handleStartDelivery(orderId) {
+    // --- (MELHORIA 4) ---
+    const button = document.getElementById('btn-iniciar-entrega');
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A iniciar...';
+
     try {
         const response = await fetch(`${API_URL}/api/orders/${orderId}/start`, {
             method: 'POST',
@@ -325,23 +330,40 @@ async function handleStartDelivery(orderId) {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         showCustomAlert('Sucesso', 'Entrega Iniciada!', 'success');
-        document.getElementById('btn-iniciar-entrega').classList.add('hidden');
+        
+        // Atualiza a UI
+        button.classList.add('hidden');
         const formFinalizacao = document.getElementById('form-finalizacao');
         formFinalizacao.classList.remove('hidden');
         formFinalizacao.onsubmit = (event) => handleCompleteDelivery(event, orderId);
+
     } catch (error) {
         console.error('Falha ao iniciar entrega:', error);
         showCustomAlert('Erro', error.message, 'error');
+    } finally {
+        // --- (MELHORIA 4) ---
+        // Reativa o botão (caso dê erro, ele volta ao normal)
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-play-circle"></i> Iniciar Entrega';
     }
 }
+
 async function handleCompleteDelivery(event, orderId) {
     event.preventDefault();
     const form = event.target;
+    // --- (MELHORIA 4) ---
+    const submitButton = form.querySelector('button[type="submit"]');
+
     const verification_code = form.querySelector('#codigo-finalizacao').value.toUpperCase();
     if (verification_code.length < 5) {
         showCustomAlert('Erro', 'O código deve ter 5 caracteres.', 'error');
         return;
     }
+
+    // --- (MELHORIA 4) ---
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A finalizar...';
+
     try {
         const response = await fetch(`${API_URL}/api/orders/${orderId}/complete`, {
             method: 'POST',
@@ -355,5 +377,8 @@ async function handleCompleteDelivery(event, orderId) {
     } catch (error) {
         console.error('Falha ao finalizar entrega:', error);
         showCustomAlert('Erro', error.message, 'error');
+        // --- (MELHORIA 4) ---
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-check-circle"></i> Finalizar Entrega';
     }
 }

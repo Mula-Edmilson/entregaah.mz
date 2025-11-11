@@ -1,4 +1,4 @@
-// Ficheiro: backend/models/DriverProfile.js (Atualizado)
+// Ficheiro: backend/models/DriverProfile.js (Otimizado com Índices)
 const mongoose = require('mongoose');
 
 const driverProfileSchema = new mongoose.Schema({
@@ -11,10 +11,11 @@ const driverProfileSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: ['online_livre', 'online_ocupado', 'offline'],
-        default: 'offline'
+        default: 'offline',
+        index: true // <-- (MELHORIA 3) Índice para pesquisas rápidas por status
     },
 
-    // --- (NOVA MELHORIA) ---
+    // --- (MELHORIA FINANCEIRA) ---
     // A percentagem (ex: 20) que o motorista ganha por entrega.
     commissionRate: {
         type: Number,

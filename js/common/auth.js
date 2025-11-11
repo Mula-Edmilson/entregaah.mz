@@ -2,6 +2,7 @@
  * Ficheiro: js/common/auth.js
  *
  * (Dependência #2) - Precisa do 'api.js'
+ * (MELHORIA 4: Adicionado feedback de loading ao botão de login)
  *
  * Centraliza toda a lógica de autenticação:
  * - Login, Logout, Verificação de token, Obtenção de token.
@@ -65,6 +66,9 @@ async function handleLogin(e, role) {
     e.preventDefault(); // Impede o recarregamento da página
 
     const form = e.target;
+    // --- (MELHORIA 4) ---
+    const submitButton = form.querySelector('button[type="submit"]');
+
     const email = form.querySelector('#email').value;
     const password = form.querySelector('#password').value;
     const showAlert = (title, message, type) => {
@@ -74,6 +78,10 @@ async function handleLogin(e, role) {
             alert(`${title}: ${message}`); // Fallback para o alerta padrão
         }
     };
+
+    // --- (MELHORIA 4) Desativa o botão ---
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A entrar...';
 
     try {
         const response = await fetch(`${API_URL}/api/auth/login`, {
@@ -100,12 +108,16 @@ async function handleLogin(e, role) {
         console.error('Falha no login:', error);
         
         // Se o modal de alerta existir na página de login, usa-o
-        if (alertModal && typeof showCustomAlert === 'function') {
+        if (typeof showCustomAlert === 'function') {
             showCustomAlert('Erro de Login', error.message, 'error');
         } else {
             // Fallback para o alerta padrão do browser
             alert(`Erro de Login: ${error.message}`);
         }
+    } finally {
+        // --- (MELHORIA 4) Reativa o botão (mesmo se der erro) ---
+        submitButton.disabled = false;
+        submitButton.innerHTML = 'Entrar';
     }
 }
 
