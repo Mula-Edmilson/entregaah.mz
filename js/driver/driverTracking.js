@@ -2,12 +2,13 @@
  * Ficheiro: js/driver/driverTracking.js
  * (Correção de Áudio Autoplay)
  * (MELHORIA: Adicionado listener para reatribuição)
+ * (MELHORIA 5: Aumentado o timeout do GPS para 30s)
  */
 
 let socket = null;
 
 // Criamos o objeto de Áudio uma vez
-const notificationSound = new Audio('https://www.myinstants.com/en/instant/oplata-27021/?utm_source=copy&utm_medium=share');
+const notificationSound = new Audio('https://www.myinstants.com/media/sounds/notification-sound.mp3');
 notificationSound.volume = 0.5; // Define o volume
 
 // Esta variável controla se o browser nos deu permissão de áudio
@@ -83,8 +84,7 @@ function connectDriverSocket() {
             document.dispatchEvent(new Event('nova_entrega'));
         });
 
-        // --- (A CORREÇÃO ESTÁ AQUI) ---
-        // Novo listener para quando o admin remove a entrega
+        // Listener para quando o admin remove a entrega
         socket.on('entrega_cancelada', (data) => {
             console.log('Entrega foi reatribuída/cancelada:', data);
             
@@ -96,10 +96,8 @@ function connectDriverSocket() {
             );
             
             // 2. Envia o evento para o 'driver.js' recarregar a lista
-            // (Podemos reutilizar o mesmo evento, pois o efeito é o mesmo: recarregar)
             document.dispatchEvent(new Event('nova_entrega'));
         });
-        // --- FIM DA CORREÇÃO ---
 
         // Adiciona o listener para "acordar" o áudio no primeiro clique.
         document.body.addEventListener('click', unlockAudio, { once: true });
@@ -134,15 +132,16 @@ function startLocationTracking() {
             }
         },
         (error) => {
+            // Esta é a função que está a dar o erro
             console.error("Erro ao obter localização:", error.message);
             if (typeof showCustomAlert === 'function') {
                 showCustomAlert('Erro de GPS', `Não foi possível obter a sua localização: ${error.message}. Verifique as permissões.`, 'error');
             }
         },
-        {
+        { // --- (A CORREÇÃO ESTÁ AQUI) ---
             enableHighAccuracy: true, 
-            timeout: 10000,           
-            maximumAge: 0,            
+            timeout: 30000,           // Aumentado de 10000 para 30000 (30 segundos)
+            maximumAge: 5000,         // Permite usar uma localização com 5s (em vez de 0)
             distanceFilter: 10
         }
     );
