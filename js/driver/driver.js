@@ -1,6 +1,6 @@
 /*
  * Ficheiro: js/driver/driver.js
- * (MELHORIA 4: Adicionado feedback de loading nos botões)
+ * (CORREÇÃO 3: Link do Google Maps definitivo)
  */
 
 /* --- PONTO DE ENTRADA (Entry Point) --- */
@@ -224,7 +224,6 @@ async function loadMyEarnings() {
 /* --- Lógica de UI (Mostrar/Esconder Secções) --- */
 
 function fillDetalheEntrega(order) {
-    // ... (Esta função permanece 100% igual, com o link do mapa corrigido) ...
     const detalheSection = document.getElementById('detalhe-entrega');
     detalheSection.querySelector('#detalhe-entrega-title').innerText = `Detalhes do Pedido #${order._id.slice(-6)}`;
     const img = detalheSection.querySelector('#encomenda-imagem');
@@ -246,7 +245,10 @@ function fillDetalheEntrega(order) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
         
+        // --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
+        // Domínio correto (maps.google.com) e formato correto (?q=...)
         mapButton.href = `http://googleusercontent.com/maps?q=${order.address_coords.lat},${order.address_coords.lng}`;
+        // --- FIM DA CORREÇÃO ---
         
         mapButton.classList.remove('hidden');
     } else {
@@ -278,7 +280,6 @@ function showListaEntregas() {
 async function handleChangePasswordDriver(e) {
     e.preventDefault();
     const form = e.target;
-    // --- (MELHORIA 4) ---
     const submitButton = form.querySelector('button[type="submit"]');
 
     const senhaAntiga = document.getElementById('driver-pass-antiga').value;
@@ -289,7 +290,6 @@ async function handleChangePasswordDriver(e) {
         return;
     }
 
-    // --- (MELHORIA 4) ---
     submitButton.disabled = true;
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A atualizar...';
 
@@ -310,14 +310,12 @@ async function handleChangePasswordDriver(e) {
     } catch (error) {
         console.error('Falha ao mudar a senha:', error);
         showCustomAlert('Erro', error.message, 'error');
-        // --- (MELHORIA 4) ---
         submitButton.disabled = false;
         submitButton.innerHTML = 'Atualizar Senha';
     }
 }
 
 async function handleStartDelivery(orderId) {
-    // --- (MELHORIA 4) ---
     const button = document.getElementById('btn-iniciar-entrega');
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A iniciar...';
@@ -331,7 +329,6 @@ async function handleStartDelivery(orderId) {
         if (!response.ok) throw new Error(data.message);
         showCustomAlert('Sucesso', 'Entrega Iniciada!', 'success');
         
-        // Atualiza a UI
         button.classList.add('hidden');
         const formFinalizacao = document.getElementById('form-finalizacao');
         formFinalizacao.classList.remove('hidden');
@@ -341,8 +338,6 @@ async function handleStartDelivery(orderId) {
         console.error('Falha ao iniciar entrega:', error);
         showCustomAlert('Erro', error.message, 'error');
     } finally {
-        // --- (MELHORIA 4) ---
-        // Reativa o botão (caso dê erro, ele volta ao normal)
         button.disabled = false;
         button.innerHTML = '<i class="fas fa-play-circle"></i> Iniciar Entrega';
     }
@@ -351,7 +346,6 @@ async function handleStartDelivery(orderId) {
 async function handleCompleteDelivery(event, orderId) {
     event.preventDefault();
     const form = event.target;
-    // --- (MELHORIA 4) ---
     const submitButton = form.querySelector('button[type="submit"]');
 
     const verification_code = form.querySelector('#codigo-finalizacao').value.toUpperCase();
@@ -360,7 +354,6 @@ async function handleCompleteDelivery(event, orderId) {
         return;
     }
 
-    // --- (MELHORIA 4) ---
     submitButton.disabled = true;
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A finalizar...';
 
@@ -377,7 +370,6 @@ async function handleCompleteDelivery(event, orderId) {
     } catch (error) {
         console.error('Falha ao finalizar entrega:', error);
         showCustomAlert('Erro', error.message, 'error');
-        // --- (MELHORIA 4) ---
         submitButton.disabled = false;
         submitButton.innerHTML = '<i class="fas fa-check-circle"></i> Finalizar Entrega';
     }
