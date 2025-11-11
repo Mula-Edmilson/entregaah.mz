@@ -257,7 +257,7 @@ function fillDetalheEntrega(order) {
         
         // --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
         // O formato correto da URL do Google Maps é este:
-        mapButton.href = `http://googleusercontent.com/maps?q=${order.address_coords.lat},${order.address_coords.lng}`;
+        mapButton.href = `https://maps.google.com/?q=${order.address_coords.lat},${order.address_coords.lng}`;
         // --- FIM DA CORREÇÃO ---
         
         mapButton.classList.remove('hidden');
