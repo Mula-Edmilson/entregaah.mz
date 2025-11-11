@@ -8,8 +8,8 @@
 let socket = null;
 
 // Criamos o objeto de Áudio uma vez
-const notificationSound = new Audio('https://www.myinstants.com/media/sounds/notification-sound.mp3');
-notificationSound.volume = 0.5; // Define o volume
+const notificationSound = new Audio('https://www.myinstants.com/en/instant/oplata-27021/?utm_source=copy&utm_medium=share');
+notificationSound.volume = 0; // Define o volume
 
 // Esta variável controla se o browser nos deu permissão de áudio
 let audioUnblocked = false;

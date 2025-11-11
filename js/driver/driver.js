@@ -248,7 +248,7 @@ function fillDetalheEntrega(order) {
         // --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
         // O domínio correto é 'http://googleusercontent.com'
         // O formato correto é '/maps?q=LAT,LNG'
-        mapButton.href = `http://googleusercontent.com/maps?q=${order.address_coords.lat},${order.address_coords.lng}`;
+        mapButton.href = `https://www.google.com/maps?q=${order.address_coords.lat},${order.address_coords.lng}`;
         // --- FIM DA CORREÇÃO ---
         
         mapButton.classList.remove('hidden');
