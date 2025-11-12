@@ -1,70 +1,63 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// --- (A CORREÇÃO ESTÁ AQUI) ---
-// Removemos a chave secreta e lemos do 'process.env'
-// O 'server.js' já tem uma verificação que impede o arranque
-// se esta variável não estiver definida.
 const JWT_SECRET = process.env.JWT_SECRET;
 
-/**
- * Middleware 'protect': Verifica se o utilizador está logado (se tem um token válido)
- */
-exports.protect = async (req, res, next) => {
-    let token;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET não está definido nas variáveis de ambiente.');
+}
 
-    // O token vem no cabeçalho 'Authorization' como 'Bearer <token>'
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-        try {
-            // 1. Obter o token (remover a palavra 'Bearer')
-            token = req.headers.authorization.split(' ')[1];
+const decodeToken = (token) => jwt.verify(token, JWT_SECRET);
 
-            // 2. Verificar o token
-            const decoded = jwt.verify(token, JWT_SECRET);
+const extractToken = (req) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.split(' ')[1];
+  }
+  if (req.cookies?.token) {
+    return req.cookies.token;
+  }
+  return null;
+};
 
-            // 3. Encontrar o utilizador pelo ID do token e anexá-lo ao 'req'
-            // O '.select('-password')' impede que a senha seja trazida do banco
-            req.user = await User.findById(decoded.user.id).select('-password');
-
-            if (!req.user) {
-                return res.status(401).json({ message: 'Utilizador não encontrado' });
-            }
-
-            // 4. Continuar para a próxima função (o controller)
-            next();
-
-        } catch (error) {
-            console.error('Erro de token:', error.message);
-            res.status(401).json({ message: 'Token não é válido' });
-        }
-    }
+const protect = async (req, res, next) => {
+  try {
+    const token = extractToken(req);
 
     if (!token) {
-        res.status(401).json({ message: 'Não autorizado, sem token' });
+      return res.status(401).json({ message: 'Não autorizado, token em falta' });
     }
+
+    const decoded = decodeToken(token);
+    const user = await User.findById(decoded.user.id).select('-password');
+
+    if (!user) {
+      return res.status(401).json({ message: 'Não autorizado, utilizador inexistente' });
+    }
+
+    req.user = user;
+    return next();
+  } catch (error) {
+    return res.status(401).json({ message: 'Sessão inválida ou expirada' });
+  }
 };
 
-/**
- * Middleware 'admin': Verifica se o utilizador é um administrador
- */
-exports.admin = (req, res, next) => {
-    // Esta função DEVE correr DEPOIS do 'protect',
-    // porque 'protect' é quem anexa 'req.user'
-    
-    if (req.user && req.user.role === 'admin') {
-        next(); // É admin, pode continuar
-    } else {
-        res.status(403).json({ message: 'Não autorizado. Acesso restrito a administradores.' });
-    }
+const admin = (req, res, next) => {
+  if (req.user?.role === 'admin') {
+    return next();
+  }
+  return res.status(403).json({ message: 'Acesso restrito a administradores' });
 };
 
-/**
- * Middleware 'driver': Verifica se o utilizador é um motorista
- */
-exports.driver = (req, res, next) => {
-    if (req.user && req.user.role === 'driver') {
-        next(); // É motorista, pode continuar
-    } else {
-        res.status(403).json({ message: 'Não autorizado. Acesso restrito a motoristas.' });
-    }
+const driver = (req, res, next) => {
+  if (req.user?.role === 'driver') {
+    return next();
+  }
+  return res.status(403).json({ message: 'Acesso restrito a motoristas' });
+};
+
+module.exports = {
+  protect,
+  admin,
+  driver
 };

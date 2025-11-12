@@ -1,72 +1,48 @@
-// Ficheiro: backend/models/Order.js (Otimizado com Índices)
 const mongoose = require('mongoose');
+const { ORDER_STATUS } = require('../utils/constants');
 
-const orderSchema = new mongoose.Schema({
-    // --- Detalhes do Serviço ---
-    service_type: { type: String, required: true },
-    price: {
-        type: Number,
-        required: true,
-        default: 0
+const orderSchema = new mongoose.Schema(
+  {
+    service_type: { type: String, required: true, trim: true },
+    price: { type: Number, required: true, default: 0 },
+    client_name: { type: String, required: true, trim: true },
+    client_phone1: { type: String, required: true, trim: true },
+    client_phone2: { type: String, trim: true },
+    address_text: { type: String, trim: true },
+    address_coords: {
+      lat: { type: Number },
+      lng: { type: Number }
     },
-
-    // --- Detalhes do Destinatário ---
-    client_name: { type: String, required: true },
-    client_phone1: { type: String, required: true },
-    client_phone2: { type: String },
-
-    // --- Detalhes do Local ---
-    address_text: { type: String },
-    address_coords: { 
-        lat: { type: Number }, 
-        lng: { type: Number }
+    image_url: { type: String },
+    verification_code: { type: String, required: true },
+    created_by_admin: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
     },
-
-    // --- Identificação ---
-    image_url: { type: String }, 
-    verification_code: { type: String, required: true }, 
-
-    // --- Atores (Quem fez o quê) ---
-    created_by_admin: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'User' 
-    },
-    assigned_to_driver: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'DriverProfile',
-        index: true // <-- (MELHORIA 3) Índice para pesquisas rápidas por motorista
+    assigned_to_driver: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'DriverProfile'
     },
     client: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Client',
-        required: false 
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Client'
     },
-
-    // --- Status e Timestamps ---
     status: {
-        type: String,
-        enum: ['pendente', 'atribuido', 'em_progresso', 'concluido', 'cancelado'],
-        default: 'pendente',
-        index: true // <-- (MELHORIA 3) Índice para pesquisas rápidas por status
+      type: String,
+      enum: Object.values(ORDER_STATUS),
+      default: ORDER_STATUS.PENDING,
+      index: true
     },
-    timestamp_started: { type: Date }, 
+    timestamp_started: { type: Date },
     timestamp_completed: { type: Date },
+    valor_motorista: { type: Number, default: 0 },
+    valor_empresa: { type: Number, default: 0 }
+  },
+  { timestamps: true }
+);
 
-    // --- (MELHORIA FINANCEIRA) ---
-    // Estes valores são calculados quando a entrega é 'concluida'
-    valor_motorista: {
-        type: Number,
-        default: 0
-    },
-    valor_empresa: {
-        type: Number,
-        default: 0
-    }
-    // --- FIM DA MELHORIA ---
+orderSchema.index({ status: 1, createdAt: -1 });
+orderSchema.index({ assigned_to_driver: 1, status: 1 });
+orderSchema.index({ client: 1, status: 1, timestamp_completed: -1 });
 
-}, {
-    timestamps: true 
-});
-
-const Order = mongoose.model('Order', orderSchema);
-module.exports = Order;
+module.exports = mongoose.model('Order', orderSchema);

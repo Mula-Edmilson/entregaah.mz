@@ -1,170 +1,141 @@
-/*
- * Ficheiro: backend/socketHandler.js
- * (Atualizado para exportar o mapa de localizações)
- */
-
 const jwt = require('jsonwebtoken');
 const DriverProfile = require('./models/DriverProfile');
-const { DRIVER_STATUS } = require('./utils/constants');
+const { DRIVER_STATUS, ADMIN_ROOM } = require('./utils/constants');
 
-// --- (MUDANÇA) ---
-// Movemos o mapa para o escopo do módulo (fora da função init)
-// para que ele possa ser acedido pela função de exportação.
 const socketUserMap = new Map();
-// --- FIM DA MUDANÇA ---
 
-/**
- * Inicializa o gestor de Socket.IO
- * @param {object} io - A instância do Socket.IO vinda do server.js
- * @param {string} JWT_SECRET - O segredo JWT
- * @param {string} ADMIN_ROOM - O nome da sala de admin
- */
-function initSocketHandler(io, JWT_SECRET, ADMIN_ROOM) {
+const initSocketHandler = (io) => {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    throw new Error('JWT_SECRET não definido para Socket.IO.');
+  }
 
-    io.on('connection', (socket) => {
-        console.log('Um utilizador conectou-se:', socket.id);
-        let userId, userRole, userName; 
+  io.on('connection', (socket) => {
+    let userId;
+    let userRole;
+    let userName;
 
-        // 1. Autenticação do Socket
-        try {
-            const token = socket.handshake.auth.token;
-            if (!token) {
-                throw new Error('Token não fornecido');
-            }
-            
-            const decoded = jwt.verify(token, JWT_SECRET);
-            userId = decoded.user.id;
-            userRole = decoded.user.role;
-            userName = decoded.user.nome; 
+    try {
+      const token = socket.handshake.auth?.token;
+      if (!token) {
+        throw new Error('Token não fornecido');
+      }
 
-            socketUserMap.set(socket.id, { userId, userRole, userName, lastLocation: null });
+      const decoded = jwt.verify(token, jwtSecret);
+      userId = decoded.user.id;
+      userRole = decoded.user.role;
+      userName = decoded.user.nome;
 
-            // 2. Gestão de Salas e Status
-            if (userRole === 'admin') {
-                socket.join(ADMIN_ROOM);
-                console.log(`Admin ${userName} (${userId}) entrou na sala ${ADMIN_ROOM}`);
+      socketUserMap.set(socket.id, {
+        userId,
+        userRole,
+        userName,
+        lastLocation: null
+      });
 
-                for (const [id, data] of socketUserMap.entries()) {
-                    if (data.userRole === 'driver' && data.lastLocation) {
-                        socket.emit('driver_location_broadcast', {
-                            driverId: data.userId,
-                            driverName: data.userName,
-                            status: (data.lastLocation.status || DRIVER_STATUS.ONLINE_FREE),
-                            lat: data.lastLocation.lat,
-                            lng: data.lastLocation.lng
-                        });
-                    }
-                }
+      if (userRole === 'admin') {
+        socket.join(ADMIN_ROOM);
 
-            } else if (userRole === 'driver') {
-                socket.join(userId);
-                console.log(`Motorista ${userName} (${userId}) juntou-se à sua sala privada.`);
-
-                DriverProfile.findOneAndUpdate(
-                    { user: userId }, 
-                    { status: DRIVER_STATUS.ONLINE_FREE }
-                )
-                    .then(() => console.log(`Motorista ${userName} (${userId}) está agora ${DRIVER_STATUS.ONLINE_FREE}.`))
-                    .catch(err => console.error('Erro ao atualizar status para online:', err));
-            }
-
-        } catch (error) {
-            console.log(`Falha na autenticação do socket (${socket.id}):`, error.message);
-            socket.disconnect(); 
-            return; 
-        }
-
-        // --- Listeners de Eventos do Socket ---
-
-        // 3. Admin pede atualização de mapa
-        if (userRole === 'admin') {
-            socket.on('admin_request_all_locations', () => {
-                console.log(`Admin ${userName} (${socket.id}) pediu um refresh dos pins.`);
-                for (const [id, data] of socketUserMap.entries()) {
-                    if (data.userRole === 'driver' && data.lastLocation) {
-                        socket.emit('driver_location_broadcast', {
-                            driverId: data.userId,
-                            driverName: data.userName,
-                            status: (data.lastLocation.status || DRIVER_STATUS.ONLINE_FREE),
-                            lat: data.lastLocation.lat,
-                            lng: data.lastLocation.lng
-                        });
-                    }
-                }
+        socketUserMap.forEach((data) => {
+          if (data.userRole === 'driver' && data.lastLocation) {
+            socket.emit('driver_location_broadcast', {
+              driverId: data.userId,
+              driverName: data.userName,
+              status: data.lastLocation.status || DRIVER_STATUS.ONLINE_FREE,
+              lat: data.lastLocation.lat,
+              lng: data.lastLocation.lng
             });
-        }
-
-        // 4. Motorista envia atualização de localização
-        if (userRole === 'driver') {
-            socket.on('driver_location_update', async (data) => {
-                const { lat, lng } = data;
-                
-                try {
-                    const profile = await DriverProfile.findOne({ user: userId });
-                    const currentStatus = profile ? profile.status : DRIVER_STATUS.ONLINE_FREE;
-
-                    if (socketUserMap.has(socket.id)) {
-                        socketUserMap.get(socket.id).lastLocation = { lat, lng, status: currentStatus };
-                    }
-                    
-                    io.to(ADMIN_ROOM).emit('driver_location_broadcast', {
-                        driverId: userId,
-                        driverName: userName,
-                        status: currentStatus,
-                        lat: lat,
-                        lng: lng
-                    });
-                } catch (error) {
-                    console.error("Erro ao buscar perfil do motorista para update de localização:", error);
-                }
-            });
-        }
-
-        // 5. Utilizador desconecta-se
-        socket.on('disconnect', () => {
-            console.log('Utilizador desconectado:', socket.id);
-            
-            if (socketUserMap.has(socket.id)) {
-                const { userId: disconnectedUserId, userRole: disconnectedUserRole, userName: disconnectedUserName } = socketUserMap.get(socket.id);
-
-                if (disconnectedUserRole === 'driver') {
-                    DriverProfile.findOneAndUpdate(
-                        { user: disconnectedUserId }, 
-                        { status: DRIVER_STATUS.OFFLINE }
-                    )
-                        .then(() => {
-                            console.log(`Motorista ${disconnectedUserName} (${disconnectedUserId}) está agora ${DRIVER_STATUS.OFFLINE}.`);
-                            
-                            io.to(ADMIN_ROOM).emit('driver_status_changed', { 
-                                driverId: disconnectedUserId, 
-                                newStatus: DRIVER_STATUS.OFFLINE 
-                            });
-
-                            io.to(ADMIN_ROOM).emit('driver_disconnected_broadcast', {
-                                driverId: disconnectedUserId,
-                                driverName: disconnectedUserName
-                            });
-                        })
-                        .catch(err => console.error('Erro ao atualizar status para offline:', err));
-                }
-                
-                socketUserMap.delete(socket.id);
-            }
+          }
         });
+      }
+
+      if (userRole === 'driver') {
+        socket.join(userId);
+
+        DriverProfile.findOneAndUpdate(
+          { user: userId },
+          { status: DRIVER_STATUS.ONLINE_FREE },
+          { new: true }
+        ).catch((err) => console.error('Erro ao atualizar status para online:', err));
+      }
+    } catch (error) {
+      console.log(`Falha na autenticação do socket (${socket.id}):`, error.message);
+      socket.disconnect();
+      return;
+    }
+
+    socket.on('admin_request_all_locations', () => {
+      if (userRole !== 'admin') return;
+
+      socketUserMap.forEach((data) => {
+        if (data.userRole === 'driver' && data.lastLocation) {
+          socket.emit('driver_location_broadcast', {
+            driverId: data.userId,
+            driverName: data.userName,
+            status: data.lastLocation.status || DRIVER_STATUS.ONLINE_FREE,
+            lat: data.lastLocation.lat,
+            lng: data.lastLocation.lng
+          });
+        }
+      });
     });
-}
 
-// --- (NOVA FUNÇÃO ADICIONADA) ---
-/**
- * Exporta o mapa de sockets para ser usado por outros controllers (ex: orderController)
- */
-function getSocketUserMap() {
-    return socketUserMap;
-}
+    socket.on('driver_location_update', async (payload) => {
+      if (userRole !== 'driver') return;
 
-// --- (MUDANÇA NA EXPORTAÇÃO) ---
-// Exportamos ambas as funções
+      const { lat, lng } = payload || {};
+      if (Number.isNaN(Number(lat)) || Number.isNaN(Number(lng))) return;
+
+      try {
+        const profile = await DriverProfile.findOne({ user: userId });
+        const status = profile ? profile.status : DRIVER_STATUS.ONLINE_FREE;
+
+        if (socketUserMap.has(socket.id)) {
+          socketUserMap.get(socket.id).lastLocation = { lat, lng, status };
+        }
+
+        io.to(ADMIN_ROOM).emit('driver_location_broadcast', {
+          driverId: userId,
+          driverName: userName,
+          status,
+          lat,
+          lng
+        });
+      } catch (error) {
+        console.error('Erro ao atualizar localização do motorista:', error);
+      }
+    });
+
+    socket.on('disconnect', async () => {
+      const userData = socketUserMap.get(socket.id);
+
+      if (userData?.userRole === 'driver') {
+        try {
+          await DriverProfile.findOneAndUpdate(
+            { user: userData.userId },
+            { status: DRIVER_STATUS.OFFLINE }
+          );
+          io.to(ADMIN_ROOM).emit('driver_status_changed', {
+            driverId: userData.userId,
+            newStatus: DRIVER_STATUS.OFFLINE
+          });
+          io.to(ADMIN_ROOM).emit('driver_disconnected_broadcast', {
+            driverId: userData.userId,
+            driverName: userData.userName
+          });
+        } catch (err) {
+          console.error('Erro ao atualizar status para offline:', err);
+        }
+      }
+
+      socketUserMap.delete(socket.id);
+    });
+  });
+};
+
+const getSocketUserMap = () => socketUserMap;
+
 module.exports = {
-    initSocketHandler,
-    getSocketUserMap
+  initSocketHandler,
+  getSocketUserMap
 };

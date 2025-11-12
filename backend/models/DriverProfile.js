@@ -1,30 +1,29 @@
-// Ficheiro: backend/models/DriverProfile.js (Otimizado com Índices)
 const mongoose = require('mongoose');
+const { DRIVER_STATUS, FINANCIAL } = require('../utils/constants');
 
-const driverProfileSchema = new mongoose.Schema({
-    user: { 
-        type: mongoose.Schema.Types.ObjectId, // Liga ao ID do 'User'
-        ref: 'User', 
-        required: true 
+const driverProfileSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      unique: true
     },
-    vehicle_plate: { type: String, default: '' }, // Placa da viatura
+    vehicle_plate: { type: String, default: '', trim: true },
     status: {
-        type: String,
-        enum: ['online_livre', 'online_ocupado', 'offline'],
-        default: 'offline',
-        index: true // <-- (MELHORIA 3) Índice para pesquisas rápidas por status
+      type: String,
+      enum: Object.values(DRIVER_STATUS),
+      default: DRIVER_STATUS.OFFLINE,
+      index: true
     },
-
-    // --- (MELHORIA FINANCEIRA) ---
-    // A percentagem (ex: 20) que o motorista ganha por entrega.
     commissionRate: {
-        type: Number,
-        default: 20, // 20% por defeito
-        min: 0,
-        max: 100
+      type: Number,
+      min: 0,
+      max: 100,
+      default: FINANCIAL.DEFAULT_COMMISSION_RATE
     }
-    // --- FIM DA MELHORIA ---
-});
+  },
+  { timestamps: true }
+);
 
-const DriverProfile = mongoose.model('DriverProfile', driverProfileSchema);
-module.exports = DriverProfile;
+module.exports = mongoose.model('DriverProfile', driverProfileSchema);

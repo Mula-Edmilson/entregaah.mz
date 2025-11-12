@@ -1,39 +1,22 @@
-// Ficheiro: backend/models/Client.js
-
 const mongoose = require('mongoose');
 
-const ClientSchema = new mongoose.Schema({
-    nome: {
-        type: String,
-        required: [true, 'O nome do cliente é obrigatório']
-    },
-    telefone: {
-        type: String,
-        required: [true, 'O telefone do cliente é obrigatório'],
-        unique: true
-    },
-    email: {
-        type: String,
-        unique: false, // O email é opcional e pode ser repetido
-        sparse: true   // Permite múltiplos clientes com email 'null'
-    },
-    empresa: {
-        type: String
-    },
-    nuit: {
-        type: String
-    },
-    endereco: {
-        type: String
-    },
-    // Referência ao Admin que criou este cliente
+const clientSchema = new mongoose.Schema(
+  {
+    nome: { type: String, required: true, trim: true },
+    telefone: { type: String, required: true, unique: true, trim: true },
+    email: { type: String, lowercase: true, trim: true, sparse: true },
+    empresa: { type: String, trim: true },
+    nuit: { type: String, trim: true },
+    endereco: { type: String, trim: true },
     created_by_admin: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: 'User'
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'User'
     }
-}, {
-    timestamps: true // Adiciona 'createdAt' e 'updatedAt' automaticamente
-});
+  },
+  { timestamps: true }
+);
 
-module.exports = mongoose.model('Client', ClientSchema);
+clientSchema.index({ nome: 1 });
+
+module.exports = mongoose.model('Client', clientSchema);
