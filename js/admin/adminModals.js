@@ -60,14 +60,22 @@ async function openAssignModal(orderId) {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
-        if (data.drivers.length === 0) { 
+        const drivers = data.drivers || [];
+        
+        if (drivers.length === 0) { 
             select.innerHTML = '<option value="">Nenhum motorista disponível</option>'; 
             return; 
         }
         
         select.innerHTML = '<option value="">-- Selecione um motorista --</option>';
-        data.drivers.forEach(driver => { 
-            select.innerHTML += `<option value="${driver.profile._id}">${driver.nome} (${driver.profile.vehicle_plate})</option>`; 
+        drivers.forEach(driver => {
+            const profile = driver.profile || {};
+            const user = driver.user || driver;
+            const driverName = user.nome || driver.nome || 'Sem nome';
+            const plate = profile.vehicle_plate || driver.vehicle_plate || 'Sem placa';
+            const profileId = profile._id || driver._id;
+            
+            select.innerHTML += `<option value="${profileId}">${driverName} (${plate})</option>`; 
         });
         
         // Atribui a função de clique ao botão (usando a função do adminApi.js)
