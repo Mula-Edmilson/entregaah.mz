@@ -11,13 +11,9 @@ const router = express.Router();
 router.get('/', protect, admin, driverController.getAllDrivers);
 
 // Listar motoristas disponíveis (admin)
-router.get('/available', protect, admin, async (_req, res) => {
-  const drivers = await driverController.getAllDriversForAvailability();
-  res.status(200).json(drivers);
-});
+router.get('/available', protect, admin, driverController.getAllDriversForAvailability);
 
 // Ganhos do motorista autenticado (app do motorista)
-// ⚠️ CORRECÇÃO: era '/me/earnings', agora é '/my-earnings'
 router.get('/my-earnings', protect, driver, driverController.getMyEarnings);
 
 // Obter motorista por ID (admin - usado pelo modal de edição)
