@@ -46,6 +46,22 @@ function attachEventListeners() {
     document.getElementById('nav-clientes').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-clientes', 'nav-clientes', 'Gestão de Clientes'); });
     document.getElementById('nav-historico').addEventListener('click', (e) => { e.preventDefault(); showPage('historico', 'nav-historico', 'Histórico'); });
     document.getElementById('nav-mapa').addEventListener('click', (e) => { e.preventDefault(); showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real'); });
+    document.getElementById('nav-gestores').addEventListener('click', (e) => {
+  e.preventDefault();
+  showPage('gestao-gestores', 'Gestores');
+  loadManagers();
+});
+
+document.getElementById('nav-custos').addEventListener('click', (e) => {
+  e.preventDefault();
+  showPage('gestao-custos', 'Custos');
+  loadExpenses();
+  loadEmployeesForExpense();
+});
+
+document.getElementById('form-add-manager').addEventListener('submit', handleAddManager);
+document.getElementById('form-edit-manager').addEventListener('submit', handleEditManager);
+document.getElementById('form-add-expense').addEventListener('submit', handleAddExpense);
 
     // Submenu de Formulários
     document.getElementById('nav-form-doc').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('doc'); });
