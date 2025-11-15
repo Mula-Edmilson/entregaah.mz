@@ -15,6 +15,18 @@ exports.getAllDrivers = asyncHandler(async (_req, res) => {
   res.status(200).json({ drivers });
 });
 
+// Motoristas disponíveis (para atribuição automática / dropdown)
+exports.getAllDriversForAvailability = asyncHandler(async () => {
+  const profiles = await DriverProfile.find({
+    status: { $in: [DRIVER_STATUS.ONLINE_FREE, DRIVER_STATUS.ONLINE_BUSY] }
+  })
+    .populate('user')
+    .lean();
+
+  // podes adaptar o formato conforme o front espera
+  return profiles;
+});
+
 exports.getDriverById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
