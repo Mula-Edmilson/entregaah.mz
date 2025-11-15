@@ -16,7 +16,16 @@ exports.protect = asyncHandler(async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id).select('-password');
+
+    // IMPORTANTE: o token foi gerado como { user: { id, role, nome } }
+    const userId = decoded.user?.id;
+
+    if (!userId) {
+      res.status(401);
+      throw new Error('Token inválido (sem ID de utilizador).');
+    }
+
+    req.user = await User.findById(userId).select('-password');
 
     if (!req.user) {
       res.status(401);
