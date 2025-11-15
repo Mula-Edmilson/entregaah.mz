@@ -13,3 +13,5 @@ router.get('/available', protect, admin, async (_req, res) => {
   const drivers = await driverController.getAllDriversForAvailability();
   res.status(200).json(drivers);
 });
+
+module.exports = router;

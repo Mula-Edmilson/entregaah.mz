@@ -1,5 +1,3 @@
-// Ficheiro: backend/routes/statsRoutes.js (Atualizado)
-
 const express = require('express');
 const router = express.Router();
 const statsController = require('../controllers/statsController');
@@ -13,11 +11,9 @@ router.get('/overview', protect, admin, statsController.getOverviewStats);
 // @desc    Admin obtém dados para o gráfico de desempenho
 router.get('/services', protect, admin, statsController.getServicePerformanceStats);
 
-// --- (NOVA MELHORIA) ---
 // @route   GET /api/stats/financials
 // @desc    Admin obtém os dados financeiros (Receita, Lucro, Ganhos Motorista)
 // @access  Privado (Admin)
 router.get('/financials', protect, admin, statsController.getFinancialStats);
-// --- FIM DA MELHORIA ---
 
 module.exports = router;
