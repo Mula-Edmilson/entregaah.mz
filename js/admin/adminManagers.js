@@ -5,6 +5,8 @@
 
 async function loadManagers() {
   const tableBody = document.getElementById('managers-table-body');
+  if (!tableBody) return;
+
   tableBody.innerHTML = '<tr><td colspan="4">A carregar gestores...</td></tr>';
 
   try {
@@ -30,12 +32,9 @@ async function loadManagers() {
       tableBody.innerHTML += `
         <tr>
           <td>${manager.nome}</td>
-          <td>${manager.telefone}</td>
+          <td>${manager.telefone || 'N/A'}</td>
           <td>${manager.email}</td>
           <td>
-            <button class="btn-action-small" onclick="openEditManagerModal('${manager._id}')">
-              <i class="fas fa-edit"></i>
-            </button>
             <button class="btn-action-small btn-danger" onclick="deleteManager('${manager._id}')">
               <i class="fas fa-trash"></i>
             </button>
@@ -52,15 +51,21 @@ async function loadManagers() {
 async function handleAddManager(event) {
   event.preventDefault();
 
-  const nome = document.getElementById('manager-name').value;
-  const telefone = document.getElementById('manager-phone').value;
-  const email = document.getElementById('manager-email').value;
+  const nome = document.getElementById('manager-name').value.trim();
+  const telefone = document.getElementById('manager-phone').value.trim();
+  const email = document.getElementById('manager-email').value.trim();
   const password = document.getElementById('manager-password').value;
+
+  // DEBUG: ver o que está a ser enviado
+  console.log('DEBUG MANAGER BODY ->', { nome, telefone, email, password });
 
   try {
     const response = await fetch(`${API_URL}/api/managers`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({ nome, telefone, email, password })
     });
 
@@ -68,71 +73,13 @@ async function handleAddManager(event) {
 
     if (!response.ok) throw new Error(data.message);
 
-    showCustomAlert('Sucesso', 'Gestor criado com sucesso.', 'success');
+    showCustomAlert('Sucesso', 'Gestor registado com sucesso.', 'success');
     document.getElementById('form-add-manager').reset();
     showAddManagerForm(false);
     loadManagers();
   } catch (error) {
     console.error('Erro ao adicionar gestor:', error);
     showCustomAlert('Erro', error.message || 'Erro ao adicionar gestor.', 'error');
-  }
-}
-
-async function openEditManagerModal(managerId) {
-  const modal = document.getElementById('edit-manager-modal');
-  modal.classList.remove('hidden');
-  document.getElementById('edit-manager-id').value = managerId;
-
-  document.getElementById('form-edit-manager').reset();
-  document.getElementById('edit-manager-name').value = 'A carregar...';
-
-  try {
-    const response = await fetch(`${API_URL}/api/managers/${managerId}`, {
-      headers: getAuthHeaders()
-    });
-
-    if (response.status === 401) return handleLogout('admin');
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message);
-
-    const manager = data.manager;
-
-    document.getElementById('edit-manager-name').value = manager.nome;
-    document.getElementById('edit-manager-phone').value = manager.telefone;
-    document.getElementById('edit-manager-email').value = manager.email;
-  } catch (error) {
-    console.error('Erro ao carregar gestor:', error);
-    showCustomAlert('Erro', 'Erro ao carregar dados do gestor.', 'error');
-    closeEditManagerModal();
-  }
-}
-
-async function handleEditManager(event) {
-  event.preventDefault();
-
-  const managerId = document.getElementById('edit-manager-id').value;
-  const nome = document.getElementById('edit-manager-name').value;
-  const telefone = document.getElementById('edit-manager-phone').value;
-  const email = document.getElementById('edit-manager-email').value;
-
-  try {
-    const response = await fetch(`${API_URL}/api/managers/${managerId}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ nome, telefone, email })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) throw new Error(data.message);
-
-    showCustomAlert('Sucesso', 'Gestor atualizado com sucesso.', 'success');
-    closeEditManagerModal();
-    loadManagers();
-  } catch (error) {
-    console.error('Erro ao atualizar gestor:', error);
-    showCustomAlert('Erro', error.message || 'Erro ao atualizar gestor.', 'error');
   }
 }
 
@@ -161,6 +108,8 @@ function showAddManagerForm(show) {
   const form = document.getElementById('form-add-manager');
   const btn = document.getElementById('btn-show-manager-form');
 
+  if (!form || !btn) return;
+
   if (show) {
     form.classList.remove('hidden');
     btn.classList.add('hidden');
@@ -170,6 +119,12 @@ function showAddManagerForm(show) {
   }
 }
 
-function closeEditManagerModal() {
-  document.getElementById('edit-manager-modal').classList.add('hidden');
-}
+// associa o submit do formulário
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('form-add-manager');
+  if (form) {
+    form.addEventListener('submit', handleAddManager);
+  }
+
+  loadManagers();
+});
