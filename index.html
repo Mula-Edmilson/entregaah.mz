@@ -43,6 +43,8 @@
             <li class="menu-item" id="nav-entregas"><a href="#"><i class="fas fa-tasks"></i> Entregas Activas</a></li>
             <li class="menu-item" id="nav-motoristas"><a href="#"><i class="fas fa-motorcycle"></i> Motoristas</a></li>
             <li class="menu-item" id="nav-clientes"><a href="#"><i class="fas fa-users"></i> Clientes</a></li>
+            <li class="menu-item" id="nav-gestores"><a href="#"><i class="fas fa-user-tie"></i> Gestores</a></li>
+            <li class="menu-item" id="nav-custos"><a href="#"><i class="fas fa-coins"></i> Custos</a></li>
             <li class="menu-item" id="nav-historico"><a href="#"><i class="fas fa-history"></i> Histórico</a></li>
             <li class="menu-item" id="nav-mapa"><a href="#"><i class="fas fa-map-marked-alt"></i> Mapa em Tempo Real</a></li>
             <li class="menu-item" id="nav-config"><a href="#"><i class="fas fa-cog"></i> Configurações</a></li>
@@ -555,6 +557,103 @@
                     </div>
                 </div>
             </div>
+            <!-- GESTÃO DE GESTORES -->
+<div id="gestao-gestores" class="content-page hidden">
+    <button class="btn-submit" onclick="showAddManagerForm(true)" id="btn-show-manager-form">
+        <i class="fas fa-plus"></i> Adicionar Novo Gestor
+    </button>
+    <form id="form-add-manager" class="hidden">
+        <h3>Dados do Novo Gestor</h3>
+        <div class="form-row">
+            <div class="form-group"><label for="manager-name">Nome Completo</label><input type="text" id="manager-name" required></div>
+            <div class="form-group"><label for="manager-phone">Telefone</label><input type="tel" id="manager-phone" required></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label for="manager-email">Email (para login)</label><input type="email" id="manager-email" required></div>
+            <div class="form-group"><label for="manager-password">Senha</label><input type="password" id="manager-password" required minlength="6"></div>
+        </div>
+        <button type="submit" class="btn-submit">Salvar Gestor</button>
+        <button type="button" class="btn-cancel" onclick="showAddManagerForm(false)">Cancelar</button>
+    </form>
+    <h3>Gestores Registados</h3>
+    <div class="table-container-responsive">
+        <table class="table-motoristas">
+            <thead><tr><th>Nome</th><th>Telefone</th><th>Email</th><th>Acções</th></tr></thead>
+            <tbody id="managers-table-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- GESTÃO DE CUSTOS -->
+<div id="gestao-custos" class="content-page hidden">
+    <button class="btn-submit" onclick="showAddExpenseForm(true)" id="btn-show-expense-form">
+        <i class="fas fa-plus"></i> Registar Novo Custo
+    </button>
+    <form id="form-add-expense" class="hidden">
+        <h3>Dados do Custo</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="expense-category">Categoria</label>
+                <select id="expense-category" required>
+                    <option value="">-- Selecione --</option>
+                    <option value="salarios">Salários</option>
+                    <option value="renda">Renda</option>
+                    <option value="diversos">Diversos</option>
+                    <option value="manutencao">Manutenção</option>
+                    <option value="comunicacao">Comunicação</option>
+                    <option value="marketing">Marketing</option>
+                    <option value="combustivel">Combustível</option>
+                </select>
+            </div>
+            <div class="form-group"><label for="expense-amount">Valor (MZN)</label><input type="number" id="expense-amount" step="0.01" min="0" required></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label for="expense-date">Data</label><input type="date" id="expense-date" required></div>
+            <div class="form-group"><label for="expense-employee">Funcionário (Opcional)</label><select id="expense-employee"></select></div>
+        </div>
+        <div class="form-group"><label for="expense-description">Descrição</label><textarea id="expense-description" rows="3" required></textarea></div>
+        <button type="submit" class="btn-submit">Salvar Custo</button>
+        <button type="button" class="btn-cancel" onclick="showAddExpenseForm(false)">Cancelar</button>
+    </form>
+    <h3>Custos Registados</h3>
+    <div class="table-container-responsive">
+        <table class="table-motoristas">
+            <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Funcionário</th><th>Valor</th><th>Acções</th></tr></thead>
+            <tbody id="expenses-table-body"></tbody>
+        </table>
+    </div>
+    
+    <h3 style="margin-top: 3rem;">Exportar Relatório Financeiro (Excel)</h3>
+    <div class="form-row">
+        <div class="form-group"><label for="export-start-date">De:</label><input type="date" id="export-start-date"></div>
+        <div class="form-group"><label for="export-end-date">Até:</label><input type="date" id="export-end-date"></div>
+    </div>
+    <button type="button" class="btn-submit" onclick="exportFinancialReport()">
+        <i class="fas fa-file-excel"></i> Exportar Relatório
+    </button>
+</div>
+
+<!-- MODAL EDITAR GESTOR -->
+<div id="edit-manager-modal" class="modal-backdrop hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Editar Gestor</h3>
+            <button class="modal-close-btn" onclick="closeEditManagerModal()">×</button>
+        </div>
+        <form id="form-edit-manager">
+            <div class="modal-body">
+                <input type="hidden" id="edit-manager-id">
+                <div class="form-group"><label for="edit-manager-name">Nome Completo</label><input type="text" id="edit-manager-name" required></div>
+                <div class="form-group"><label for="edit-manager-phone">Telefone</label><input type="tel" id="edit-manager-phone" required></div>
+                <div class="form-group"><label for="edit-manager-email">Email</label><input type="email" id="edit-manager-email" required></div>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn-submit">Salvar Alterações</button>
+                <button type="button" class="btn-cancel" onclick="closeEditManagerModal()">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
 
     </main>
     
@@ -569,6 +668,8 @@
     <script src="js/admin/adminModals.js"></script>
 
     <script src="js/admin/admin.js"></script>
+    <script src="js/admin/adminExpenses.js"></script>
+    <script src="js/admin/adminManagers.js"></script>
 
 </body>
 </html>
