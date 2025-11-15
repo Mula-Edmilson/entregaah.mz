@@ -119,6 +119,16 @@ function showAddManagerForm(show) {
   }
 }
 
+function handleEditManager(managerId) {
+  console.warn('handleEditManager ainda não implementado. ID:', managerId);
+  showCustomAlert('Atenção', 'Funcionalidade de edição de gestor ainda não está implementada.', 'warning');
+}
+
+async function handleUpdateManager(event) {
+  event.preventDefault();
+  console.warn('handleUpdateManager ainda não implementado.');
+}
+
 // associa o submit do formulário
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('form-add-manager');
@@ -128,3 +138,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadManagers();
 });
+
