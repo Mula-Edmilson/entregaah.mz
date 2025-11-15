@@ -60,10 +60,16 @@ async function handleAddExpense(event) {
   const date = document.getElementById('expense-date').value;
   const employee = document.getElementById('expense-employee').value || null;
 
+  // DEBUG para vermos o que está a ser enviado
+  console.log('DEBUG EXPENSE BODY ->', { category, description, amount, date, employee });
+
   try {
     const response = await fetch(`${API_URL}/api/expenses`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({ category, description, amount, date, employee })
     });
 
