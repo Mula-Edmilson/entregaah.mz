@@ -7,16 +7,20 @@ const { DRIVER_STATUS } = require('../utils/constants');
 
 const router = express.Router();
 
-// Listar todos os motoristas
+// Listar todos os motoristas (admin)
 router.get('/', protect, admin, driverController.getAllDrivers);
 
-// Listar motoristas disponíveis
+// Listar motoristas disponíveis (admin)
 router.get('/available', protect, admin, async (_req, res) => {
   const drivers = await driverController.getAllDriversForAvailability();
   res.status(200).json(drivers);
 });
 
-// Obter motorista por ID (usado pelo modal de edição)
+// Ganhos do motorista autenticado (app do motorista)
+// ⚠️ CORRECÇÃO: era '/me/earnings', agora é '/my-earnings'
+router.get('/my-earnings', protect, driver, driverController.getMyEarnings);
+
+// Obter motorista por ID (admin - usado pelo modal de edição)
 router.get(
   '/:id',
   protect,
@@ -26,7 +30,7 @@ router.get(
   driverController.getDriverById
 );
 
-// Atualizar dados do motorista
+// Atualizar dados do motorista (admin)
 router.put(
   '/:id',
   protect,
@@ -47,7 +51,7 @@ router.put(
   driverController.updateDriver
 );
 
-// Relatório de um motorista
+// Relatório de um motorista (admin)
 router.get(
   '/:id/report',
   protect,
@@ -56,8 +60,5 @@ router.get(
   validateRequest,
   driverController.getDriverReport
 );
-
-// Ganhos do motorista autenticado (app do motorista)
-router.get('/me/earnings', protect, driver, driverController.getMyEarnings);
 
 module.exports = router;
