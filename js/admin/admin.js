@@ -716,3 +716,42 @@ function closeConfirmationModal() {
     // TODO: implementar com adminModals.js
     console.warn('closeConfirmationModal() não implementado – stub a correr.');
 }
+
+// ============================
+// EXPOR FUNÇÕES NO ESCOPO GLOBAL
+// ============================
+window.showPage = showPage;
+window.showServiceForm = showServiceForm;
+window.handleClientSelect = handleClientSelect;
+window.resetDeliveryForm = resetDeliveryForm;
+window.handleDeleteOldHistoryClick = handleDeleteOldHistoryClick;
+window.handleNewDelivery = handleNewDelivery;
+window.handleAddDriver = handleAddDriver;
+window.handleUpdateDriver = handleUpdateDriver;
+window.handleAddClient = handleAddClient;
+window.handleUpdateClient = handleUpdateClient;
+window.handleChangePassword = handleChangePassword;
+window.handleAddManager = handleAddManager;
+window.handleEditManager = handleEditManager;
+window.handleAddExpense = handleAddExpense;
+window.loadOverviewStats = loadOverviewStats;
+window.loadFinancialStats = loadFinancialStats;
+window.initServicesChart = initServicesChart;
+window.handleChartReset = handleChartReset;
+window.loadDrivers = loadDrivers;
+window.loadActiveDeliveries = loadActiveDeliveries;
+window.loadHistory = loadHistory;
+window.loadClients = loadClients;
+window.loadManagers = loadManagers;
+window.loadExpenses = loadExpenses;
+window.loadEmployeesForExpense = loadEmployeesForExpense;
+window.initializeLiveMap = initializeLiveMap;
+window.destroyFormMap = destroyFormMap;
+window.destroyLiveMap = destroyLiveMap;
+window.initializeFormMap = initializeFormMap;
+window.destroyCharts = destroyCharts;
+window.filterHistoryTable = filterHistoryTable;
+window.handleGenerateStatement = handleGenerateStatement;
+window.handleDownloadPDF = handleDownloadPDF;
+window.setStatementDates = setStatementDates;
+window.closeConfirmationModal = closeConfirmationModal;
