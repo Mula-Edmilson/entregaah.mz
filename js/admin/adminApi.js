@@ -3,8 +3,7 @@
  *
  * (Dependência #6) - Precisa de 'api.js', 'auth.js', 'adminMap.js'
  *
- * Contém todas as funções de interação com a API do backend para o painel admin.
- * ✅ CORRIGIDO: Adicionado prefixo /api a todas as rotas.
+ * ✅ CORRIGIDO: Rotas alinhadas com o server.js (ex: /api/stats, /api/clients).
  */
 
 /* --- Funções de Gestão de Motoristas --- */
@@ -14,8 +13,8 @@
  */
 async function fetchDrivers() {
     try {
-        // CORRIGIDO: /admin/drivers -> /api/admin/drivers
-        const response = await apiRequest('/api/admin/drivers', 'GET');
+        // CORRIGIDO: Rota mudada para /api/drivers
+        const response = await apiRequest('/api/drivers', 'GET');
         
         if (response && response.drivers) {
             populateDriversTable(response.drivers);
@@ -109,8 +108,8 @@ function getStatusClass(status) {
  */
 async function addDriver(driverData) {
     try {
-        // CORRIGIDO: /admin/drivers -> /api/admin/drivers
-        const response = await apiRequest('/api/admin/drivers', 'POST', driverData);
+        // CORRIGIDO: Rota mudada para /api/drivers
+        const response = await apiRequest('/api/drivers', 'POST', driverData);
         
         if (response && response.driver) {
             showCustomAlert('Sucesso', 'Motorista adicionado com sucesso!');
@@ -128,8 +127,8 @@ async function addDriver(driverData) {
  */
 async function updateDriver(driverId, driverData) {
     try {
-        // CORRIGIDO: /admin/drivers -> /api/admin/drivers
-        const response = await apiRequest(`/api/admin/drivers/${driverId}`, 'PUT', driverData);
+        // CORRIGIDO: Rota mudada para /api/drivers
+        const response = await apiRequest(`/api/drivers/${driverId}`, 'PUT', driverData);
         
         if (response && response.driver) {
             showCustomAlert('Sucesso', 'Motorista atualizado com sucesso!');
@@ -147,8 +146,8 @@ async function updateDriver(driverId, driverData) {
  */
 async function deleteDriver(driverId) {
     try {
-        // CORRIGIDO: /admin/drivers -> /api/admin/drivers
-        const response = await apiRequest(`/api/admin/drivers/${driverId}`, 'DELETE');
+        // CORRIGIDO: Rota mudada para /api/drivers
+        const response = await apiRequest(`/api/drivers/${driverId}`, 'DELETE');
         
         if (response && response.message) {
             showCustomAlert('Sucesso', 'Motorista apagado com sucesso!');
@@ -160,7 +159,7 @@ async function deleteDriver(driverId) {
     }
 }
 
-/* --- ✅ NOVO: Funções de Histórico de Rotas --- */
+/* --- ✅ Funções de Histórico de Rotas (adminRoutes.js) --- */
 
 /**
  * Abre modal com histórico de rotas de um motorista.
@@ -168,7 +167,7 @@ async function deleteDriver(driverId) {
  */
 async function openDriverTripsModal(driverId) {
     try {
-        // CORRIGIDO: /admin/drivers -> /api/admin/drivers
+        // CORRETO: Esta rota ESTÁ em /api/admin/
         const response = await apiRequest(`/api/admin/drivers/${driverId}/trips`, 'GET');
         
         if (response && response.trips) {
@@ -296,8 +295,8 @@ function openTripDetailsOnMap(tripId) {
 
 async function fetchClients() {
     try {
-        // CORRIGIDO: /admin/clients -> /api/admin/clients
-        const response = await apiRequest('/api/admin/clients', 'GET');
+        // CORRIGIDO: Rota mudada para /api/clients
+        const response = await apiRequest('/api/clients', 'GET');
         
         if (response && response.clients) {
             populateClientsTable(response.clients);
@@ -363,8 +362,8 @@ function populateClientDropdown(clients) {
 
 async function addClient(clientData) {
     try {
-        // CORRIGIDO: /admin/clients -> /api/admin/clients
-        const response = await apiRequest('/api/admin/clients', 'POST', clientData);
+        // CORRIGIDO: Rota mudada para /api/clients
+        const response = await apiRequest('/api/clients', 'POST', clientData);
         
         if (response && response.client) {
             showCustomAlert('Sucesso', 'Cliente adicionado com sucesso!');
@@ -379,8 +378,8 @@ async function addClient(clientData) {
 
 async function updateClient(clientId, clientData) {
     try {
-        // CORRIGIDO: /admin/clients -> /api/admin/clients
-        const response = await apiRequest(`/api/admin/clients/${clientId}`, 'PUT', clientData);
+        // CORRIGIDO: Rota mudada para /api/clients
+        const response = await apiRequest(`/api/clients/${clientId}`, 'PUT', clientData);
         
         if (response && response.client) {
             showCustomAlert('Sucesso', 'Cliente atualizado com sucesso!');
@@ -395,8 +394,8 @@ async function updateClient(clientId, clientData) {
 
 async function deleteClient(clientId) {
     try {
-        // CORRIGIDO: /admin/clients -> /api/admin/clients
-        const response = await apiRequest(`/api/admin/clients/${clientId}`, 'DELETE');
+        // CORRIGIDO: Rota mudada para /api/clients
+        const response = await apiRequest(`/api/clients/${clientId}`, 'DELETE');
         
         if (response && response.message) {
             showCustomAlert('Sucesso', 'Cliente apagado com sucesso!');
@@ -412,8 +411,8 @@ async function deleteClient(clientId) {
 
 async function fetchActiveOrders() {
     try {
-        // CORRIGIDO: /admin/orders -> /api/admin/orders
-        const response = await apiRequest('/api/admin/orders/active', 'GET');
+        // CORRIGIDO: Rota mudada para /api/orders
+        const response = await apiRequest('/api/orders/active', 'GET');
         
         if (response && response.orders) {
             populateActiveOrdersTable(response.orders);
@@ -465,11 +464,10 @@ function populateActiveOrdersTable(orders) {
 
 async function createOrder(orderData) {
     try {
-        // CORRIGIDO: /admin/orders -> /api/admin/orders
-        const response = await apiRequest('/api/admin/orders', 'POST', orderData);
+        // CORRIGIDO: Rota mudada para /api/orders
+        const response = await apiRequest('/api/orders', 'POST', orderData);
         
         if (response && response.order) {
-            // Removido o showCustomAlert daqui para ser tratado no admin.js
             fetchActiveOrders();
             fetchStats();
             return response.order;
@@ -483,8 +481,8 @@ async function createOrder(orderData) {
 
 async function assignOrder(orderId, driverId) {
     try {
-        // CORRIGIDO: /admin/orders -> /api/admin/orders
-        const response = await apiRequest(`/api/admin/orders/${orderId}/assign`, 'POST', { driverId });
+        // CORRIGIDO: Rota mudada para /api/orders
+        const response = await apiRequest(`/api/orders/${orderId}/assign`, 'POST', { driverId });
         
         if (response && response.order) {
             showCustomAlert('Sucesso', 'Pedido atribuído com sucesso!');
@@ -499,8 +497,8 @@ async function assignOrder(orderId, driverId) {
 
 async function cancelOrder(orderId) {
     try {
-        // CORRIGIDO: /admin/orders -> /api/admin/orders
-        const response = await apiRequest(`/api/admin/orders/${orderId}/cancel`, 'POST');
+        // CORRIGIDO: Rota mudada para /api/orders
+        const response = await apiRequest(`/api/orders/${orderId}/cancel`, 'POST');
         
         if (response && response.order) {
             showCustomAlert('Sucesso', 'Pedido cancelado com sucesso!');
@@ -517,8 +515,8 @@ async function cancelOrder(orderId) {
 
 async function fetchOrderHistory(searchTerm = '') {
     try {
-        // CORRIGIDO: /admin/orders -> /api/admin/orders
-        const url = searchTerm ? `/api/admin/orders/history?search=${encodeURIComponent(searchTerm)}` : '/api/admin/orders/history';
+        // CORRIGIDO: Rota mudada para /api/orders
+        const url = searchTerm ? `/api/orders/history?search=${encodeURIComponent(searchTerm)}` : '/api/orders/history';
         const response = await apiRequest(url, 'GET');
         
         if (response && response.orders) {
@@ -582,8 +580,8 @@ function calculateDuration(start, end) {
 
 async function fetchStats() {
     try {
-        // CORRIGIDO: /admin/stats -> /api/admin/stats
-        const response = await apiRequest('/api/admin/stats', 'GET');
+        // CORRIGIDO: Rota mudada para /api/stats
+        const response = await apiRequest('/api/stats', 'GET');
         
         if (response) {
             updateStatsCards(response);
