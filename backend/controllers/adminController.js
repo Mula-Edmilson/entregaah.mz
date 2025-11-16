@@ -64,6 +64,28 @@ exports.getAllDriversLocation = asyncHandler(async (_req, res) => {
 });
 
 /**
+ * ✅ NOVA: Obter histórico de viagens de UM motorista específico
+ *
+ * Usado na rota: GET /api/admin/drivers/:driverId/trips
+ */
+exports.getDriverTripsHistory = asyncHandler(async (req, res) => {
+  const { driverId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(driverId)) {
+    res.status(400);
+    throw new Error('ID de motorista inválido.');
+  }
+
+  const trips = await Trip.find({ driver: driverId })
+    .populate('order', 'client_name service_type price address_text verification_code')
+    .sort({ startedAt: -1 })
+    .limit(100)
+    .lean();
+
+  res.status(200).json({ trips });
+});
+
+/**
  * Obter histórico completo de viagens (todos os motoristas)
  *
  * query params:
