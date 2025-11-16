@@ -320,9 +320,7 @@ exports.completeDelivery = asyncHandler(async (req, res) => {
 });
 
 /**
- * ✅ FUNÇÃO ADICIONADA
- * Esta função estava em falta e a causar o crash do servidor.
- * Permite que um admin cancele um pedido.
+ * Função para cancelar uma encomenda (Admin)
  */
 exports.cancelOrder = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -333,14 +331,11 @@ exports.cancelOrder = asyncHandler(async (req, res) => {
     throw new Error('Encomenda não encontrada.');
   }
 
-  // Regra de negócio: Não cancelar encomendas já concluídas ou em progresso
-  // (O admin só deve poder cancelar PENDENTE ou ATRIBUÍDA)
   if ([ORDER_STATUS.COMPLETED, ORDER_STATUS.IN_PROGRESS].includes(order.status)) {
     res.status(400);
     throw new Error(`Não é possível cancelar uma encomenda com status '${order.status}'.`);
   }
 
-  // Se já estiver cancelada, apenas retorne
   if (order.status === ORDER_STATUS.CANCELED) {
     return res.status(200).json({ message: 'Encomenda já estava cancelada.', order });
   }
@@ -348,16 +343,13 @@ exports.cancelOrder = asyncHandler(async (req, res) => {
   const io = req.app.get('socketio');
   const oldDriverProfileId = order.assigned_to_driver;
 
-  // Atualiza a encomenda
   order.status = ORDER_STATUS.CANCELED;
-  order.assigned_to_driver = null; // Remove o motorista
-  order.timestamp_canceled = Date.now(); // Adiciona um timestamp (opcional)
+  order.assigned_to_driver = null; 
+  order.timestamp_canceled = Date.now(); 
   await order.save();
 
-  // Notifica o admin room que a encomenda foi atualizada/removida da lista ativa
   io.to(ADMIN_ROOM).emit('delivery_canceled', { id: order._id });
 
-  // Se um motorista estava atribuído, notifica-o
   if (oldDriverProfileId) {
     try {
       const driverProfile = await DriverProfile.findById(oldDriverProfileId).lean();
@@ -399,7 +391,11 @@ exports.getActiveOrders = asyncHandler(async (_req, res) => {
 
 exports.getHistoryOrders = asyncHandler(async (_req, res) => {
   const orders = await Order.find({
-    status: { $in [ORDER_STATUS.COMPLETED, ORDER_STATUS.CANCELED] }
+    /**
+     * ✅ CORREÇÃO DO SYNTAXERROR
+     * Faltava um dois-pontos (:) depois do $in
+     */
+    status: { $in: [ORDER_STATUS.COMPLETED, ORDER_STATUS.CANCELED] }
   })
     .populate({
       path: 'assigned_to_driver',
