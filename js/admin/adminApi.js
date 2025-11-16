@@ -1,19 +1,15 @@
 /*
  * Ficheiro: js/admin/adminApi.js
  *
- * (Dependência #6) - Precisa de 'api.js', 'auth.js', 'adminMap.js'
- *
- * ✅ CORRIGIDO: Rotas alinhadas com o server.js (ex: /api/stats, /api/clients).
+ * ✅ CORRIGIDO:
+ * - fetchStats() agora chama /api/stats/overview.
+ * - Nomes de funções onclick (ex: openHistoryDetailModal) corrigidos.
  */
 
 /* --- Funções de Gestão de Motoristas --- */
 
-/**
- * Busca todos os motoristas registados e preenche a tabela.
- */
 async function fetchDrivers() {
     try {
-        // CORRIGIDO: Rota mudada para /api/drivers
         const response = await apiRequest('/api/drivers', 'GET');
         
         if (response && response.drivers) {
@@ -25,10 +21,6 @@ async function fetchDrivers() {
     }
 }
 
-/**
- * Preenche a tabela de motoristas com os dados recebidos.
- * @param {Array} drivers - Array de motoristas.
- */
 function populateDriversTable(drivers) {
     const tbody = document.getElementById('drivers-table-body');
     if (!tbody) return;
@@ -49,6 +41,10 @@ function populateDriversTable(drivers) {
         const status = driver.status || 'offline';
         const statusText = translateDriverStatus(status);
         const statusClass = getStatusClass(status);
+        
+        // Obter o ID do perfil do motorista ou ID do usuário como fallback
+        const driverId = driver.profile?._id || driver._id;
+        const driverName = driver.user?.nome || 'Motorista';
 
         row.innerHTML = `
             <td>${nome}</td>
@@ -56,16 +52,16 @@ function populateDriversTable(drivers) {
             <td>${vehicle}</td>
             <td><span class="badge ${statusClass}">${statusText}</span></td>
             <td>
-                <button class="btn-action-small" onclick="openEditDriverModal('${driver._id}')">
+                <button class="btn-action-small" onclick="openEditDriverModal('${driverId}')">
                     <i class="fas fa-edit"></i> Editar
                 </button>
-                <button class="btn-action-small btn-info" onclick="openDriverReport('${driver._id}')">
+                <button class="btn-action-small btn-info" onclick="openDriverReportModal('${driverId}', '${driverName}')">
                     <i class="fas fa-chart-line"></i> Relatório
                 </button>
-                <button class="btn-action-small btn-primary" onclick="openDriverTripsModal('${driver._id}')">
+                <button class="btn-action-small btn-primary" onclick="openDriverTripsModal('${driverId}')">
                     <i class="fas fa-route"></i> Ver Rotas
                 </button>
-                <button class="btn-action-small btn-danger" onclick="confirmDeleteDriver('${driver._id}', '${nome}')">
+                <button class="btn-action-small btn-danger" onclick="confirmDeleteDriver('${driverId}', '${nome}')">
                     <i class="fas fa-trash"></i> Apagar
                 </button>
             </td>
@@ -75,27 +71,16 @@ function populateDriversTable(drivers) {
     });
 }
 
-/**
- * Traduz o status do motorista para português.
- */
 function translateDriverStatus(status) {
     const translations = {
-        'online_livre': 'Disponível',
-        'online_ocupado': 'Ocupado',
-        'a_caminho_coleta': 'A caminho da coleta',
-        'coletando': 'No local da coleta',
-        'a_caminho_entrega': 'A caminho da entrega',
-        'entregando': 'No local da entrega',
-        'retorno_central': 'Retornando à base',
-        'pausa': 'Em pausa',
-        'offline': 'Offline'
+        'online_livre': 'Disponível', 'online_ocupado': 'Ocupado',
+        'a_caminho_coleta': 'A caminho da coleta', 'coletando': 'No local da coleta',
+        'a_caminho_entrega': 'A caminho da entrega', 'entregando': 'No local da entrega',
+        'retorno_central': 'Retornando à base', 'pausa': 'Em pausa', 'offline': 'Offline'
     };
     return translations[status] || status;
 }
 
-/**
- * Retorna a classe CSS apropriada para o badge de status.
- */
 function getStatusClass(status) {
     if (status === 'online_livre') return 'badge-success';
     if (status === 'online_ocupado' || status.includes('caminho') || status.includes('entregando') || status.includes('coletando')) return 'badge-warning';
@@ -103,18 +88,13 @@ function getStatusClass(status) {
     return 'badge-info';
 }
 
-/**
- * Adiciona um novo motorista.
- */
 async function addDriver(driverData) {
     try {
-        // CORRIGIDO: Rota mudada para /api/drivers
         const response = await apiRequest('/api/drivers', 'POST', driverData);
-        
         if (response && response.driver) {
             showCustomAlert('Sucesso', 'Motorista adicionado com sucesso!');
-            fetchDrivers(); // Atualiza a tabela
-            showAddDriverForm(false); // Fecha o formulário
+            fetchDrivers();
+            showAddDriverForm(false);
         }
     } catch (error) {
         console.error('Erro ao adicionar motorista:', error);
@@ -122,17 +102,12 @@ async function addDriver(driverData) {
     }
 }
 
-/**
- * Atualiza os dados de um motorista.
- */
 async function updateDriver(driverId, driverData) {
     try {
-        // CORRIGIDO: Rota mudada para /api/drivers
         const response = await apiRequest(`/api/drivers/${driverId}`, 'PUT', driverData);
-        
         if (response && response.driver) {
             showCustomAlert('Sucesso', 'Motorista atualizado com sucesso!');
-            fetchDrivers(); // Atualiza a tabela
+            fetchDrivers();
             closeEditDriverModal();
         }
     } catch (error) {
@@ -141,17 +116,12 @@ async function updateDriver(driverId, driverData) {
     }
 }
 
-/**
- * Apaga um motorista.
- */
 async function deleteDriver(driverId) {
     try {
-        // CORRIGIDO: Rota mudada para /api/drivers
         const response = await apiRequest(`/api/drivers/${driverId}`, 'DELETE');
-        
         if (response && response.message) {
             showCustomAlert('Sucesso', 'Motorista apagado com sucesso!');
-            fetchDrivers(); // Atualiza a tabela
+            fetchDrivers();
         }
     } catch (error) {
         console.error('Erro ao apagar motorista:', error);
@@ -159,17 +129,11 @@ async function deleteDriver(driverId) {
     }
 }
 
-/* --- ✅ Funções de Histórico de Rotas (adminRoutes.js) --- */
+/* --- Funções de Histórico de Rotas (adminRoutes.js) --- */
 
-/**
- * Abre modal com histórico de rotas de um motorista.
- * @param {string} driverId - ID do motorista.
- */
 async function openDriverTripsModal(driverId) {
     try {
-        // CORRETO: Esta rota ESTÁ em /api/admin/
         const response = await apiRequest(`/api/admin/drivers/${driverId}/trips`, 'GET');
-        
         if (response && response.trips) {
             showDriverTripsModal(response.trips, response.driverName || 'Motorista');
         } else {
@@ -181,11 +145,6 @@ async function openDriverTripsModal(driverId) {
     }
 }
 
-/**
- * Exibe modal com lista de rotas do motorista.
- * @param {Array} trips - Array de viagens.
- * @param {string} driverName - Nome do motorista.
- */
 function showDriverTripsModal(trips, driverName) {
     const modalTitle = document.getElementById('driver-trips-modal-title');
     const modalBody = document.getElementById('driver-trips-modal-body');
@@ -205,13 +164,8 @@ function showDriverTripsModal(trips, driverName) {
                 <table class="table table-striped table-hover">
                     <thead>
                         <tr>
-                            <th>Data</th>
-                            <th>Tipo</th>
-                            <th>Status</th>
-                            <th>Distância</th>
-                            <th>Duração</th>
-                            <th>Cliente</th>
-                            <th>Ações</th>
+                            <th>Data</th> <th>Tipo</th> <th>Status</th>
+                            <th>Distância</th> <th>Duração</th> <th>Cliente</th> <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -242,48 +196,30 @@ function showDriverTripsModal(trips, driverName) {
             `;
         });
 
-        tableHTML += `
-                    </tbody>
-                </table>
-            </div>
-        `;
-
+        tableHTML += `</tbody></table></div>`;
         modalBody.innerHTML = tableHTML;
     }
 
-    // Abre o modal (Bootstrap 5)
     const modalElement = document.getElementById('driverTripsModal');
     const modal = new bootstrap.Modal(modalElement);
     modal.show();
 }
 
-/**
- * Traduz tipo de viagem para português.
- */
 function translateTripType(type) {
     const translations = {
-        'coleta': 'Coleta',
-        'entrega': 'Entrega',
-        'retorno_central': 'Retorno à base',
-        'pausa': 'Pausa',
-        'outro': 'Outro'
+        'coleta': 'Coleta', 'entrega': 'Entrega',
+        'retorno_central': 'Retorno à base', 'pausa': 'Pausa', 'outro': 'Outro'
     };
     return translations[type] || type;
 }
 
-/**
- * Abre detalhes de uma viagem específica no mapa (chama função em adminMap.js).
- * @param {string} tripId - ID da viagem.
- */
 function openTripDetailsOnMap(tripId) {
-    // Fecha o modal de lista de rotas
     const modalElement = document.getElementById('driverTripsModal');
     if (modalElement) {
         const modal = bootstrap.Modal.getInstance(modalElement);
         if (modal) modal.hide();
     }
 
-    // Chama função do adminMap.js para abrir modal de detalhes
     if (typeof openTripDetails === 'function') {
         openTripDetails(tripId);
     } else {
@@ -295,9 +231,7 @@ function openTripDetailsOnMap(tripId) {
 
 async function fetchClients() {
     try {
-        // CORRIGIDO: Rota mudada para /api/clients
         const response = await apiRequest('/api/clients', 'GET');
-        
         if (response && response.clients) {
             populateClientsTable(response.clients);
             populateClientDropdown(response.clients);
@@ -330,7 +264,7 @@ function populateClientsTable(clients) {
                 <button class="btn-action-small" onclick="openEditClientModal('${client._id}')">
                     <i class="fas fa-edit"></i> Editar
                 </button>
-                <button class="btn-action-small btn-info" onclick="openClientStatement('${client._id}')">
+                <button class="btn-action-small btn-info" onclick="openStatementModal('${client._id}', '${client.nome}')">
                     <i class="fas fa-file-invoice"></i> Extrato
                 </button>
                 <button class="btn-action-small btn-danger" onclick="confirmDeleteClient('${client._id}', '${client.nome}')">
@@ -362,9 +296,7 @@ function populateClientDropdown(clients) {
 
 async function addClient(clientData) {
     try {
-        // CORRIGIDO: Rota mudada para /api/clients
         const response = await apiRequest('/api/clients', 'POST', clientData);
-        
         if (response && response.client) {
             showCustomAlert('Sucesso', 'Cliente adicionado com sucesso!');
             fetchClients();
@@ -378,9 +310,7 @@ async function addClient(clientData) {
 
 async function updateClient(clientId, clientData) {
     try {
-        // CORRIGIDO: Rota mudada para /api/clients
         const response = await apiRequest(`/api/clients/${clientId}`, 'PUT', clientData);
-        
         if (response && response.client) {
             showCustomAlert('Sucesso', 'Cliente atualizado com sucesso!');
             fetchClients();
@@ -394,9 +324,7 @@ async function updateClient(clientId, clientData) {
 
 async function deleteClient(clientId) {
     try {
-        // CORRIGIDO: Rota mudada para /api/clients
         const response = await apiRequest(`/api/clients/${clientId}`, 'DELETE');
-        
         if (response && response.message) {
             showCustomAlert('Sucesso', 'Cliente apagado com sucesso!');
             fetchClients();
@@ -411,9 +339,7 @@ async function deleteClient(clientId) {
 
 async function fetchActiveOrders() {
     try {
-        // CORRIGIDO: Rota mudada para /api/orders
         const response = await apiRequest('/api/orders/active', 'GET');
-        
         if (response && response.orders) {
             populateActiveOrdersTable(response.orders);
         }
@@ -464,9 +390,7 @@ function populateActiveOrdersTable(orders) {
 
 async function createOrder(orderData) {
     try {
-        // CORRIGIDO: Rota mudada para /api/orders
         const response = await apiRequest('/api/orders', 'POST', orderData);
-        
         if (response && response.order) {
             fetchActiveOrders();
             fetchStats();
@@ -481,9 +405,7 @@ async function createOrder(orderData) {
 
 async function assignOrder(orderId, driverId) {
     try {
-        // CORRIGIDO: Rota mudada para /api/orders
         const response = await apiRequest(`/api/orders/${orderId}/assign`, 'POST', { driverId });
-        
         if (response && response.order) {
             showCustomAlert('Sucesso', 'Pedido atribuído com sucesso!');
             fetchActiveOrders();
@@ -497,9 +419,7 @@ async function assignOrder(orderId, driverId) {
 
 async function cancelOrder(orderId) {
     try {
-        // CORRIGIDO: Rota mudada para /api/orders
         const response = await apiRequest(`/api/orders/${orderId}/cancel`, 'POST');
-        
         if (response && response.order) {
             showCustomAlert('Sucesso', 'Pedido cancelado com sucesso!');
             fetchActiveOrders();
@@ -515,10 +435,8 @@ async function cancelOrder(orderId) {
 
 async function fetchOrderHistory(searchTerm = '') {
     try {
-        // CORRIGIDO: Rota mudada para /api/orders
         const url = searchTerm ? `/api/orders/history?search=${encodeURIComponent(searchTerm)}` : '/api/orders/history';
         const response = await apiRequest(url, 'GET');
-        
         if (response && response.orders) {
             populateHistoryTable(response.orders);
         }
@@ -554,7 +472,7 @@ function populateHistoryTable(orders) {
             <td>${duration}</td>
             <td>${order.verification_code || '-'}</td>
             <td>
-                <button class="btn-action-small btn-info" onclick="openHistoryDetail('${order._id}')">
+                <button class="btn-action-small btn-info" onclick="openHistoryDetailModal('${order._id}')">
                     <i class="fas fa-eye"></i> Ver
                 </button>
             </td>
@@ -580,8 +498,8 @@ function calculateDuration(start, end) {
 
 async function fetchStats() {
     try {
-        // CORRIGIDO: Rota mudada para /api/stats
-        const response = await apiRequest('/api/stats', 'GET');
+        // CORRIGIDO: Rota mudada de /api/stats para /api/stats/overview
+        const response = await apiRequest('/api/stats/overview', 'GET');
         
         if (response) {
             updateStatsCards(response);
@@ -597,8 +515,15 @@ function updateStatsCards(stats) {
     document.getElementById('stats-concluidas-hoje').textContent = stats.concluidasHoje || 0;
     document.getElementById('stats-motoristas-online').textContent = stats.motoristasOnline || 0;
     
-    document.getElementById('stats-receita-total').textContent = `${(stats.receitaTotal || 0).toFixed(2)} MT`;
-    document.getElementById('stats-lucro-empresa').textContent = `${(stats.lucroEmpresa || 0).toFixed(2)} MT`;
-    document.getElementById('stats-ganhos-motorista').textContent = `${(stats.ganhosMotorista || 0).toFixed(2)} MT`;
-    document.getElementById('stats-top-driver').textContent = stats.topDriver || '-';
+    // Assumindo que a rota /overview não traz dados financeiros.
+    // Estes podem vir de outra chamada, ex: /api/stats/financials
+    // Se 'fetchStats' era para trazer tudo, o backend (statsController) precisa ser unido.
+    // Por agora, vamos evitar que falhe:
+    const statsReceitaTotal = document.getElementById('stats-receita-total');
+    if (statsReceitaTotal) {
+        statsReceitaTotal.textContent = `${(stats.receitaTotal || 0).toFixed(2)} MT`;
+        document.getElementById('stats-lucro-empresa').textContent = `${(stats.lucroEmpresa || 0).toFixed(2)} MT`;
+        document.getElementById('stats-ganhos-motorista').textContent = `${(stats.ganhosMotorista || 0).toFixed(2)} MT`;
+        document.getElementById('stats-top-driver').textContent = stats.topDriver || '-';
+    }
 }
