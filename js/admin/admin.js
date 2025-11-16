@@ -505,3 +505,37 @@ function handleDownloadPDF() { console.warn('handleDownloadPDF não definida'); 
 function setStatementDates() { console.warn('setStatementDates não definida'); }
 function closeConfirmationModal() { console.warn('closeConfirmationModal não definida'); }
 function handleLogout() { console.warn('handleLogout não definida'); }
+
+/**
+ * ✅ NOVA FUNÇÃO
+ * Define as datas de início e fim no modal de extrato.
+ * @param {string} range - 'this_week' ou 'this_month'
+ */
+function setStatementDates(range) {
+    const startDateInput = document.getElementById('statement-start-date');
+    const endDateInput = document.getElementById('statement-end-date');
+    const today = new Date();
+    let startDate = new Date();
+
+    if (range === 'this_week') {
+        const dayOfWeek = today.getDay(); // 0=Domingo, 1=Segunda...
+        // Define o início da semana como Segunda-feira (1)
+        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        startDate = new Date(today.setDate(diff));
+    } else if (range === 'this_month') {
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1); // Primeiro dia do mês
+    }
+
+    startDateInput.value = toISODate(startDate);
+    endDateInput.value = toISODate(today);
+}
+
+/**
+ * ✅ NOVA FUNÇÃO AUXILIAR
+ * Converte um objeto Date para o formato YYYY-MM-DD.
+ * @param {Date} date - O objeto de data.
+ * @returns {string} - A data formatada.
+ */
+function toISODate(date) {
+    return date.toISOString().split('T')[0];
+}
