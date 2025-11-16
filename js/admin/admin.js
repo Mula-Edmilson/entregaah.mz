@@ -573,3 +573,146 @@ async function handleAddExpense(event) {
         console.error('Erro ao adicionar despesa:', err);
     }
 }
+/**
+ * ===========================
+ *  STUBS / FUNÇÕES BÁSICAS PARA EVITAR CRASH
+ *  (substituiremos depois por versões completas, se necessário)
+ * ===========================
+ */
+
+// ---------- CHARTS / ESTATÍSTICAS ----------
+
+// Estatísticas de visão geral (topo do painel)
+function loadOverviewStats() {
+    // TODO: implementar com adminApi.js/adminCharts.js
+    console.warn('loadOverviewStats() não implementado – stub a correr.');
+}
+
+// Estatísticas financeiras
+function loadFinancialStats() {
+    // TODO: implementar com adminApi.js/adminCharts.js
+    console.warn('loadFinancialStats() não implementado – stub a correr.');
+}
+
+// Inicializar gráfico de serviços
+function initServicesChart(_reset = false) {
+    // TODO: implementar com adminCharts.js
+    console.warn('initServicesChart() não implementado – stub a correr.');
+}
+
+// Resetar gráfico (botão "Reset" no dashboard)
+function handleChartReset() {
+    console.warn('handleChartReset() não implementado – stub a correr.');
+    // Exemplo simples: só reinicializa o gráfico se já tiveres algo
+    if (typeof initServicesChart === 'function') {
+        initServicesChart(true);
+    }
+}
+
+// ---------- LISTAGENS (TABELAS) ----------
+
+// Carregar motoristas
+function loadDrivers() {
+    // TODO: implementar com adminApi.js
+    console.warn('loadDrivers() não implementado – stub a correr.');
+}
+
+// Carregar entregas ativas
+function loadActiveDeliveries() {
+    // TODO: implementar com adminApi.js
+    console.warn('loadActiveDeliveries() não implementado – stub a correr.');
+}
+
+// Carregar histórico de encomendas
+function loadHistory() {
+    // TODO: implementar com adminApi.js
+    console.warn('loadHistory() não implementado – stub a correr.');
+}
+
+// Carregar clientes
+function loadClients() {
+    // TODO: implementar com adminApi.js
+    console.warn('loadClients() não implementado – stub a correr.');
+}
+
+// Carregar lista de gestores
+function loadManagers() {
+    // TODO: implementar com adminApi.js
+    console.warn('loadManagers() não implementado – stub a correr.');
+}
+
+// Carregar despesas
+function loadExpenses() {
+    // TODO: implementar com adminApi.js
+    console.warn('loadExpenses() não implementado – stub a correr.');
+}
+
+// Carregar funcionários elegíveis para despesas
+function loadEmployeesForExpense() {
+    // TODO: implementar com adminApi.js
+    console.warn('loadEmployeesForExpense() não implementado – stub a correr.');
+}
+
+// ---------- MAPAS ----------
+
+// Inicializar mapa em tempo real
+function initializeLiveMap() {
+    // TODO: implementar com adminMap.js
+    console.warn('initializeLiveMap() não implementado – stub a correr.');
+}
+
+// Destruir mapa do formulário (quando muda de página)
+function destroyFormMap() {
+    // TODO: implementar com adminMap.js
+    console.warn('destroyFormMap() não implementado – stub a correr.');
+}
+
+// Destruir mapa em tempo real (quando muda de página)
+function destroyLiveMap() {
+    // TODO: implementar com adminMap.js
+    console.warn('destroyLiveMap() não implementado – stub a correr.');
+}
+
+// Inicializar mapa do formulário de nova entrega
+function initializeFormMap() {
+    // TODO: implementar com adminMap.js
+    console.warn('initializeFormMap() não implementado – stub a correr.');
+}
+
+// ---------- CHARTS CLEANUP ----------
+
+function destroyCharts() {
+    // TODO: implementar com adminCharts.js
+    console.warn('destroyCharts() não implementado – stub a correr.');
+}
+
+// ---------- HISTÓRICO / FILTRO ----------
+
+function filterHistoryTable() {
+    // TODO: implementar com lógica de filtro
+    console.warn('filterHistoryTable() não implementado – stub a correr.');
+}
+
+// ---------- EXTRATO / RELATÓRIOS ----------
+
+function handleGenerateStatement() {
+    // TODO: implementar com adminApi.js
+    console.warn('handleGenerateStatement() não implementado – stub a correr.');
+}
+
+function handleDownloadPDF() {
+    // TODO: implementar – provavelmente gera/download PDF
+    console.warn('handleDownloadPDF() não implementado – stub a correr.');
+}
+
+function setStatementDates(_range) {
+    // TODO: implementar alteração rápida de datas
+    console.warn('setStatementDates() não implementado – stub a correr.');
+}
+
+// ---------- MODAIS / CONFIRMAÇÃO ----------
+
+function closeConfirmationModal() {
+    // TODO: implementar com adminModals.js
+    console.warn('closeConfirmationModal() não implementado – stub a correr.');
+}
