@@ -1,9 +1,39 @@
 /*
- * Ficheiro: js/admin/adminModals.js (VERSÃO COMPLETA E CORRIGIDA)
+ * Ficheiro: js/admin/adminModals.js
  *
- * Contém toda a lógica de ABERTURA e carregamento de dados
- * dos modais (pop-ups) do painel de admin.
+ * ✅ CORRIGIDO:
+ * - Todas as funções de 'fetch' foram substituídas por 'apiRequest'.
+ * - Funções de callback (ex: confirmAssign) corrigidas para usar as funções de adminApi.js (ex: assignOrder).
+ * - Adicionada a função 'confirmCancelOrder' que faltava.
  */
+
+// Definições de fallback (caso ui.js não as defina)
+const SERVICE_NAMES = {
+    'doc': 'Tramitação de Documentos',
+    'farma': 'Produtos Farmacêuticos',
+    'carga': 'Transporte de Cargas',
+    'rapido': 'Delivery Rápido',
+    'outros': 'Outros Serviços'
+};
+
+function formatDuration(start, end) {
+    if (!start || !end) return '-';
+    const diff = new Date(end) - new Date(start);
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) return `${hours}h ${mins}min`;
+    return `${mins}min`;
+}
+
+function formatTotalDuration(ms) {
+    if (!ms || ms === 0) return '0 min';
+    const minutes = Math.floor(ms / 60000);
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) return `${hours}h ${mins}min`;
+    return `${mins}min`;
+}
 
 /**
  * Abre o modal genérico de confirmação (para ações destrutivas).
@@ -35,10 +65,33 @@ function openConfirmationModal({ title, message, confirmText, onConfirm }) {
     };
     
     confirmBtn.onclick = () => {
-        onConfirm(); // Chama a função de callback (ex: handleDeleteOldHistory)
+        onConfirm(); // Chama a função de callback (ex: cancelOrder)
+        closeConfirmationModal(); // Fecha o modal após confirmar
     };
 
     modal.classList.remove('hidden');
+}
+
+/**
+ * ✅ NOVA FUNÇÃO (Faltava)
+ * Abre um modal de confirmação para cancelar um pedido.
+ * @param {string} orderId - O ID da encomenda.
+ */
+function confirmCancelOrder(orderId) {
+    openConfirmationModal({
+        title: "Cancelar Pedido?",
+        message: `Tem a certeza de que deseja cancelar o pedido #${orderId.slice(-6)}? Esta ação não pode ser revertida.`,
+        confirmText: "CANCELAR",
+        onConfirm: () => {
+            // Chama a função 'cancelOrder' que existe em adminApi.js
+            if (typeof cancelOrder === 'function') {
+                cancelOrder(orderId);
+            } else {
+                console.error('Função cancelOrder() não encontrada.');
+                showCustomAlert('Erro', 'Erro fatal. A função cancelOrder não foi encontrada.');
+            }
+        }
+    });
 }
 
 /**
@@ -54,12 +107,8 @@ async function openAssignModal(orderId) {
     select.innerHTML = '<option value="">A carregar...</option>';
     
     try {
-        const response = await fetch(`${API_URL}/api/drivers/available`, { headers: getAuthHeaders() });
-        if (response.status === 401) { return handleLogout('admin'); }
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        
+        // CORRIGIDO: Usa apiRequest e a rota /api/drivers/available
+        const data = await apiRequest('/api/drivers/available', 'GET');
         const drivers = data.drivers || [];
         
         if (drivers.length === 0) { 
@@ -69,39 +118,41 @@ async function openAssignModal(orderId) {
         
         select.innerHTML = '<option value="">-- Selecione um motorista --</option>';
         drivers.forEach(driver => {
-            const profile = driver.profile || {};
+            // O backend parece retornar o perfil aninhado ou não
+            const profile = driver.profile || driver;
             const user = driver.user || driver;
-            const driverName = user.nome || driver.nome || 'Sem nome';
-            const plate = profile.vehicle_plate || driver.vehicle_plate || 'Sem placa';
+            const driverName = user.nome || 'Sem nome';
+            const plate = profile.vehicle_plate || 'Sem placa';
             const profileId = profile._id || driver._id;
             
             select.innerHTML += `<option value="${profileId}">${driverName} (${plate})</option>`; 
         });
         
-        // Atribui a função de clique ao botão (usando a função do adminApi.js)
+        // CORRIGIDO: Chama assignOrder (de adminApi.js) em vez de confirmAssign
         document.getElementById('btn-confirm-assign').onclick = async () => {
             const driverId = select.value;
             if (!driverId) { 
                 showCustomAlert('Atenção', 'Por favor, selecione um motorista.'); 
                 return; 
             }
-            await confirmAssign(orderId, driverId);
+            await assignOrder(orderId, driverId); // Função de adminApi.js
         };
         
     } catch (error) { 
         console.error('Falha ao carregar motoristas disponíveis:', error); 
         select.innerHTML = '<option value="">Erro ao carregar</option>'; 
+        if (error.message.includes('401')) handleLogout('admin'); // Trata erro de auth
     }
 }
 
 /**
  * Abre o modal para editar os dados de um motorista.
- * @param {string} driverUserId - O ID do *User* do motorista.
+ * @param {string} driverId - O ID do *Profile* do motorista.
  */
-async function openEditDriverModal(driverUserId) {
+async function openEditDriverModal(driverId) {
     const modal = document.getElementById('edit-driver-modal');
     modal.classList.remove('hidden');
-    document.getElementById('edit-driver-id').value = driverUserId;
+    document.getElementById('edit-driver-id').value = driverId;
     
     // Limpa o formulário enquanto carrega
     document.getElementById('form-edit-motorista').reset();
@@ -109,26 +160,25 @@ async function openEditDriverModal(driverUserId) {
     document.getElementById('edit-driver-phone').value = 'A carregar...';
     
     try {
-        const response = await fetch(`${API_URL}/api/drivers/${driverUserId}`, { headers: getAuthHeaders() });
-        if (response.status === 401) { return handleLogout('admin'); }
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
+        // CORRIGIDO: Usa apiRequest. Assume-se que /api/drivers/:id retorna um *perfil*
+        // Nota: O seu backend pode precisar de uma rota para buscar um *perfil* por ID
+        const data = await apiRequest(`/api/drivers/${driverId}`, 'GET');
         
-        const driver = data.driver;
-        const profile = driver.profile || {};
+        const driver = data.driver || data.profile; // Ajuste conforme a resposta da API
+        const user = driver.user || driver;
         
         // Preenche o formulário
-        document.getElementById('edit-driver-name').value = driver.nome;
-        document.getElementById('edit-driver-phone').value = driver.telefone;
-        document.getElementById('edit-driver-plate').value = profile.vehicle_plate || '';
-        document.getElementById('edit-driver-status').value = profile.status || 'offline';
-        document.getElementById('edit-driver-commission').value = profile.commissionRate || 20;
+        document.getElementById('edit-driver-name').value = user.nome;
+        document.getElementById('edit-driver-phone').value = user.telefone;
+        document.getElementById('edit-driver-plate').value = driver.vehicle_plate || '';
+        document.getElementById('edit-driver-status').value = driver.status || 'offline';
+        document.getElementById('edit-driver-commission').value = driver.commissionRate || 20;
         
     } catch (error) { 
         console.error('Falha ao carregar dados do motorista:', error); 
         showCustomAlert('Erro', 'Erro ao carregar dados do motorista.', 'error'); 
         closeEditDriverModal(); 
+        if (error.message.includes('401')) handleLogout('admin');
     }
 }
 
@@ -144,14 +194,11 @@ async function openHistoryDetailModal(orderId) {
     body.innerHTML = '<p>A carregar detalhes...</p>';
     
     try {
-        const response = await fetch(`${API_URL}/api/orders/${orderId}`, { headers: getAuthHeaders() });
-        if (response.status === 401) { return handleLogout('admin'); }
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
+        // CORRIGIDO: Usa apiRequest
+        const data = await apiRequest(`/api/orders/${orderId}`, 'GET');
         
         const order = data.order;
-        const motorista = order.assigned_to_driver ? order.assigned_to_driver.user.nome : 'N/D';
+        const motorista = order.assigned_to_driver ? (order.assigned_to_driver.user?.nome || 'N/D') : 'N/D';
         const admin = order.created_by_admin ? order.created_by_admin.nome : 'N/D';
         
         let coordsHtml = '<p><strong>Pin do Mapa:</strong> N/D</p>';
@@ -178,15 +225,16 @@ async function openHistoryDetailModal(orderId) {
     } catch (error) { 
         console.error('Falha ao carregar detalhes do histórico:', error); 
         body.innerHTML = '<p>Erro ao carregar detalhes.</p>'; 
+        if (error.message.includes('401')) handleLogout('admin');
     }
 }
 
 /**
  * Abre o modal de relatório de entregas de um motorista.
- * @param {string} driverUserId - O ID do *User* do motorista.
+ * @param {string} driverId - O ID do *Profile* do motorista.
  * @param {string} driverName - O nome do motorista.
  */
-async function openDriverReportModal(driverUserId, driverName) {
+async function openDriverReportModal(driverId, driverName) {
     const modal = document.getElementById('driver-report-modal');
     modal.classList.remove('hidden');
     document.getElementById('driver-report-title').innerText = `Relatório de ${driverName}`;
@@ -197,11 +245,8 @@ async function openDriverReportModal(driverUserId, driverName) {
     tableBody.innerHTML = '<tr><td colspan="5">A carregar relatório...</td></tr>';
     
     try {
-        const response = await fetch(`${API_URL}/api/drivers/${driverUserId}/report`, { headers: getAuthHeaders() });
-        if (response.status === 401) { return handleLogout('admin'); }
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
+        // CORRIGIDO: Usa apiRequest. Assume-se que a rota /api/drivers/:id/report existe
+        const data = await apiRequest(`/api/drivers/${driverId}/report`, 'GET');
         
         const orders = data.orders;
         let totalMs = 0;
@@ -235,6 +280,7 @@ async function openDriverReportModal(driverUserId, driverName) {
     } catch (error) { 
         console.error('Falha ao carregar relatório do motorista:', error); 
         tableBody.innerHTML = '<tr><td colspan="5">Erro ao carregar relatório.</td></tr>'; 
+        if (error.message.includes('401')) handleLogout('admin');
     }
 }
 
@@ -246,17 +292,13 @@ async function openEditClientModal(clientId) {
     const modal = document.getElementById('edit-client-modal');
     modal.classList.remove('hidden');
     
-    // Limpa o formulário enquanto carrega
     document.getElementById('form-edit-cliente').reset();
     document.getElementById('edit-client-nome').value = 'A carregar...';
     document.getElementById('edit-client-telefone').value = 'A carregar...';
 
     try {
-        const response = await fetch(`${API_URL}/api/clients/${clientId}`, { headers: getAuthHeaders() });
-        if (response.status === 401) { return handleLogout('admin'); }
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
+        // CORRIGIDO: Usa apiRequest
+        const data = await apiRequest(`/api/clients/${clientId}`, 'GET');
         
         const client = data.client;
         document.getElementById('edit-client-id').value = client._id;
@@ -271,6 +313,7 @@ async function openEditClientModal(clientId) {
         console.error('Falha ao carregar dados do cliente:', error);
         showCustomAlert('Erro', 'Erro ao carregar dados do cliente.', 'error');
         closeEditClientModal();
+        if (error.message.includes('401')) handleLogout('admin');
     }
 }
 
@@ -284,7 +327,6 @@ function openStatementModal(clientId, clientName) {
     document.getElementById('statement-client-name').textContent = `Extrato de ${clientName}`;
     document.getElementById('statement-client-id').value = clientId;
     
-    // Limpa o modal
     document.getElementById('statement-results').classList.add('hidden');
     document.getElementById('statement-table-body').innerHTML = '';
     document.getElementById('statement-start-date').value = '';
@@ -295,7 +337,7 @@ function openStatementModal(clientId, clientName) {
 
 /**
  * Preenche o modal de extrato com os resultados da API.
- * (Chamado por 'handleGenerateStatement' em adminApi.js)
+ * (Chamado por 'handleGenerateStatement' em admin.js)
  */
 function populateStatementModal(data, startDate, endDate) {
     const { totalValue, totalOrders, ordersList } = data;
