@@ -3,10 +3,7 @@
  *
  * (Dependência #5) - Precisa de 'api.js', 'auth.js', 'socket.io'
  *
- * Contém toda a lógica de gestão dos mapas Leaflet.js:
- * - O mapa do formulário de nova entrega.
- * - O mapa em tempo real de motoristas.
- * - ✅ NOVO: Integração com API REST para rastreamento de rotas.
+ * ✅ CORRIGIDO: Adicionado prefixo /api às chamadas de apiRequest.
  */
 
 // --- Variáveis de Estado para os Mapas ---
@@ -192,7 +189,8 @@ async function fetchDriversLocations() {
     if (!liveMap) return; // Não faz nada se o mapa não estiver visível
 
     try {
-        const response = await apiRequest('/admin/drivers/locations', 'GET');
+        // CORRIGIDO: Adicionado /api
+        const response = await apiRequest('/api/admin/drivers/locations', 'GET');
         
         if (response && response.drivers) {
             updateDriverMarkersFromAPI(response.drivers);
@@ -344,7 +342,8 @@ function translateTripType(type) {
  */
 async function openTripDetails(tripId) {
     try {
-        const response = await apiRequest(`/admin/trips/${tripId}`, 'GET');
+        // CORRIGIDO: Adicionado /api
+        const response = await apiRequest(`/api/admin/trips/${tripId}`, 'GET');
         
         if (response && response.trip) {
             showTripModal(response.trip);
@@ -362,9 +361,15 @@ async function openTripDetails(tripId) {
  * @param {object} trip - Dados completos da viagem.
  */
 function showTripModal(trip) {
+    // Esta função assume que existe um modal no seu index (1).html com id="tripDetailsModal"
+    // e dentro dele um <div id="trip-details-body"></div>.
+    // O seu index (1).html não parece ter este modal, o que pode causar um erro aqui.
+    
     const modalBody = document.getElementById('trip-details-body');
     if (!modalBody) {
-        console.error('Elemento #trip-details-body não encontrado no DOM.');
+        console.error('Elemento #trip-details-body não encontrado no DOM. Verifique o index (1).html');
+        // Tenta usar o modal de histórico como alternativa
+        openHistoryDetail(trip.order?._id || trip._id);
         return;
     }
 
