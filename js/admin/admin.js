@@ -1,583 +1,420 @@
-/*
- * Ficheiro: js/admin/admin.js (REFATORADO E CORRIGIDO)
+/**
+ * js/admin/admin.js
+ * Arquivo "central" do painel admin — navegação, utilitários e pequenas funções globais.
  *
- * Este é o ficheiro "controlador" principal.
- * Ele gere a navegação, os event listeners e os sockets.
- *
- * ESTA VERSÃO CONTÉM AS FUNÇÕES "HANDLER" QUE FALTAVAM
+ * Observações:
+ * - Este ficheiro tenta não sobrescrever funções já definidas em outros ficheiros (ex.: adminManagers.js).
+ *   Antes de definir uma função verifica-se `typeof <fn> !== 'function'`.
+ * - Espera que `API_URL` e funções de autenticação (ex.: `getAuthHeaders`) possam existir em `js/common/*`.
+ *   Caso não existam, fornece implementações de fallback seguras.
+ * - Liga a navegação lateral, carrega páginas e chama loaders específicos (se existirem):
+ *     loadManagers, loadDrivers, loadClients, loadExpenses, loadOverviewStats, loadActiveOrders, loadHistory
  */
 
-// --- Variáveis de Estado Globais ---
-let socket = null;
-let clientCache = []; // O cache de clientes ainda é útil aqui
+/* ======================
+   Helpers de Autenticação
+   ====================== */
 
-/* --- PONTO DE ENTRADA (Entry Point) --- */
-document.addEventListener('DOMContentLoaded', () => {
-    checkAuth('admin'); 
-    initializeMapIcons(); // (Vem do adminMap.js)
-    connectSocket(); 
-    attachEventListeners();
-    
-    // Carrega a página inicial
-    showPage('visao-geral', 'nav-visao-geral', 'Visão Geral');
-});
-
-/**
- * Anexa todos os event listeners da aplicação.
- * As funções 'handle...' e 'open...' vêm dos ficheiros importados.
- */
-function attachEventListeners() {
-    // --- Formulários ---
-    document.getElementById('delivery-form').addEventListener('submit', handleNewDelivery);
-    document.getElementById('form-add-motorista').addEventListener('submit', handleAddDriver);
-    document.getElementById('form-edit-motorista').addEventListener('submit', handleUpdateDriver);
-    document.getElementById('form-add-cliente').addEventListener('submit', handleAddClient);
-    document.getElementById('form-edit-cliente').addEventListener('submit', handleUpdateClient);
-    document.getElementById('form-change-password').addEventListener('submit', handleChangePassword);
-
-    // --- Navegação Principal (Sidebar) ---
-    document.getElementById('nav-visao-geral').addEventListener('click', (e) => { e.preventDefault(); showPage('visao-geral', 'nav-visao-geral', 'Visão Geral'); });
-    document.getElementById('nav-entregas').addEventListener('click', (e) => { e.preventDefault(); showPage('entregas-activas', 'nav-entregas', 'Entregas Activas'); });
-    document.getElementById('nav-motoristas').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-motoristas', 'nav-motoristas', 'Gestão de Motoristas'); });
-    document.getElementById('nav-clientes').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-clientes', 'nav-clientes', 'Gestão de Clientes'); });
-    document.getElementById('nav-historico').addEventListener('click', (e) => { e.preventDefault(); showPage('historico', 'nav-historico', 'Histórico'); });
-    document.getElementById('nav-mapa').addEventListener('click', (e) => { e.preventDefault(); showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real'); });
-    document.getElementById('nav-gestores').addEventListener('click', (e) => {
-        e.preventDefault();
-        showPage('gestao-gestores', 'nav-gestores', 'Gestores');
-        // A função loadManagers() não foi fornecida, pode causar erro
-        // loadManagers(); 
-    });
-
-    document.getElementById('nav-custos').addEventListener('click', (e) => {
-        e.preventDefault();
-        showPage('gestao-custos', 'nav-custos', 'Custos');
-        // As funções loadExpenses() e loadEmployeesForExpense() não foram fornecidas
-        // loadExpenses();
-        // loadEmployeesForExpense();
-    });
-
-    document.getElementById('form-add-manager').addEventListener('submit', handleAddManager);
-    document.getElementById('form-edit-manager').addEventListener('submit', handleEditManager);
-    document.getElementById('form-add-expense').addEventListener('submit', handleAddExpense);
-
-    // Submenu de Formulários
-    document.getElementById('nav-form-doc').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('doc'); });
-    document.getElementById('nav-form-farma').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('farma'); });
-    document.getElementById('nav-form-carga').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('carga'); });
-    document.getElementById('nav-form-rapido').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('rapido'); });
-    document.getElementById('nav-form-outros').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('outros'); });
-    
-    document.getElementById('nav-config').addEventListener('click', (e) => { e.preventDefault(); showPage('configuracoes', 'nav-config', 'Configurações'); });
-
-    // --- Autenticação ---
-    document.getElementById('admin-logout').addEventListener('click', (e) => { e.preventDefault(); handleLogout('admin'); });
-
-    // --- Modais e Botões (Listeners) ---
-    document.getElementById('btn-reset-chart').addEventListener('click', openChartResetModal);
-    document.getElementById('btn-confirm-chart-reset').addEventListener('click', handleChartReset);
-    document.getElementById('btn-close-chart-reset').addEventListener('click', closeChartResetModal);
-    document.getElementById('btn-cancel-chart-reset').addEventListener('click', closeChartResetModal);
-    
-    // A função filterHistoryTable não foi fornecida. Se existir, ótimo. Senão, pode ser um erro futuro.
-    // document.getElementById('history-search-input').addEventListener('input', filterHistoryTable); 
-    document.getElementById('delivery-image').addEventListener('change', handleImageUpload);
-    document.getElementById('delivery-client-select').addEventListener('change', handleClientSelect);
-
-    // Listeners do Modal de Extrato (Statement)
-    document.getElementById('btn-generate-statement').addEventListener('click', handleGenerateStatement);
-    document.getElementById('btn-download-pdf').addEventListener('click', handleDownloadPDF);
-    document.querySelectorAll('.btn-set-date').forEach(btn => {
-        btn.addEventListener('click', () => setStatementDates(btn.dataset.range));
-    });
-
-    // Zona de Perigo
-    document.getElementById('btn-delete-old-history').addEventListener('click', handleDeleteOldHistoryClick);
-    document.getElementById('btn-close-confirmation-modal').addEventListener('click', closeConfirmationModal);
-    document.getElementById('btn-cancel-confirmation-modal').addEventListener('click', closeConfirmationModal);
-    
-    // --- Lógica do Menu Mobile ---
-    const menuToggle = document.getElementById('mobile-menu-toggle');
-    const mainContent = document.querySelector('.main-content');
-    if (menuToggle) {
-        menuToggle.addEventListener('click', (e) => {
-            e.stopPropagation();
-            document.body.classList.toggle('mobile-menu-open');
-        });
-    }
-    if (mainContent) {
-        mainContent.addEventListener('click', () => {
-            if (document.body.classList.contains('mobile-menu-open')) {
-                document.body.classList.remove('mobile-menu-open');
-            }
-        });
-    }
-    // Fecha o menu mobile ao clicar num item (em ecrãs pequenos)
-    document.querySelectorAll('.sidebar-menu .menu-item a').forEach(item => {
-        item.addEventListener('click', () => {
-            if (window.innerWidth < 992 && !item.parentElement.classList.contains('has-submenu')) {
-                document.body.classList.remove('mobile-menu-open');
-            }
-        });
-    });
-}
-
-
-/* --- Lógica de Navegação (Router) --- */
-
-/**
- * Mostra uma página de conteúdo e esconde as outras.
- * Chama as funções de carregamento de dados necessárias.
- * @param {string} pageId - ID do elemento da página (ex: 'visao-geral')
- * @param {string} navId - ID do link da sidebar (ex: 'nav-visao-geral')
- * @param {string} title - O título a mostrar no header
- */
-function showPage(pageId, navId, title) {
-    // Limpa recursos de outras páginas
-    destroyFormMap(); // (adminMap.js)
-    destroyLiveMap(); // (adminMap.js)
-    destroyCharts();  // (adminCharts.js)     
-    
-    // Esconde todas as páginas e desativa todos os links
-    document.querySelectorAll('.content-page').forEach(page => page.classList.add('hidden'));
-    document.querySelectorAll('.sidebar-menu .menu-item').forEach(item => item.classList.remove('active'));
-    
-    // Mostra a página e ativa o link corretos
-    const pageToShow = document.getElementById(pageId);
-    if (pageToShow) pageToShow.classList.remove('hidden');
-    
-    const navLink = document.getElementById(navId);
-    if (navLink) navLink.classList.add('active');
-    
-    document.getElementById('main-title').innerText = title;
-    
-    // Carrega os dados específicos da página
-    switch (pageId) {
-        case 'visao-geral':
-            // CORRIGIDO: usa fetchStats() de adminApi.js
-            fetchStats(); 
-            // Assumindo que fetchStats() também carrega os dados financeiros
-            initServicesChart(false);
-            break;
-        case 'gestao-motoristas':
-            // CORRIGIDO: de loadDrivers() para fetchDrivers()
-            fetchDrivers();
-            break;
-        case 'entregas-activas':
-            // CORRIGIDO: de loadActiveDeliveries() para fetchActiveOrders()
-            fetchActiveOrders();
-            break;
-        case 'historico':
-            // CORRIGIDO: de loadHistory() para fetchOrderHistory()
-            fetchOrderHistory();
-            break;
-        case 'gestao-clientes':
-            // CORRIGIDO: de loadClients() para fetchClients()
-            fetchClients();
-            break;
-        case 'mapa-tempo-real':
-            initializeLiveMap();
-            break;
-        case 'configuracoes':
-            document.getElementById('form-change-password').reset();
-            break;
-    }
-}
-
-/**
- * Controlador para mostrar o formulário de nova entrega.
- * @param {string} serviceType - O tipo de serviço (ex: 'doc', 'farma')
- */
-function showServiceForm(serviceType) {
-    const titles = {
-        'doc': 'Nova Tramitação de Documentos',
-        'farma': 'Novo Pedido Farmacêutico',
-        'carga': 'Novo Transporte de Carga',
-        'rapido': 'Novo Delivery Rápido',
-        'outros': 'Outros Serviços'
-    };
-    showPage('form-nova-entrega', null, titles[serviceType] || 'Nova Entrega');
-    
-    // Prepara o formulário
-    document.getElementById('service-type').value = serviceType;
-    removeImage(); // (ui.js)
-    resetDeliveryForm();
-    
-    // CORRIGIDO: Esta função chama fetchClients() e depois preenche o dropdown
-    loadClientsIntoDropdown(); 
-    
-    // Atraso para garantir que o elemento #map está visível antes de inicializar
-    setTimeout(initializeFormMap, 100); // (adminMap.js)
-}
-
-/**
- * Carrega clientes e preenche o dropdown do formulário.
- */
-async function loadClientsIntoDropdown() {
+// Fallback para obter headers de autenticação. Se já existir `getAuthHeaders` global, usa-a.
+if (typeof getAuthHeaders !== 'function') {
+  function getAuthHeaders() {
+    const headers = {};
     try {
-        const response = await apiRequest('/admin/clients', 'GET'); //
-        
-        if (response && response.clients) {
-            clientCache = response.clients; // Armazena o cache
-            
-            const select = document.getElementById('delivery-client-select');
-            if (!select) return;
-
-            select.innerHTML = '<option value="">-- Ou digite manualmente abaixo --</option>';
-
-            response.clients.forEach(client => { //
-                const option = document.createElement('option');
-                option.value = client._id;
-                option.textContent = `${client.nome} - ${client.telefone}`;
-                select.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('Erro ao buscar clientes para dropdown:', error);
+      const token = localStorage.getItem('token');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    } catch (err) {
+      // ignore
     }
+    return headers;
+  }
 }
 
+/* ======================
+   Helper fetch com auth
+   ====================== */
+async function apiFetch(path, options = {}) {
+  const url = (typeof API_URL === 'string' && API_URL) ? `${API_URL}${path}` : path;
+  const headers = {
+    ...(options.headers || {}),
+    ...getAuthHeaders()
+  };
 
-/* --- Lógica de Socket.IO --- */
-function connectSocket() {
-    const token = getAuthToken(); // (auth.js)
-    if (!token) return;
-    
-    // Assegure que API_URL está definida (provavelmente noutro ficheiro como api.js)
-    if (typeof API_URL === 'undefined') {
-        console.error("API_URL não está definida. A conexão socket falhará.");
-        return;
-    }
-    
-    socket = io(API_URL, { auth: { token: token } }); // (api.js)
-    
-    socket.on('connect', () => {
-        console.log('Conectado ao servidor Socket.io com ID:', socket.id);
-        socket.emit('admin_join_room');
-    });
+  const opts = {
+    ...options,
+    headers
+  };
 
-    // Função auxiliar para saber qual página está ativa
-    const activePage = () => {
-        const page = document.querySelector('.content-page:not(.hidden)');
-        return page ? page.id : null;
-    };
-    
-    // Listeners de Socket que atualizam a UI
-    socket.on('delivery_started', (order) => {
-        if (activePage() === 'entregas-activas') fetchActiveOrders(); // Corrigido
-        if (activePage() === 'visao-geral') { fetchStats(); } // Corrigido
-    });
-    
-    socket.on('delivery_completed', (order) => {
-        if (activePage() === 'entregas-activas') fetchActiveOrders(); // Corrigido
-        if (activePage() === 'historico') fetchOrderHistory(); // Corrigido
-        if (activePage() === 'visao-geral') { fetchStats(); } // Corrigido
-    });
-    
-    socket.on('driver_status_changed', (data) => {
-         if (activePage() === 'gestao-motoristas') fetchDrivers(); // Corrigido
-         if (activePage() === 'visao-geral') fetchStats(); // Corrigido
-    });
-
-    // Listeners do Mapa em Tempo Real (chamam funções do adminMap.js)
-    socket.on('driver_location_broadcast', (data) => {
-        if (typeof updateDriverMarker === 'function') {
-            updateDriverMarker(data);
-        }
-    });
-    
-    socket.on('driver_disconnected_broadcast', (data) => {
-        if (typeof removeDriverMarker === 'function') {
-            removeDriverMarker(data);
-        }
-    });
-}
-
-
-/* --- Lógica Auxiliar (UI Helpers) --- */
-
-/**
- * Preenche o formulário de entrega quando um cliente registado é selecionado.
- */
-function handleClientSelect(e) {
-    const selectedClientId = e.target.value;
-    const client = clientCache.find(c => c._id === selectedClientId);
-    
-    if (client) {
-        document.getElementById('client-name').value = client.nome;
-        document.getElementById('client-phone1').value = client.telefone;
-        document.getElementById('client-phone2').value = ''; // Limpa o tel. alternativo
-        document.getElementById('delivery-client-id').value = client._id;
-        
-        // Torna os campos read-only
-        document.getElementById('client-name').readOnly = true;
-        document.getElementById('client-phone1').readOnly = true;
-        
+  try {
+    const res = await fetch(url, opts);
+    // tenta parsear JSON; se falhar, devolve blob/text conforme status
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const json = await res.json();
+      if (!res.ok) {
+        const err = new Error(json.message || `Erro na requisição: ${res.status}`);
+        err.status = res.status;
+        err.payload = json;
+        throw err;
+      }
+      return json;
     } else {
-        // Se selecionar "-- Selecione --", limpa e reativa os campos
-        resetDeliveryForm();
+      // não-json (ex.: download excel)
+      if (!res.ok) {
+        const text = await res.text();
+        const err = new Error(text || `Erro na requisição: ${res.status}`);
+        err.status = res.status;
+        throw err;
+      }
+      return res;
     }
-}
-
-/**
- * Limpa o formulário de entrega e reativa os campos.
- */
-function resetDeliveryForm() {
-    document.getElementById('delivery-form').reset();
-    document.getElementById('delivery-client-id').value = ''; 
-    
-    document.getElementById('client-name').readOnly = false;
-    document.getElementById('client-phone1').readOnly = false;
-}
-
-/**
- * Callback para a zona de perigo (Apagar Histórico).
- */
-function handleDeleteOldHistoryClick() {
-    const confirmWord = 'APAGAR';
-    
-    openConfirmationModal({ // (adminModals.js)
-        title: "Apagar Histórico Antigo?",
-        message: `Esta ação é irreversível. Todas as encomendas concluídas com mais de 30 dias serão permanentemente apagadas.\n\nPara confirmar, digite <b>${confirmWord}</b> no campo abaixo.`,
-        confirmText: confirmWord,
-        onConfirm: () => {
-             // Esta função 'handleDeleteOldHistory' não estava no seu adminApi.js.
-             // Adicionei uma chamada genérica 'apiRequest' baseada no seu adminController.js
-             
-             apiRequest('/admin/orders/history/old', 'DELETE')
-                .then(response => {
-                    showCustomAlert('Sucesso', response.message || 'Histórico antigo apagado.');
-                })
-                .catch(err => {
-                    showCustomAlert('Erro', err.message || 'Não foi possível apagar o histórico.');
-                });
-        }
-    });
-}
-
-/************************************************************************
- * NOVAS FUNÇÕES HANDLER (para corrigir erros '... is not defined')
- ************************************************************************/
-
-/**
- * Handler para submissão do formulário de nova entrega.
- * @param {Event} event - O evento de submit do formulário.
- */
-async function handleNewDelivery(event) {
-    event.preventDefault();
-
-    const form = document.getElementById('delivery-form');
-    if (!form) return;
-
-    const formData = new FormData(form);
-
-    const payload = {
-        service_type: formData.get('service_type') || 'outros',
-        client_name: formData.get('client_name'),
-        client_phone1: formData.get('client_phone1'),
-        client_phone2: formData.get('client_phone2') || null,
-        price: Number(formData.get('price') || 0),
-        address_text: formData.get('address_text'),
-        lng: Number(formData.get('lng')),
-        lat: Number(formData.get('lat')),
-        clientId: formData.get('clientId') || null,
-        autoAssign: formData.get('autoAssign') === 'true' || formData.get('autoAssign') === 'on'
-    };
-
-    try {
-        const order = await createOrder(payload); // usa createOrder de adminApi.js
-        if (order) {
-            form.reset();
-            resetDeliveryForm();
-            showCustomAlert('Sucesso', `Pedido criado com sucesso! Código: ${order.verification_code}`);
-            
-            // Após criar, volta para a página de entregas activas
-            showPage('entregas-activas', 'nav-entregas', 'Entregas Activas');
-        }
-    } catch (err) {
-        console.error('Erro ao criar pedido:', err);
-        // showCustomAlert já é chamado dentro de createOrder em caso de erro
+  } catch (err) {
+    // se for 401, tenta fazer logout automático chamando handleLogout se existir
+    if (err.status === 401) {
+      if (typeof handleLogout === 'function') handleLogout('admin');
     }
+    throw err;
+  }
 }
 
-/**
- * Handler para adicionar novo motorista.
- */
-async function handleAddDriver(event) {
-    event.preventDefault();
-    const driverData = {
-        nome: document.getElementById('driver-name').value,
-        telefone: document.getElementById('driver-phone').value,
-        email: document.getElementById('driver-email').value,
-        password: document.getElementById('driver-password').value,
-        vehicle_plate: document.getElementById('driver-plate').value,
-        commission_rate: document.getElementById('driver-commission').value,
-    };
-    await addDriver(driverData); // Chama a função de adminApi.js
-    document.getElementById('form-add-motorista').reset();
-}
+/* ======================
+   UI: abrir/fechar modais e alertas
+   ====================== */
 
-/**
- * Handler para atualizar motorista.
- */
-async function handleUpdateDriver(event) {
-    event.preventDefault();
-    const driverId = document.getElementById('edit-driver-id').value;
-    const driverData = {
-        nome: document.getElementById('edit-driver-name').value,
-        telefone: document.getElementById('edit-driver-phone').value,
-        vehicle_plate: document.getElementById('edit-driver-plate').value,
-        commission_rate: document.getElementById('edit-driver-commission').value,
-        status: document.getElementById('edit-driver-status').value,
-    };
-    await updateDriver(driverId, driverData); // Chama a função de adminApi.js
-}
-
-/**
- * Handler para adicionar novo cliente.
- */
-async function handleAddClient(event) {
-    event.preventDefault();
-    const clientData = {
-        nome: document.getElementById('client-nome').value,
-        telefone: document.getElementById('client-telefone').value,
-        empresa: document.getElementById('client-empresa').value,
-        email: document.getElementById('client-email').value,
-        nuit: document.getElementById('client-nuit').value,
-        endereco: document.getElementById('client-endereco').value,
-    };
-    await addClient(clientData); // Chama a função de adminApi.js
-    document.getElementById('form-add-cliente').reset();
-}
-
-/**
- * Handler para atualizar cliente.
- */
-async function handleUpdateClient(event) {
-    event.preventDefault();
-    const clientId = document.getElementById('edit-client-id').value;
-    const clientData = {
-        nome: document.getElementById('edit-client-nome').value,
-        telefone: document.getElementById('edit-client-telefone').value,
-        empresa: document.getElementById('edit-client-empresa').value,
-        email: document.getElementById('edit-client-email').value,
-        nuit: document.getElementById('edit-client-nuit').value,
-        endereco: document.getElementById('edit-client-endereco').value,
-    };
-    await updateClient(clientId, clientData); // Chama a função de adminApi.js
-}
-
-/* --- Handlers Placeholder (para evitar erros de 'not defined') --- */
-// Estas funções não farão nada, mas evitarão que o script falhe
-// Você precisará carregar os ficheiros (adminManagers.js, etc.) ou implementar a lógica
-
-function handleChangePassword(event) {
-    event.preventDefault();
-    console.warn("Handler 'handleChangePassword' não implementado.");
-    showCustomAlert("Função não implementada", "A alteração de senha ainda não foi implementada.");
-}
-
-function handleAddManager(event) {
-    event.preventDefault();
-    console.warn("Handler 'handleAddManager' não implementado. Verifique se adminManagers.js está carregado.");
-    showCustomAlert("Função não implementada", "A adição de gestores ainda não foi implementada.");
-}
-
-function handleEditManager(event) {
-    event.preventDefault();
-    console.warn("Handler 'handleEditManager' não implementado. Verifique se adminManagers.js está carregado.");
-}
-
-function handleAddExpense(event) {
-    event.preventDefault();
-    console.warn("Handler 'handleAddExpense' não implementado. Verifique se adminExpenses.js está carregado.");
-    showCustomAlert("Função não implementada", "A adição de despesas ainda não foi implementada.");
-}
-
-// Funções que faltam de outros ficheiros, mas são chamadas no HTML/JS
-// Adicionar placeholders para que não falhem
-function openChartResetModal() { console.warn('openChartResetModal não definida'); }
-function handleChartReset() { console.warn('handleChartReset não definida'); }
-function closeChartResetModal() { console.warn('closeChartResetModal não definida'); }
-function handleImageUpload() { console.warn('handleImageUpload não definida'); }
-
-// Gera o extrato para um cliente e popula o modal (usa clientController.getStatement)
-async function handleGenerateStatement(event) {
-    if (event && typeof event.preventDefault === 'function') event.preventDefault();
-
-    const clientId = document.getElementById('statement-client-id')?.value;
-    const startDate = document.getElementById('statement-start-date')?.value;
-    const endDate = document.getElementById('statement-end-date')?.value;
-
-    if (!clientId) {
-        showCustomAlert('Atenção', 'Cliente não selecionado. Abra o modal de extrato a partir da lista de clientes.');
-        return;
+// showCustomAlert / closeCustomAlert — define apenas se não existir
+if (typeof showCustomAlert !== 'function') {
+  function showCustomAlert(title, message, type = 'info') {
+    const modal = document.getElementById('custom-alert-modal');
+    const titleEl = document.getElementById('custom-alert-title');
+    const messageEl = document.getElementById('custom-alert-message');
+    if (!modal || !titleEl || !messageEl) {
+      // fallback: alert browser
+      alert(`${title}\n\n${message}`);
+      return;
     }
-    if (!startDate || !endDate) {
-        showCustomAlert('Atenção', 'Por favor selecione a data de início e fim.');
-        return;
+    titleEl.textContent = title || '';
+    messageEl.textContent = message || '';
+    modal.classList.remove('hidden');
+    modal.dataset.type = type;
+    // optionally auto-close after X seconds for non-error
+    if (type !== 'error') {
+      clearTimeout(modal._autoCloseTimer);
+      modal._autoCloseTimer = setTimeout(() => {
+        closeCustomAlert();
+      }, 4500);
     }
+  }
 
-    try {
-        const endpoint = `/api/clients/${clientId}/statement?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
-        const data = await apiRequest(endpoint, 'GET');
-        // data: { totalValue, totalOrders, ordersList }
-        if (!data) {
-            showCustomAlert('Erro', 'Resposta vazia do servidor ao gerar extrato.');
-            return;
-        }
-        populateStatementModal(data, startDate, endDate);
-    } catch (err) {
-        console.error('Erro ao gerar extrato:', err);
-        // apiRequest já chama showCustomAlert em caso de falha; apenas registro local
-    }
-}
-
-function handleDownloadPDF() { /* Implemented in adminModals.js (handleDownloadPDF) */ }
-
-// Fecha o modal de confirmação genérico
-function closeConfirmationModal() {
-    const modal = document.getElementById('confirmation-modal');
-    if (!modal) {
-        console.warn('closeConfirmationModal: modal não encontrado');
-        return;
-    }
+  function closeCustomAlert() {
+    const modal = document.getElementById('custom-alert-modal');
+    if (!modal) return;
     modal.classList.add('hidden');
+    const titleEl = document.getElementById('custom-alert-title');
+    const messageEl = document.getElementById('custom-alert-message');
+    if (titleEl) titleEl.textContent = '';
+    if (messageEl) messageEl.textContent = '';
+  }
 }
 
-// Não sobrescrever handleLogout aqui — usa a função de js/common/auth.js
+/* Funções de fechar modais genéricas — definidas somente se ainda não existirem */
+function _toggleModalById(id, show) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (show) el.classList.remove('hidden');
+  else el.classList.add('hidden');
+}
 
+if (typeof closeAssignModal !== 'function') {
+  function closeAssignModal() { _toggleModalById('assign-modal', false); }
+}
+if (typeof openAssignModal !== 'function') {
+  function openAssignModal() { _toggleModalById('assign-modal', true); }
+}
+if (typeof closeEditDriverModal !== 'function') {
+  function closeEditDriverModal() { _toggleModalById('edit-driver-modal', false); const f = document.getElementById('form-edit-motorista'); if (f) f.reset(); }
+}
+if (typeof openEditDriverModal !== 'function') {
+  function openEditDriverModal() { _toggleModalById('edit-driver-modal', true); }
+}
+if (typeof closeDriverReportModal !== 'function') {
+  function closeDriverReportModal() { _toggleModalById('driver-report-modal', false); }
+}
+if (typeof closeEditClientModal !== 'function') {
+  function closeEditClientModal() { _toggleModalById('edit-client-modal', false); const f = document.getElementById('form-edit-cliente'); if (f) f.reset(); }
+}
+if (typeof closeStatementModal !== 'function') {
+  function closeStatementModal() { _toggleModalById('statement-modal', false); }
+}
+if (typeof closeHistoryDetailModal !== 'function') {
+  function closeHistoryDetailModal() { _toggleModalById('history-detail-modal', false); }
+}
 
-/**
- * ✅ NOVA FUNÇÃO
- * Define as datas de início e fim no modal de extrato.
- * @param {string} range - 'this_week' ou 'this_month'
- */
-function setStatementDates(range) {
-    const startDateInput = document.getElementById('statement-start-date');
-    const endDateInput = document.getElementById('statement-end-date');
-    const today = new Date();
-    let startDate = new Date();
+/* ======================
+   Form toggles (Add forms)
+   ====================== */
 
-    if (range === 'this_week') {
-        const dayOfWeek = today.getDay(); // 0=Domingo, 1=Segunda...
-        // Define o início da semana como Segunda-feira (1)
-        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        startDate = new Date(today.setDate(diff));
-    } else if (range === 'this_month') {
-        startDate = new Date(today.getFullYear(), today.getMonth(), 1); // Primeiro dia do mês
+function showAddManagerForm(show) {
+  const form = document.getElementById('form-add-manager');
+  const btn = document.getElementById('btn-show-manager-form');
+  if (!form || !btn) return;
+  if (show) {
+    form.classList.remove('hidden');
+    btn.classList.add('hidden');
+  } else {
+    form.classList.add('hidden');
+    btn.classList.remove('hidden');
+    form.reset();
+  }
+}
+
+function showAddDriverForm(show) {
+  const form = document.getElementById('form-add-motorista');
+  const btn = document.getElementById('btn-show-driver-form');
+  if (!form || !btn) return;
+  if (show) {
+    form.classList.remove('hidden');
+    btn.classList.add('hidden');
+  } else {
+    form.classList.add('hidden');
+    btn.classList.remove('hidden');
+    form.reset();
+  }
+}
+
+function showAddClientForm(show) {
+  const form = document.getElementById('form-add-cliente');
+  const btn = document.getElementById('btn-show-client-form');
+  if (!form || !btn) return;
+  if (show) {
+    form.classList.remove('hidden');
+    btn.classList.add('hidden');
+  } else {
+    form.classList.add('hidden');
+    btn.classList.remove('hidden');
+    form.reset();
+  }
+}
+
+function showAddExpenseForm(show) {
+  const form = document.getElementById('form-add-expense');
+  const btn = document.getElementById('btn-show-expense-form');
+  if (!form || !btn) return;
+  if (show) {
+    form.classList.remove('hidden');
+    btn.classList.add('hidden');
+  } else {
+    form.classList.add('hidden');
+    btn.classList.remove('hidden');
+    form.reset();
+  }
+}
+
+/* ======================
+   Navegação lateral e roteamento simples das "content-pages"
+   ====================== */
+
+function _hideAllPages() {
+  const pages = document.querySelectorAll('.content-page');
+  pages.forEach(p => p.classList.add('hidden'));
+}
+
+function showPage(pageId) {
+  const pageEl = document.getElementById(pageId);
+  if (!pageEl) return;
+  // esconder todas
+  _hideAllPages();
+  // mostrar a pedida
+  pageEl.classList.remove('hidden');
+
+  // marca menu activo
+  document.querySelectorAll('.sidebar .menu-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  // tenta encontrar menu correspondente por id nav-<page>
+  const menu = document.getElementById(`nav-${pageId.split('-')[0]}`) || Array.from(document.querySelectorAll('.sidebar .menu-item')).find(m => m.textContent && m.textContent.toLowerCase().includes(pageId.split('-')[0]));
+  if (menu) menu.classList.add('active');
+
+  // atualiza título principal
+  const title = pageEl.querySelector('h3') || pageEl.querySelector('h1') || pageEl.querySelector('h2');
+  const mainTitle = document.getElementById('main-title');
+  if (mainTitle) {
+    mainTitle.textContent = title ? title.textContent : (pageId.replace('-', ' ').toUpperCase());
+  }
+
+  // Dispara loaders específicos se existirem
+  try {
+    if (pageId === 'gestao-gestores' && typeof loadManagers === 'function') loadManagers();
+    if (pageId === 'gestao-motoristas' && typeof loadDrivers === 'function') loadDrivers();
+    if (pageId === 'gestao-clientes' && typeof loadClients === 'function') loadClients();
+    if (pageId === 'gestao-custos' && typeof loadExpenses === 'function') loadExpenses();
+    if (pageId === 'visao-geral' && typeof loadOverviewStats === 'function') loadOverviewStats();
+    if (pageId === 'entregas-activas' && typeof loadActiveOrders === 'function') loadActiveOrders();
+    if (pageId === 'historico' && typeof loadHistory === 'function') loadHistory();
+  } catch (err) {
+    console.error('Erro ao disparar loaders na mudança de página:', err);
+  }
+}
+
+function _setupSidebarNav() {
+  // liga cliques nos items da sidebar que tenham id "nav-..."
+  document.querySelectorAll('.sidebar .menu-item').forEach(item => {
+    if (!item.id) return;
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      const id = item.id.replace('nav-', '');
+      // mapeamento simples: nav-visao-geral -> visao-geral, nav-gestores -> gestao-gestores etc.
+      const map = {
+        'visao-geral': 'visao-geral',
+        'entregas': 'entregas-activas',
+        'motoristas': 'gestao-motoristas',
+        'clientes': 'gestao-clientes',
+        'gestores': 'gestao-gestores',
+        'custos': 'gestao-custos',
+        'historico': 'historico',
+        'mapa': 'mapa-tempo-real',
+        'config': 'configuracoes'
+      };
+      const pageId = map[id] || id;
+      showPage(pageId);
+      // fecha menu mobile se aberto
+      const sidebar = document.querySelector('.sidebar');
+      if (sidebar && sidebar.classList.contains('open')) sidebar.classList.remove('open');
+    });
+  });
+}
+
+/* ======================
+   Utilitários (formatos)
+   ====================== */
+
+function formatCurrency(value, currency = 'MZN') {
+  if (value === null || value === undefined || isNaN(Number(value))) return '-';
+  return new Intl.NumberFormat('pt-MZ', { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(value));
+}
+
+function formatDateISO(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('pt-MZ');
+}
+
+/* ======================
+   Exportar Relatório Financeiro (Excel)
+   ====================== */
+
+async function exportFinancialReport() {
+  const start = document.getElementById('export-start-date').value;
+  const end = document.getElementById('export-end-date').value;
+
+  if (!start || !end) {
+    showCustomAlert('Erro', 'Escolha as datas de início e fim para exportar.', 'error');
+    return;
+  }
+
+  const query = `?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+  const path = (typeof API_URL === 'string' && API_URL) ? `${API_URL}/api/expenses/export${query}` : `/api/expenses/export${query}`;
+
+  try {
+    const res = await fetch(path, {
+      method: 'GET',
+      headers: {
+        ...getAuthHeaders()
+      }
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Erro ${res.status}`);
     }
 
-    startDateInput.value = toISODate(startDate);
-    endDateInput.value = toISODate(today);
+    // response is a file blob (xlsx)
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    // nome sugestão
+    const filename = `relatorio_custos_${start}_a_${end}.xlsx`;
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+    showCustomAlert('Sucesso', 'Relatório gerado. Ficheiro será transferido.', 'success');
+  } catch (err) {
+    console.error('Erro ao exportar relatório:', err);
+    showCustomAlert('Erro', err.message || 'Erro ao exportar relatório', 'error');
+  }
 }
 
-/**
- * ✅ NOVA FUNÇÃO AUXILIAR
- * Converte um objeto Date para o formato YYYY-MM-DD.
- * @param {Date} date - O objeto de data.
- * @returns {string} - A data formatada.
- */
-function toISODate(date) {
-    return date.toISOString().split('T')[0];
+/* ======================
+   Logout (fallback)
+   ====================== */
+
+if (typeof handleLogout !== 'function') {
+  function handleLogout(role) {
+    // remove token e redireciona
+    try { localStorage.removeItem('token'); } catch (e) {}
+    // optional: clear other session data
+    try { localStorage.removeItem('user'); } catch (e) {}
+    window.location.href = '/login.html';
+  }
 }
+
+/* ======================
+   Inicialização
+   ====================== */
+
+document.addEventListener('DOMContentLoaded', () => {
+  _setupSidebarNav();
+
+  // Default page: visão geral
+  showPage('visao-geral');
+
+  // Liga botões que existem no HTML para abrir forms/modals
+  const btnShowManager = document.getElementById('btn-show-manager-form');
+  if (btnShowManager) btnShowManager.addEventListener('click', () => showAddManagerForm(true));
+
+  const btnShowDriver = document.getElementById('btn-show-driver-form');
+  if (btnShowDriver) btnShowDriver.addEventListener('click', () => showAddDriverForm(true));
+
+  const btnShowClient = document.getElementById('btn-show-client-form');
+  if (btnShowClient) btnShowClient.addEventListener('click', () => showAddClientForm(true));
+
+  const btnShowExpense = document.getElementById('btn-show-expense-form');
+  if (btnShowExpense) btnShowExpense.addEventListener('click', () => showAddExpenseForm(true));
+
+  // Export button
+  const btnExport = document.querySelector('button[onclick="exportFinancialReport()"], button#btn-export-financial');
+  if (btnExport) btnExport.addEventListener('click', exportFinancialReport);
+
+  // Close custom alert button (if exists)
+  const customAlertCloseBtns = document.querySelectorAll('#custom-alert-modal .modal-close-btn, #custom-alert-modal button');
+  customAlertCloseBtns.forEach(b => b.addEventListener('click', closeCustomAlert));
+
+  // Fechar modais com clique fora (opcional, minimal)
+  document.querySelectorAll('.modal-backdrop').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        // tenta chamar um close específico, senão simplesmente esconde
+        if (modal.id === 'assign-modal' && typeof closeAssignModal === 'function') return closeAssignModal();
+        if (modal.id === 'custom-alert-modal' && typeof closeCustomAlert === 'function') return closeCustomAlert();
+        modal.classList.add('hidden');
+      }
+    });
+  });
+
+  // Confirmação de ações: habilita botão quando input corresponde
+  const confirmationInput = document.getElementById('confirmation-input');
+  const confirmBtn = document.getElementById('btn-confirm-action');
+  const confirmationLabel = document.getElementById('confirmation-input-label');
+  if (confirmationInput && confirmBtn && confirmationLabel) {
+    confirmationInput.addEventListener('input', () => {
+      const expected = confirmationLabel.dataset.expected || confirmationLabel.textContent.trim();
+      if (confirmationInput.value.trim().toUpperCase() === expected.trim().toUpperCase()) {
+        confirmBtn.disabled = false;
+      } else {
+        confirmBtn.disabled = true;
+      }
+    });
+  }
+});
