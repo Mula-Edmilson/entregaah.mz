@@ -47,21 +47,21 @@ function attachEventListeners() {
     document.getElementById('nav-historico').addEventListener('click', (e) => { e.preventDefault(); showPage('historico', 'nav-historico', 'Histórico'); });
     document.getElementById('nav-mapa').addEventListener('click', (e) => { e.preventDefault(); showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real'); });
     document.getElementById('nav-gestores').addEventListener('click', (e) => {
-  e.preventDefault();
-  showPage('gestao-gestores', 'Gestores');
-  loadManagers();
-});
+        e.preventDefault();
+        showPage('gestao-gestores', 'nav-gestores', 'Gestores');
+        loadManagers();
+    });
 
-document.getElementById('nav-custos').addEventListener('click', (e) => {
-  e.preventDefault();
-  showPage('gestao-custos', 'Custos');
-  loadExpenses();
-  loadEmployeesForExpense();
-});
+    document.getElementById('nav-custos').addEventListener('click', (e) => {
+        e.preventDefault();
+        showPage('gestao-custos', 'nav-custos', 'Custos');
+        loadExpenses();
+        loadEmployeesForExpense();
+    });
 
-document.getElementById('form-add-manager').addEventListener('submit', handleAddManager);
-document.getElementById('form-edit-manager').addEventListener('submit', handleEditManager);
-document.getElementById('form-add-expense').addEventListener('submit', handleAddExpense);
+    document.getElementById('form-add-manager').addEventListener('submit', handleAddManager);
+    document.getElementById('form-edit-manager').addEventListener('submit', handleEditManager);
+    document.getElementById('form-add-expense').addEventListener('submit', handleAddExpense);
 
     // Submenu de Formulários
     document.getElementById('nav-form-doc').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('doc'); });
@@ -87,7 +87,7 @@ document.getElementById('form-add-expense').addEventListener('submit', handleAdd
 
     // Listeners do Modal de Extrato (Statement)
     document.getElementById('btn-generate-statement').addEventListener('click', handleGenerateStatement);
-    document.getElementById('btn-download-pdf').addEventListener('click', handleDownloadPDF); // (Esta função tem de ser movida)
+    document.getElementById('btn-download-pdf').addEventListener('click', handleDownloadPDF);
     document.querySelectorAll('.btn-set-date').forEach(btn => {
         btn.addEventListener('click', () => setStatementDates(btn.dataset.range));
     });
@@ -299,4 +299,42 @@ function handleDeleteOldHistoryClick() {
         confirmText: confirmWord,
         onConfirm: handleDeleteOldHistory // (adminApi.js)
     });
+}
+
+/**
+ * ✅ NOVA FUNÇÃO: Submissão do formulário de nova entrega.
+ * @param {Event} event - O evento de submit do formulário.
+ */
+async function handleNewDelivery(event) {
+    event.preventDefault();
+
+    const form = document.getElementById('delivery-form');
+    if (!form) return;
+
+    const formData = new FormData(form);
+
+    const payload = {
+        service_type: formData.get('service_type') || 'outros',
+        client_name: formData.get('client_name'),
+        client_phone1: formData.get('client_phone1'),
+        client_phone2: formData.get('client_phone2') || null,
+        price: Number(formData.get('price') || 0),
+        address_text: formData.get('address_text'),
+        lng: Number(formData.get('lng')),
+        lat: Number(formData.get('lat')),
+        clientId: formData.get('clientId') || null,
+        autoAssign: formData.get('autoAssign') === 'true' || formData.get('autoAssign') === 'on'
+    };
+
+    try {
+        const order = await createOrder(payload); // usa createOrder de adminApi.js
+        if (order) {
+            form.reset();
+            resetDeliveryForm();
+            showCustomAlert('Sucesso', `Pedido criado com sucesso! Código: ${order.verification_code}`);
+        }
+    } catch (err) {
+        console.error('Erro ao criar pedido:', err);
+        // showCustomAlert já é chamado dentro de createOrder em caso de erro
+    }
 }
