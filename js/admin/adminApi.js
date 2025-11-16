@@ -2,8 +2,8 @@
  * Ficheiro: js/admin/adminApi.js
  *
  * ✅ CORRIGIDO:
- * - fetchStats() agora chama /api/stats/overview.
- * - Nomes de funções onclick (ex: openHistoryDetailModal) corrigidos.
+ * - populateDriversTable agora passa o 'driver.user._id' (User ID) para o modal de edição,
+ * em vez do ID de perfil, para corrigir o 404 "Motorista não encontrado".
  */
 
 /* --- Funções de Gestão de Motoristas --- */
@@ -33,6 +33,7 @@ function populateDriversTable(drivers) {
     }
 
     drivers.forEach(driver => {
+        // Assumindo que /api/drivers retorna DriverProfile[] com 'user' populado
         const row = document.createElement('tr');
         
         const nome = driver.user?.nome || 'N/A';
@@ -42,8 +43,9 @@ function populateDriversTable(drivers) {
         const statusText = translateDriverStatus(status);
         const statusClass = getStatusClass(status);
         
-        // Obter o ID do perfil do motorista ou ID do usuário como fallback
-        const driverId = driver.profile?._id || driver._id;
+        // IDs
+        const profileId = driver._id; // ID do Perfil
+        const userId = driver.user?._id; // ID do Utilizador
         const driverName = driver.user?.nome || 'Motorista';
 
         row.innerHTML = `
@@ -52,16 +54,16 @@ function populateDriversTable(drivers) {
             <td>${vehicle}</td>
             <td><span class="badge ${statusClass}">${statusText}</span></td>
             <td>
-                <button class="btn-action-small" onclick="openEditDriverModal('${driverId}')">
+                <button class="btn-action-small" onclick="openEditDriverModal('${userId}')">
                     <i class="fas fa-edit"></i> Editar
                 </button>
-                <button class="btn-action-small btn-info" onclick="openDriverReportModal('${driverId}', '${driverName}')">
+                <button class="btn-action-small btn-info" onclick="openDriverReportModal('${profileId}', '${driverName}')">
                     <i class="fas fa-chart-line"></i> Relatório
                 </button>
-                <button class="btn-action-small btn-primary" onclick="openDriverTripsModal('${driverId}')">
+                <button class="btn-action-small btn-primary" onclick="openDriverTripsModal('${profileId}')">
                     <i class="fas fa-route"></i> Ver Rotas
                 </button>
-                <button class="btn-action-small btn-danger" onclick="confirmDeleteDriver('${driverId}', '${nome}')">
+                <button class="btn-action-small btn-danger" onclick="confirmDeleteDriver('${profileId}', '${nome}')">
                     <i class="fas fa-trash"></i> Apagar
                 </button>
             </td>
@@ -104,6 +106,7 @@ async function addDriver(driverData) {
 
 async function updateDriver(driverId, driverData) {
     try {
+        // Esta rota /api/drivers/:id espera o USER ID
         const response = await apiRequest(`/api/drivers/${driverId}`, 'PUT', driverData);
         if (response && response.driver) {
             showCustomAlert('Sucesso', 'Motorista atualizado com sucesso!');
@@ -118,6 +121,7 @@ async function updateDriver(driverId, driverData) {
 
 async function deleteDriver(driverId) {
     try {
+        // Esta rota pode esperar o Profile ID ou User ID, dependendo do backend
         const response = await apiRequest(`/api/drivers/${driverId}`, 'DELETE');
         if (response && response.message) {
             showCustomAlert('Sucesso', 'Motorista apagado com sucesso!');
@@ -405,7 +409,7 @@ async function createOrder(orderData) {
 
 async function assignOrder(orderId, driverId) {
     try {
-        const response = await apiRequest(`/api/orders/${orderId}/assign`, 'POST', { driverId });
+        const response = await apiRequest(`/api/orders/${orderId}/assign`, 'PUT', { driverId });
         if (response && response.order) {
             showCustomAlert('Sucesso', 'Pedido atribuído com sucesso!');
             fetchActiveOrders();
@@ -498,7 +502,6 @@ function calculateDuration(start, end) {
 
 async function fetchStats() {
     try {
-        // CORRIGIDO: Rota mudada de /api/stats para /api/stats/overview
         const response = await apiRequest('/api/stats/overview', 'GET');
         
         if (response) {
@@ -515,10 +518,6 @@ function updateStatsCards(stats) {
     document.getElementById('stats-concluidas-hoje').textContent = stats.concluidasHoje || 0;
     document.getElementById('stats-motoristas-online').textContent = stats.motoristasOnline || 0;
     
-    // Assumindo que a rota /overview não traz dados financeiros.
-    // Estes podem vir de outra chamada, ex: /api/stats/financials
-    // Se 'fetchStats' era para trazer tudo, o backend (statsController) precisa ser unido.
-    // Por agora, vamos evitar que falhe:
     const statsReceitaTotal = document.getElementById('stats-receita-total');
     if (statsReceitaTotal) {
         statsReceitaTotal.textContent = `${(stats.receitaTotal || 0).toFixed(2)} MT`;
