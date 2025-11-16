@@ -2,8 +2,8 @@
  * Ficheiro: js/admin/adminApi.js
  *
  * ✅ CORRIGIDO:
- * - populateDriversTable agora passa o 'driver.user._id' (User ID) para o modal de edição,
- * em vez do ID de perfil, para corrigir o 404 "Motorista não encontrado".
+ * - populateDriversTable agora passa 'driver.user' (a string de ID)
+ * em vez de 'driver.user._id' para o modal de edição.
  */
 
 /* --- Funções de Gestão de Motoristas --- */
@@ -33,11 +33,16 @@ function populateDriversTable(drivers) {
     }
 
     drivers.forEach(driver => {
-        // Assumindo que /api/drivers retorna DriverProfile[] com 'user' populado
+        // 'driver' é um DriverProfile
         const row = document.createElement('tr');
         
-        const nome = driver.user?.nome || 'N/A';
-        const telefone = driver.user?.telefone || 'N/A';
+        // 'driver.user' é o ID do utilizador. O nome/telefone não estão aqui.
+        // O seu backend /api/drivers (driverController.getAllDrivers)
+        // precisa de popular o 'user' para que nome e telefone apareçam.
+        // Ex: DriverProfile.find().populate('user', 'nome telefone')
+        const nome = driver.user?.nome || 'Carregando...'; // Se 'user' não for 'populado'
+        const telefone = driver.user?.telefone || '...'; // Se 'user' não for 'populado'
+        
         const vehicle = driver.vehicle_plate || 'N/A';
         const status = driver.status || 'offline';
         const statusText = translateDriverStatus(status);
@@ -45,8 +50,9 @@ function populateDriversTable(drivers) {
         
         // IDs
         const profileId = driver._id; // ID do Perfil
-        const userId = driver.user?._id; // ID do Utilizador
-        const driverName = driver.user?.nome || 'Motorista';
+        // ✅ CORREÇÃO AQUI: driver.user é a string de ID, não um objeto
+        const userId = driver.user; 
+        const driverName = driver.user?.nome || 'Motorista'; // Isto também pode falhar
 
         row.innerHTML = `
             <td>${nome}</td>
@@ -106,7 +112,6 @@ async function addDriver(driverData) {
 
 async function updateDriver(driverId, driverData) {
     try {
-        // Esta rota /api/drivers/:id espera o USER ID
         const response = await apiRequest(`/api/drivers/${driverId}`, 'PUT', driverData);
         if (response && response.driver) {
             showCustomAlert('Sucesso', 'Motorista atualizado com sucesso!');
@@ -121,7 +126,6 @@ async function updateDriver(driverId, driverData) {
 
 async function deleteDriver(driverId) {
     try {
-        // Esta rota pode esperar o Profile ID ou User ID, dependendo do backend
         const response = await apiRequest(`/api/drivers/${driverId}`, 'DELETE');
         if (response && response.message) {
             showCustomAlert('Sucesso', 'Motorista apagado com sucesso!');
