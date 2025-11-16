@@ -3,7 +3,7 @@
  *
  * (Dependência #5) - Precisa de 'api.js', 'auth.js', 'socket.io'
  *
- * ✅ CORRIGIDO: Adicionado prefixo /api às chamadas de apiRequest.
+ * ✅ CORRIGIDO: Rotas alinhadas com o adminRoutes.js (ex: /api/admin/drivers/locations).
  */
 
 // --- Variáveis de Estado para os Mapas ---
@@ -30,26 +30,22 @@ let pauseIcon = null;
 
 /**
  * Inicializa os ícones customizados para o mapa em tempo real.
- * Esta função é chamada uma vez quando a página de admin é carregada.
  */
 function initializeMapIcons() {
     const iconShadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
     
-    // Ícone para motorista 'online_livre'
     freeIcon = L.icon({
         iconUrl: 'https://i.postimg.cc/MK8ty3PJ/car-pin-point.png',
         shadowUrl: iconShadowUrl,
         iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
     });
     
-    // Ícone para motorista 'online_ocupado'
     busyIcon = L.icon({
         iconUrl: 'https://i.postimg.cc/J0bJ0fJj/marker-busy.png',
         shadowUrl: iconShadowUrl,
         iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
     });
 
-    // ✅ NOVO: Ícones para estados específicos de rota
     collectingIcon = L.icon({
         iconUrl: 'https://i.postimg.cc/9fZLJy3L/marker-collecting.png', // azul
         shadowUrl: iconShadowUrl,
@@ -77,12 +73,10 @@ function initializeMapIcons() {
 
 /**
  * Inicializa o mapa do formulário de "Nova Entrega".
- * É chamado pela função showServiceForm() em 'admin.js'.
  */
 function initializeFormMap() {
     const maputoCoords = [-25.965, 32.589];
     
-    // Destrói qualquer mapa anterior para evitar duplicação
     if (map) {
         destroyFormMap();
     }
@@ -93,19 +87,16 @@ function initializeFormMap() {
             attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
         
-        // Marcador arrastável
         mapMarker = L.marker(maputoCoords, {
             draggable: true
         }).addTo(map);
         
-        // Atualiza os inputs hidden quando o marcador é arrastado
         mapMarker.on('dragend', (event) => {
             const position = event.target.getLatLng();
             document.getElementById('delivery-lng').value = position.lng;
             document.getElementById('delivery-lat').value = position.lat;
         });
         
-        // Define os valores iniciais dos inputs
         document.getElementById('delivery-lng').value = maputoCoords[1];
         document.getElementById('delivery-lat').value = maputoCoords[0];
         
@@ -117,7 +108,6 @@ function initializeFormMap() {
 
 /**
  * Destrói a instância do mapa do formulário.
- * É chamado pela função showPage() sempre que se sai do formulário.
  */
 function destroyFormMap() {
     if (map) {
@@ -130,10 +120,9 @@ function destroyFormMap() {
 
 /**
  * Inicializa o mapa em tempo real.
- * É chamado pela função showPage() quando se entra na página do mapa.
  */
 function initializeLiveMap() {
-    if (liveMap) return; // Não inicializa se já estiver ativo
+    if (liveMap) return; 
 
     try {
         const maputoCoords = [-25.965, 32.589];
@@ -144,11 +133,9 @@ function initializeLiveMap() {
         
         console.log('Mapa em tempo real inicializado.');
 
-        // ✅ NOVO: Inicia polling via API REST
         fetchDriversLocations();
         liveMapPollingInterval = setInterval(fetchDriversLocations, LIVE_MAP_REFRESH_MS);
 
-        // Pede ao socket (em admin.js) que solicite as localizações atuais (mantém compatibilidade)
         if (socket && typeof socket.emit === 'function') {
             socket.emit('admin_request_all_locations'); 
             console.log('A pedir ao servidor as localizações ativas via Socket.IO...');
@@ -162,10 +149,8 @@ function initializeLiveMap() {
 
 /**
  * Destrói a instância do mapa em tempo real.
- * É chamado pela função showPage() sempre que se sai da página do mapa.
  */
 function destroyLiveMap() {
-    // ✅ NOVO: Para o polling
     if (liveMapPollingInterval) {
         clearInterval(liveMapPollingInterval);
         liveMapPollingInterval = null;
@@ -174,22 +159,21 @@ function destroyLiveMap() {
     if (liveMap) {
         liveMap.remove();
         liveMap = null;
-        driverMarkers = {}; // Limpa o registo de marcadores
+        driverMarkers = {}; 
         console.log('Mapa em tempo real destruído.');
     }
 }
 
-/* --- ✅ NOVO: Funções de Integração com API REST --- */
+/* --- Funções de Integração com API REST --- */
 
 /**
  * Busca localizações de todos os motoristas via API REST.
- * Atualiza os marcadores no mapa.
  */
 async function fetchDriversLocations() {
-    if (!liveMap) return; // Não faz nada se o mapa não estiver visível
+    if (!liveMap) return; 
 
     try {
-        // CORRIGIDO: Adicionado /api
+        // CORRIGIDO: Esta rota ESTÁ em /api/admin/
         const response = await apiRequest('/api/admin/drivers/locations', 'GET');
         
         if (response && response.drivers) {
@@ -202,14 +186,13 @@ async function fetchDriversLocations() {
 
 /**
  * Atualiza marcadores no mapa com base nos dados da API.
- * @param {Array} drivers - Array de motoristas com currentLocation.
  */
 function updateDriverMarkersFromAPI(drivers) {
     const seenIds = new Set();
 
     drivers.forEach(driver => {
         if (!driver.currentLocation || driver.currentLocation.lat == null || driver.currentLocation.lng == null) {
-            return; // Sem localização válida
+            return;
         }
 
         const driverId = driver._id;
@@ -223,7 +206,6 @@ function updateDriverMarkersFromAPI(drivers) {
 
         const newLatLng = [lat, lng];
         
-        // ✅ NOVO: Popup mais rico com info de viagem
         let popupContent = `
             <div style="min-width: 200px;">
                 <strong>${driverName}</strong><br/>
@@ -235,7 +217,6 @@ function updateDriverMarkersFromAPI(drivers) {
                 <small>Atualizado: ${lastUpdated ? new Date(lastUpdated).toLocaleString('pt-PT') : '-'}</small>
         `;
 
-        // Se tiver viagem ativa, adiciona botão para ver detalhes
         if (driver.currentTrip && driver.currentTrip._id) {
             const tripType = driver.currentTrip.type || 'desconhecido';
             const orderInfo = driver.currentTrip.order?.client_name || '';
@@ -258,19 +239,16 @@ function updateDriverMarkersFromAPI(drivers) {
         const iconToUse = getIconForStatus(status);
 
         if (driverMarkers[driverId]) {
-            // Atualiza marcador existente
             driverMarkers[driverId].setLatLng(newLatLng);
             driverMarkers[driverId].setPopupContent(popupContent);
             driverMarkers[driverId].setIcon(iconToUse);
         } else {
-            // Cria novo marcador
             driverMarkers[driverId] = L.marker(newLatLng, { icon: iconToUse }).addTo(liveMap);
             driverMarkers[driverId].bindPopup(popupContent);
             console.log(`Adicionado marcador para ${driverName}`);
         }
     });
 
-    // Remove marcadores de motoristas que não vieram na resposta (offline)
     Object.keys(driverMarkers).forEach(driverId => {
         if (!seenIds.has(driverId)) {
             liveMap.removeLayer(driverMarkers[driverId]);
@@ -281,7 +259,7 @@ function updateDriverMarkersFromAPI(drivers) {
 }
 
 /**
- * ✅ NOVO: Retorna o ícone apropriado com base no status do motorista.
+ * Retorna o ícone apropriado com base no status do motorista.
  */
 function getIconForStatus(status) {
     switch (status) {
@@ -305,7 +283,7 @@ function getIconForStatus(status) {
 }
 
 /**
- * ✅ NOVO: Traduz status do motorista para português.
+ * Traduz status do motorista para português.
  */
 function translateStatus(status) {
     const translations = {
@@ -323,7 +301,7 @@ function translateStatus(status) {
 }
 
 /**
- * ✅ NOVO: Traduz tipo de viagem para português.
+ * Traduz tipo de viagem para português.
  */
 function translateTripType(type) {
     const translations = {
@@ -337,12 +315,11 @@ function translateTripType(type) {
 }
 
 /**
- * ✅ NOVO: Abre modal com detalhes completos de uma viagem (replay de rota).
- * @param {string} tripId - ID da viagem.
+ * Abre modal com detalhes completos de uma viagem (replay de rota).
  */
 async function openTripDetails(tripId) {
     try {
-        // CORRIGIDO: Adicionado /api
+        // CORRIGIDO: Esta rota ESTÁ em /api/admin/
         const response = await apiRequest(`/api/admin/trips/${tripId}`, 'GET');
         
         if (response && response.trip) {
@@ -357,19 +334,13 @@ async function openTripDetails(tripId) {
 }
 
 /**
- * ✅ NOVO: Exibe modal com detalhes da viagem e mapa de replay.
- * @param {object} trip - Dados completos da viagem.
+ * Exibe modal com detalhes da viagem e mapa de replay.
  */
 function showTripModal(trip) {
-    // Esta função assume que existe um modal no seu index (1).html com id="tripDetailsModal"
-    // e dentro dele um <div id="trip-details-body"></div>.
-    // O seu index (1).html não parece ter este modal, o que pode causar um erro aqui.
-    
+    // Verifique se o seu index (1).html tem um modal com id="tripDetailsModal"
     const modalBody = document.getElementById('trip-details-body');
     if (!modalBody) {
-        console.error('Elemento #trip-details-body não encontrado no DOM. Verifique o index (1).html');
-        // Tenta usar o modal de histórico como alternativa
-        openHistoryDetail(trip.order?._id || trip._id);
+        console.error('Elemento #trip-details-body não encontrado no DOM.');
         return;
     }
 
@@ -413,12 +384,10 @@ function showTripModal(trip) {
         </div>
     `;
 
-    // Inicializar mapa de replay após um pequeno delay (para garantir que o modal está visível)
     setTimeout(() => {
         initializeTripReplayMap(trip);
     }, 300);
 
-    // Abrir modal (assumindo Bootstrap 5)
     const modalElement = document.getElementById('tripDetailsModal');
     if (modalElement) {
         const modal = new bootstrap.Modal(modalElement);
@@ -429,14 +398,12 @@ function showTripModal(trip) {
 }
 
 /**
- * ✅ NOVO: Inicializa mapa de replay da rota dentro do modal.
- * @param {object} trip - Dados da viagem com array de positions.
+ * Inicializa mapa de replay da rota dentro do modal.
  */
 function initializeTripReplayMap(trip) {
     const mapElement = document.getElementById('trip-replay-map');
     if (!mapElement) return;
 
-    // Remove mapa anterior se existir
     if (mapElement._leaflet_id) {
         mapElement._leaflet_id = null;
         mapElement.innerHTML = '';
@@ -451,14 +418,12 @@ function initializeTripReplayMap(trip) {
     if (trip.positions && trip.positions.length > 0) {
         const latlngs = trip.positions.map(p => [p.lat, p.lng]);
         
-        // Desenha polyline da rota
         const polyline = L.polyline(latlngs, { 
             color: '#007bff', 
             weight: 4,
             opacity: 0.7
         }).addTo(tripMap);
 
-        // Marcador de início (verde)
         const startPos = trip.positions[0];
         L.marker([startPos.lat, startPos.lng], {
             icon: L.icon({
@@ -470,7 +435,6 @@ function initializeTripReplayMap(trip) {
             })
         }).addTo(tripMap).bindPopup('Início');
 
-        // Marcador de fim (vermelho)
         const endPos = trip.positions[trip.positions.length - 1];
         L.marker([endPos.lat, endPos.lng], {
             icon: L.icon({
@@ -482,34 +446,30 @@ function initializeTripReplayMap(trip) {
             })
         }).addTo(tripMap).bindPopup('Fim');
 
-        // Ajusta zoom para mostrar toda a rota
         tripMap.fitBounds(polyline.getBounds(), { padding: [20, 20] });
     } else {
         mapElement.innerHTML = '<p style="text-align: center; padding: 2rem;">Sem dados de rota disponíveis.</p>';
     }
 }
 
-/* --- Funções de Atualização do Mapa em Tempo Real (Chamadas pelo Socket) --- */
+/* --- Funções de Atualização do Mapa em Tempo Real (Socket) --- */
 
 /**
  * Atualiza ou cria o marcador de um motorista no mapa em tempo real.
- * @param {object} data - Dados do motorista (driverId, driverName, status, lat, lng).
  */
 function updateDriverMarker(data) {
     const { driverId, driverName, status, lat, lng } = data;
-    if (!liveMap) return; // Não faz nada se o mapa não estiver visível
+    if (!liveMap) return; 
 
     const newLatLng = [lat, lng];
     const popupContent = `<strong>${driverName}</strong><br>Status: ${translateStatus(status)}`;
     const iconToUse = getIconForStatus(status);
 
     if (driverMarkers[driverId]) {
-        // Se o marcador já existe, atualiza a posição, ícone e popup
         driverMarkers[driverId].setLatLng(newLatLng);
         driverMarkers[driverId].setPopupContent(popupContent);
         driverMarkers[driverId].setIcon(iconToUse);
     } else {
-        // Se é um novo motorista, cria o marcador
         driverMarkers[driverId] = L.marker(newLatLng, { icon: iconToUse }).addTo(liveMap);
         driverMarkers[driverId].bindPopup(popupContent).openPopup();
         console.log(`Adicionando novo marcador para ${driverName}`);
@@ -518,15 +478,14 @@ function updateDriverMarker(data) {
 
 /**
  * Remove o marcador de um motorista que se desconectou.
- * @param {object} data - Dados do motorista (driverId, driverName).
  */
 function removeDriverMarker(data) {
     const { driverId } = data;
     if (!liveMap) return;
 
     if (driverMarkers[driverId]) {
-        liveMap.removeLayer(driverMarkers[driverId]); // Remove do mapa
-        delete driverMarkers[driverId]; // Remove do nosso registo
+        liveMap.removeLayer(driverMarkers[driverId]); 
+        delete driverMarkers[driverId]; 
         console.log(`Removido marcador para ${data.driverName} (desconectado)`);
     }
 }
