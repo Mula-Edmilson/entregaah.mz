@@ -179,8 +179,11 @@ function updateDriverMarkersFromAPI(drivers) {
             driverMarkers[driverId].setPopupContent(popupContent);
             driverMarkers[driverId].setIcon(iconToUse);
         } else {
-            driverMarkers[driverId] = L.marker(newLatLng, { icon: iconToUse }).addTo(liveMap);
-            driverMarkers[driverId].bindPopup(popupContent);
+            // Adiciona verificação extra
+            if (liveMap) {
+                driverMarkers[driverId] = L.marker(newLatLng, { icon: iconToUse }).addTo(liveMap);
+                driverMarkers[driverId].bindPopup(popupContent);
+            }
         }
     });
 
@@ -257,7 +260,7 @@ function showTripModal(trip) {
     const driverName = trip.driver?.user?.nome || 'Desconhecido';
     const orderInfo = trip.order ? `
         <p><strong>Cliente:</strong> ${trip.order.client_name || '-'}</p>
-        <p><strong>Serviço:</strong> ${trip.order.service_type || '-'}</p>
+        <p><strong>Serviço:</strong> ${SERVICE_NAMES[trip.order.service_type] || '-'}</p>
         <p><strong>Preço:</strong> ${trip.order.price || 0} MT</p>
     ` : '<p><em>Sem pedido associado</em></p>';
 
@@ -350,8 +353,11 @@ function updateDriverMarker(data) {
         driverMarkers[driverId].setPopupContent(popupContent);
         driverMarkers[driverId].setIcon(iconToUse);
     } else {
-        driverMarkers[driverId] = L.marker(newLatLng, { icon: iconToUse }).addTo(liveMap);
-        driverMarkers[driverId].bindPopup(popupContent).openPopup();
+        // Adiciona verificação extra
+        if (liveMap) {
+            driverMarkers[driverId] = L.marker(newLatLng, { icon: iconToUse }).addTo(liveMap);
+            driverMarkers[driverId].bindPopup(popupContent).openPopup();
+        }
     }
 }
 
