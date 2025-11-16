@@ -4,7 +4,7 @@
  * (Dependência #6) - Precisa de 'api.js', 'auth.js', 'adminMap.js'
  *
  * Contém todas as funções de interação com a API do backend para o painel admin.
- * ✅ NOVO: Funções para histórico de rotas dos motoristas.
+ * ✅ CORRIGIDO: Adicionado prefixo /api a todas as rotas.
  */
 
 /* --- Funções de Gestão de Motoristas --- */
@@ -14,7 +14,8 @@
  */
 async function fetchDrivers() {
     try {
-        const response = await apiRequest('/admin/drivers', 'GET');
+        // CORRIGIDO: /admin/drivers -> /api/admin/drivers
+        const response = await apiRequest('/api/admin/drivers', 'GET');
         
         if (response && response.drivers) {
             populateDriversTable(response.drivers);
@@ -108,7 +109,8 @@ function getStatusClass(status) {
  */
 async function addDriver(driverData) {
     try {
-        const response = await apiRequest('/admin/drivers', 'POST', driverData);
+        // CORRIGIDO: /admin/drivers -> /api/admin/drivers
+        const response = await apiRequest('/api/admin/drivers', 'POST', driverData);
         
         if (response && response.driver) {
             showCustomAlert('Sucesso', 'Motorista adicionado com sucesso!');
@@ -126,7 +128,8 @@ async function addDriver(driverData) {
  */
 async function updateDriver(driverId, driverData) {
     try {
-        const response = await apiRequest(`/admin/drivers/${driverId}`, 'PUT', driverData);
+        // CORRIGIDO: /admin/drivers -> /api/admin/drivers
+        const response = await apiRequest(`/api/admin/drivers/${driverId}`, 'PUT', driverData);
         
         if (response && response.driver) {
             showCustomAlert('Sucesso', 'Motorista atualizado com sucesso!');
@@ -144,7 +147,8 @@ async function updateDriver(driverId, driverData) {
  */
 async function deleteDriver(driverId) {
     try {
-        const response = await apiRequest(`/admin/drivers/${driverId}`, 'DELETE');
+        // CORRIGIDO: /admin/drivers -> /api/admin/drivers
+        const response = await apiRequest(`/api/admin/drivers/${driverId}`, 'DELETE');
         
         if (response && response.message) {
             showCustomAlert('Sucesso', 'Motorista apagado com sucesso!');
@@ -164,7 +168,8 @@ async function deleteDriver(driverId) {
  */
 async function openDriverTripsModal(driverId) {
     try {
-        const response = await apiRequest(`/admin/drivers/${driverId}/trips`, 'GET');
+        // CORRIGIDO: /admin/drivers -> /api/admin/drivers
+        const response = await apiRequest(`/api/admin/drivers/${driverId}/trips`, 'GET');
         
         if (response && response.trips) {
             showDriverTripsModal(response.trips, response.driverName || 'Motorista');
@@ -291,7 +296,8 @@ function openTripDetailsOnMap(tripId) {
 
 async function fetchClients() {
     try {
-        const response = await apiRequest('/admin/clients', 'GET');
+        // CORRIGIDO: /admin/clients -> /api/admin/clients
+        const response = await apiRequest('/api/admin/clients', 'GET');
         
         if (response && response.clients) {
             populateClientsTable(response.clients);
@@ -357,7 +363,8 @@ function populateClientDropdown(clients) {
 
 async function addClient(clientData) {
     try {
-        const response = await apiRequest('/admin/clients', 'POST', clientData);
+        // CORRIGIDO: /admin/clients -> /api/admin/clients
+        const response = await apiRequest('/api/admin/clients', 'POST', clientData);
         
         if (response && response.client) {
             showCustomAlert('Sucesso', 'Cliente adicionado com sucesso!');
@@ -372,7 +379,8 @@ async function addClient(clientData) {
 
 async function updateClient(clientId, clientData) {
     try {
-        const response = await apiRequest(`/admin/clients/${clientId}`, 'PUT', clientData);
+        // CORRIGIDO: /admin/clients -> /api/admin/clients
+        const response = await apiRequest(`/api/admin/clients/${clientId}`, 'PUT', clientData);
         
         if (response && response.client) {
             showCustomAlert('Sucesso', 'Cliente atualizado com sucesso!');
@@ -387,7 +395,8 @@ async function updateClient(clientId, clientData) {
 
 async function deleteClient(clientId) {
     try {
-        const response = await apiRequest(`/admin/clients/${clientId}`, 'DELETE');
+        // CORRIGIDO: /admin/clients -> /api/admin/clients
+        const response = await apiRequest(`/api/admin/clients/${clientId}`, 'DELETE');
         
         if (response && response.message) {
             showCustomAlert('Sucesso', 'Cliente apagado com sucesso!');
@@ -403,7 +412,8 @@ async function deleteClient(clientId) {
 
 async function fetchActiveOrders() {
     try {
-        const response = await apiRequest('/admin/orders/active', 'GET');
+        // CORRIGIDO: /admin/orders -> /api/admin/orders
+        const response = await apiRequest('/api/admin/orders/active', 'GET');
         
         if (response && response.orders) {
             populateActiveOrdersTable(response.orders);
@@ -455,10 +465,11 @@ function populateActiveOrdersTable(orders) {
 
 async function createOrder(orderData) {
     try {
-        const response = await apiRequest('/admin/orders', 'POST', orderData);
+        // CORRIGIDO: /admin/orders -> /api/admin/orders
+        const response = await apiRequest('/api/admin/orders', 'POST', orderData);
         
         if (response && response.order) {
-            showCustomAlert('Sucesso', `Pedido criado com sucesso! Código: ${response.order.verification_code}`);
+            // Removido o showCustomAlert daqui para ser tratado no admin.js
             fetchActiveOrders();
             fetchStats();
             return response.order;
@@ -472,7 +483,8 @@ async function createOrder(orderData) {
 
 async function assignOrder(orderId, driverId) {
     try {
-        const response = await apiRequest(`/admin/orders/${orderId}/assign`, 'POST', { driverId });
+        // CORRIGIDO: /admin/orders -> /api/admin/orders
+        const response = await apiRequest(`/api/admin/orders/${orderId}/assign`, 'POST', { driverId });
         
         if (response && response.order) {
             showCustomAlert('Sucesso', 'Pedido atribuído com sucesso!');
@@ -487,7 +499,8 @@ async function assignOrder(orderId, driverId) {
 
 async function cancelOrder(orderId) {
     try {
-        const response = await apiRequest(`/admin/orders/${orderId}/cancel`, 'POST');
+        // CORRIGIDO: /admin/orders -> /api/admin/orders
+        const response = await apiRequest(`/api/admin/orders/${orderId}/cancel`, 'POST');
         
         if (response && response.order) {
             showCustomAlert('Sucesso', 'Pedido cancelado com sucesso!');
@@ -504,7 +517,8 @@ async function cancelOrder(orderId) {
 
 async function fetchOrderHistory(searchTerm = '') {
     try {
-        const url = searchTerm ? `/admin/orders/history?search=${encodeURIComponent(searchTerm)}` : '/admin/orders/history';
+        // CORRIGIDO: /admin/orders -> /api/admin/orders
+        const url = searchTerm ? `/api/admin/orders/history?search=${encodeURIComponent(searchTerm)}` : '/api/admin/orders/history';
         const response = await apiRequest(url, 'GET');
         
         if (response && response.orders) {
@@ -568,7 +582,8 @@ function calculateDuration(start, end) {
 
 async function fetchStats() {
     try {
-        const response = await apiRequest('/admin/stats', 'GET');
+        // CORRIGIDO: /admin/stats -> /api/admin/stats
+        const response = await apiRequest('/api/admin/stats', 'GET');
         
         if (response) {
             updateStatsCards(response);
