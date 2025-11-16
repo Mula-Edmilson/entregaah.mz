@@ -60,7 +60,7 @@ function populateDriversTable(drivers) {
             <td>${vehicle}</td>
             <td><span class="badge ${statusClass}">${statusText}</span></td>
             <td>
-                <button class="btn-action-small" onclick="openEditDriverModal('${userId}')">
+                <button class="btn-action-small" onclick="safeOpenEditDriverModal('${profileId}')">
                     <i class="fas fa-edit"></i> Editar
                 </button>
                 <button class="btn-action-small btn-info" onclick="openDriverReportModal('${profileId}', '${driverName}')">
