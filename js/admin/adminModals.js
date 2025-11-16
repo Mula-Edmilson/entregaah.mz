@@ -375,3 +375,16 @@ function handleDownloadPDF() {
         showCustomAlert('Erro', 'Não foi possível gerar o PDF. Tente novamente.', 'error');
     }
 }
+
+/**
+ * Função segura para abrir o modal de edição de motorista.
+ * @param {string} driverId - O ID do motorista.
+ */
+function safeOpenEditDriverModal(driverId) {
+    if (!driverId) {
+        console.error('ID do motorista inválido ou indefinido');
+        showCustomAlert('Erro', 'ID do motorista inválido.');
+        return;
+    }
+    openEditDriverModal(driverId);
+}
