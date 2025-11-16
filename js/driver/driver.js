@@ -1,7 +1,13 @@
 /*
  * Ficheiro: js/driver/driver.js
- * (CORREÇÃO 7: Link do Google Maps - http://googleusercontent.com/maps)
+ * ✅ NOVO: Integração com sistema de rastreamento de rotas (Trip)
  */
+
+/* --- ✅ NOVO: Variáveis de Estado para Rastreamento --- */
+let currentTripId = null; // ID da viagem ativa
+let positionTrackingInterval = null; // Intervalo de envio de posição
+const POSITION_INTERVAL_MS = 20000; // 20 segundos
+let watchPositionId = null; // ID do watchPosition do navegador
 
 /* --- PONTO DE ENTRADA (Entry Point) --- */
 document.addEventListener('DOMContentLoaded', () => {
@@ -9,6 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
     connectDriverSocket();
     startLocationTracking();
     attachDriverEventListeners();
+    
+    // ✅ NOVO: Carrega viagem atual (se houver)
+    loadCurrentTrip();
     
     // Carrega a página inicial
     showDriverPage('lista-entregas');
@@ -244,13 +253,7 @@ function fillDetalheEntrega(order) {
     if (order.address_coords && order.address_coords.lat) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
-        
-        // --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
-        // O domínio correto é 'http://googleusercontent.com'
-        // O formato correto é '/maps?q=LAT,LNG'
         mapButton.href = `https://www.google.com/maps?q=${order.address_coords.lat},${order.address_coords.lng}`;
-        // --- FIM DA CORREÇÃO ---
-        
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
@@ -268,7 +271,7 @@ function fillDetalheEntrega(order) {
     } else {
         btnIniciar.classList.remove('hidden');
         formFinalizacao.classList.add('hidden');
-        btnIniciar.onclick = () => handleStartDelivery(order._id);
+        btnIniciar.onclick = () => handleStartDelivery(order._id, order);
     }
 }
 function showListaEntregas() {
@@ -316,18 +319,23 @@ async function handleChangePasswordDriver(e) {
     }
 }
 
-async function handleStartDelivery(orderId) {
+async function handleStartDelivery(orderId, order) {
     const button = document.getElementById('btn-iniciar-entrega');
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A iniciar...';
 
     try {
+        // 1. Inicia a entrega no backend (marca order como em_progresso)
         const response = await fetch(`${API_URL}/api/orders/${orderId}/start`, {
             method: 'POST',
             headers: getAuthHeaders()
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
+
+        // ✅ NOVO: 2. Inicia uma Trip de tipo 'entrega'
+        await startTrip('entrega', orderId, order);
+
         showCustomAlert('Sucesso', 'Entrega Iniciada!', 'success');
         
         button.classList.add('hidden');
@@ -359,6 +367,7 @@ async function handleCompleteDelivery(event, orderId) {
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A finalizar...';
 
     try {
+        // 1. Finaliza a entrega no backend
         const response = await fetch(`${API_URL}/api/orders/${orderId}/complete`, {
             method: 'POST',
             headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
@@ -366,6 +375,10 @@ async function handleCompleteDelivery(event, orderId) {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
+
+        // ✅ NOVO: 2. Finaliza a Trip
+        await endTrip('Entrega concluída com sucesso');
+
         showCustomAlert('Sucesso', 'Entrega Finalizada com sucesso!', 'success');
         showListaEntregas();
     } catch (error) {
@@ -373,5 +386,238 @@ async function handleCompleteDelivery(event, orderId) {
         showCustomAlert('Erro', error.message, 'error');
         submitButton.disabled = false;
         submitButton.innerHTML = '<i class="fas fa-check-circle"></i> Finalizar Entrega';
+    }
+}
+
+/* --- ✅ NOVO: Funções de Rastreamento de Rotas (Trip) --- */
+
+/**
+ * Carrega a viagem atual do motorista (se houver).
+ * Chamado ao carregar a página.
+ */
+async function loadCurrentTrip() {
+    try {
+        const response = await fetch(`${API_URL}/api/drivers/trips/current`, {
+            method: 'GET',
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            console.warn('Erro ao carregar viagem atual');
+            return;
+        }
+
+        const data = await response.json();
+        
+        if (data.trip && data.trip._id) {
+            currentTripId = data.trip._id;
+            console.log('Viagem ativa encontrada:', currentTripId);
+            
+            // Inicia envio de posição
+            startPositionTracking();
+        } else {
+            console.log('Nenhuma viagem ativa');
+            currentTripId = null;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar viagem atual:', error);
+    }
+}
+
+/**
+ * Inicia uma nova viagem (Trip).
+ * @param {string} type - Tipo de viagem ('coleta', 'entrega', 'retorno_central', 'pausa', 'outro')
+ * @param {string} orderId - ID do pedido (opcional)
+ * @param {object} order - Dados do pedido (opcional, para pegar coordenadas)
+ */
+async function startTrip(type, orderId = null, order = null) {
+    try {
+        const body = { type };
+        
+        if (orderId) {
+            body.orderId = orderId;
+        }
+
+        // Se tiver coordenadas do pedido, adiciona como destino
+        if (order && order.address_coords) {
+            body.destination = {
+                lat: order.address_coords.lat,
+                lng: order.address_coords.lng,
+                address: order.address_text || ''
+            };
+        }
+
+        const response = await fetch(`${API_URL}/api/drivers/trips/start`, {
+            method: 'POST',
+            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro ao iniciar viagem');
+        }
+
+        currentTripId = data.trip._id;
+        console.log('Viagem iniciada:', currentTripId);
+
+        // Inicia envio periódico de posição
+        startPositionTracking();
+
+    } catch (error) {
+        console.error('Erro ao iniciar viagem:', error);
+        // Não bloqueia a entrega se falhar o Trip
+    }
+}
+
+/**
+ * Finaliza a viagem atual.
+ * @param {string} notes - Notas opcionais sobre a viagem
+ */
+async function endTrip(notes = '') {
+    if (!currentTripId) {
+        console.warn('Nenhuma viagem ativa para finalizar');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/api/drivers/trips/end`, {
+            method: 'POST',
+            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes })
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro ao finalizar viagem');
+        }
+
+        console.log('Viagem finalizada:', currentTripId);
+        currentTripId = null;
+
+        // Para o envio de posição
+        stopPositionTracking();
+
+    } catch (error) {
+        console.error('Erro ao finalizar viagem:', error);
+        // Não bloqueia a finalização da entrega se falhar o Trip
+    }
+}
+
+/**
+ * Inicia o rastreamento periódico de posição GPS.
+ */
+function startPositionTracking() {
+    if (positionTrackingInterval) {
+        console.log('Rastreamento de posição já está ativo');
+        return;
+    }
+
+    console.log('Iniciando rastreamento de posição GPS...');
+
+    // Envia posição imediatamente
+    sendCurrentPosition();
+
+    // Configura intervalo para enviar posição periodicamente
+    positionTrackingInterval = setInterval(() => {
+        sendCurrentPosition();
+    }, POSITION_INTERVAL_MS);
+
+    // ✅ OPCIONAL: Usa watchPosition para atualizações mais frequentes
+    if (navigator.geolocation) {
+        watchPositionId = navigator.geolocation.watchPosition(
+            (position) => {
+                // Atualiza posição em tempo real (mais preciso que setInterval)
+                sendPosition(
+                    position.coords.latitude,
+                    position.coords.longitude,
+                    position.coords.speed ? position.coords.speed * 3.6 : 0, // m/s para km/h
+                    position.coords.heading || 0,
+                    position.coords.accuracy || 0
+                );
+            },
+            (error) => {
+                console.warn('Erro ao obter posição GPS:', error.message);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    }
+}
+
+/**
+ * Para o rastreamento de posição GPS.
+ */
+function stopPositionTracking() {
+    if (positionTrackingInterval) {
+        clearInterval(positionTrackingInterval);
+        positionTrackingInterval = null;
+        console.log('Rastreamento de posição parado');
+    }
+
+    if (watchPositionId !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchPositionId);
+        watchPositionId = null;
+    }
+}
+
+/**
+ * Obtém posição atual e envia para o backend.
+ */
+function sendCurrentPosition() {
+    if (!navigator.geolocation) {
+        console.warn('Geolocalização não suportada pelo navegador');
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const speed = position.coords.speed ? position.coords.speed * 3.6 : 0; // m/s para km/h
+            const heading = position.coords.heading || 0;
+            const accuracy = position.coords.accuracy || 0;
+
+            sendPosition(lat, lng, speed, heading, accuracy);
+        },
+        (error) => {
+            console.warn('Erro ao obter posição GPS:', error.message);
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 30000
+        }
+    );
+}
+
+/**
+ * Envia posição GPS para o backend.
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @param {number} speed - Velocidade em km/h
+ * @param {number} heading - Direção (0-360°)
+ * @param {number} accuracy - Precisão em metros
+ */
+async function sendPosition(lat, lng, speed, heading, accuracy) {
+    try {
+        const response = await fetch(`${API_URL}/api/drivers/trips/position`, {
+            method: 'POST',
+            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat, lng, speed, heading, accuracy })
+        });
+
+        if (!response.ok) {
+            console.warn('Erro ao enviar posição');
+        } else {
+            console.log(`Posição enviada: ${lat.toFixed(5)}, ${lng.toFixed(5)} | ${speed.toFixed(1)} km/h`);
+        }
+    } catch (error) {
+        console.error('Erro ao enviar posição:', error);
     }
 }
