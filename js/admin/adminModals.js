@@ -2,38 +2,9 @@
  * Ficheiro: js/admin/adminModals.js
  *
  * ✅ CORRIGIDO:
- * - Todas as funções de 'fetch' foram substituídas por 'apiRequest'.
- * - Funções de callback (ex: confirmAssign) corrigidas para usar as funções de adminApi.js (ex: assignOrder).
- * - Adicionada a função 'confirmCancelOrder' que faltava.
+ * - Removidas as declarações duplicadas (SERVICE_NAMES, formatDuration)
+ * que causavam o SyntaxError, pois elas já existem em ui.js.
  */
-
-// Definições de fallback (caso ui.js não as defina)
-const SERVICE_NAMES = {
-    'doc': 'Tramitação de Documentos',
-    'farma': 'Produtos Farmacêuticos',
-    'carga': 'Transporte de Cargas',
-    'rapido': 'Delivery Rápido',
-    'outros': 'Outros Serviços'
-};
-
-function formatDuration(start, end) {
-    if (!start || !end) return '-';
-    const diff = new Date(end) - new Date(start);
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) return `${hours}h ${mins}min`;
-    return `${mins}min`;
-}
-
-function formatTotalDuration(ms) {
-    if (!ms || ms === 0) return '0 min';
-    const minutes = Math.floor(ms / 60000);
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) return `${hours}h ${mins}min`;
-    return `${mins}min`;
-}
 
 /**
  * Abre o modal genérico de confirmação (para ações destrutivas).
@@ -73,7 +44,6 @@ function openConfirmationModal({ title, message, confirmText, onConfirm }) {
 }
 
 /**
- * ✅ NOVA FUNÇÃO (Faltava)
  * Abre um modal de confirmação para cancelar um pedido.
  * @param {string} orderId - O ID da encomenda.
  */
@@ -83,7 +53,6 @@ function confirmCancelOrder(orderId) {
         message: `Tem a certeza de que deseja cancelar o pedido #${orderId.slice(-6)}? Esta ação não pode ser revertida.`,
         confirmText: "CANCELAR",
         onConfirm: () => {
-            // Chama a função 'cancelOrder' que existe em adminApi.js
             if (typeof cancelOrder === 'function') {
                 cancelOrder(orderId);
             } else {
@@ -107,7 +76,6 @@ async function openAssignModal(orderId) {
     select.innerHTML = '<option value="">A carregar...</option>';
     
     try {
-        // CORRIGIDO: Usa apiRequest e a rota /api/drivers/available
         const data = await apiRequest('/api/drivers/available', 'GET');
         const drivers = data.drivers || [];
         
@@ -118,7 +86,6 @@ async function openAssignModal(orderId) {
         
         select.innerHTML = '<option value="">-- Selecione um motorista --</option>';
         drivers.forEach(driver => {
-            // O backend parece retornar o perfil aninhado ou não
             const profile = driver.profile || driver;
             const user = driver.user || driver;
             const driverName = user.nome || 'Sem nome';
@@ -128,7 +95,6 @@ async function openAssignModal(orderId) {
             select.innerHTML += `<option value="${profileId}">${driverName} (${plate})</option>`; 
         });
         
-        // CORRIGIDO: Chama assignOrder (de adminApi.js) em vez de confirmAssign
         document.getElementById('btn-confirm-assign').onclick = async () => {
             const driverId = select.value;
             if (!driverId) { 
@@ -141,7 +107,7 @@ async function openAssignModal(orderId) {
     } catch (error) { 
         console.error('Falha ao carregar motoristas disponíveis:', error); 
         select.innerHTML = '<option value="">Erro ao carregar</option>'; 
-        if (error.message.includes('401')) handleLogout('admin'); // Trata erro de auth
+        if (error.message.includes('401')) handleLogout('admin');
     }
 }
 
@@ -154,20 +120,16 @@ async function openEditDriverModal(driverId) {
     modal.classList.remove('hidden');
     document.getElementById('edit-driver-id').value = driverId;
     
-    // Limpa o formulário enquanto carrega
     document.getElementById('form-edit-motorista').reset();
     document.getElementById('edit-driver-name').value = 'A carregar...';
     document.getElementById('edit-driver-phone').value = 'A carregar...';
     
     try {
-        // CORRIGIDO: Usa apiRequest. Assume-se que /api/drivers/:id retorna um *perfil*
-        // Nota: O seu backend pode precisar de uma rota para buscar um *perfil* por ID
         const data = await apiRequest(`/api/drivers/${driverId}`, 'GET');
         
         const driver = data.driver || data.profile; // Ajuste conforme a resposta da API
         const user = driver.user || driver;
         
-        // Preenche o formulário
         document.getElementById('edit-driver-name').value = user.nome;
         document.getElementById('edit-driver-phone').value = user.telefone;
         document.getElementById('edit-driver-plate').value = driver.vehicle_plate || '';
@@ -194,7 +156,6 @@ async function openHistoryDetailModal(orderId) {
     body.innerHTML = '<p>A carregar detalhes...</p>';
     
     try {
-        // CORRIGIDO: Usa apiRequest
         const data = await apiRequest(`/api/orders/${orderId}`, 'GET');
         
         const order = data.order;
@@ -206,6 +167,7 @@ async function openHistoryDetailModal(orderId) {
             coordsHtml = `<p><strong>Pin do Mapa:</strong> ${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}</p>`;
         }
         
+        // Assume que SERVICE_NAMES e formatDuration existem (ex: em ui.js)
         body.innerHTML = `
             <p><strong>Cliente:</strong> ${order.client_name}</p>
             <p><strong>Telefone:</strong> ${order.client_phone1}</p>
@@ -245,7 +207,6 @@ async function openDriverReportModal(driverId, driverName) {
     tableBody.innerHTML = '<tr><td colspan="5">A carregar relatório...</td></tr>';
     
     try {
-        // CORRIGIDO: Usa apiRequest. Assume-se que a rota /api/drivers/:id/report existe
         const data = await apiRequest(`/api/drivers/${driverId}/report`, 'GET');
         
         const orders = data.orders;
@@ -256,6 +217,7 @@ async function openDriverReportModal(driverId, driverName) {
             }
         });
         
+        // Assume que formatTotalDuration e SERVICE_NAMES existem (ex: em ui.js)
         document.getElementById('report-total-entregas').innerText = orders.length;
         document.getElementById('report-total-duracao').innerText = formatTotalDuration(totalMs);
         
@@ -297,7 +259,6 @@ async function openEditClientModal(clientId) {
     document.getElementById('edit-client-telefone').value = 'A carregar...';
 
     try {
-        // CORRIGIDO: Usa apiRequest
         const data = await apiRequest(`/api/clients/${clientId}`, 'GET');
         
         const client = data.client;
