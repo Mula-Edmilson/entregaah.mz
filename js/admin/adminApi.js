@@ -236,6 +236,134 @@ async function loadClientsIntoDropdown() {
     }
 }
 
+/**
+ * Traduz o tipo de viagem para português
+ */
+function translateTripType(type) {
+  const types = {
+    'coleta': 'Coleta',
+    'entrega': 'Entrega',
+    'retorno_central': 'Retorno à Base',
+    'pausa': 'Pausa',
+    'outro': 'Outro'
+  };
+  return types[type] || type || '-';
+}
+
+/**
+ * Traduz o status da viagem
+ */
+function translateTripStatus(status) {
+  const statuses = {
+    'em_andamento': 'Em Andamento',
+    'concluida': 'Concluída',
+    'cancelada': 'Cancelada'
+  };
+  return statuses[status] || status || '-';
+}
+
+/**
+ * Abre modal com histórico de rotas do motorista
+ */
+async function openDriverTripsModal(driverId, driverName) {
+  const modalTitle = document.getElementById('driver-trips-modal-title');
+  const modalBody = document.getElementById('driver-trips-modal-body');
+
+  modalTitle.innerText = `Rotas de ${driverName}`;
+  modalBody.innerHTML = '<p class="text-center"><i class="fas fa-spinner fa-spin"></i> A carregar rotas...</p>';
+
+  // Abrir o modal
+  const modalElement = document.getElementById('driverTripsModal');
+  const modal = new bootstrap.Modal(modalElement);
+  modal.show();
+
+  try {
+    const response = await fetch(`${API_URL}/api/admin/drivers/${driverId}/trips`, {
+      headers: getAuthHeaders()
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Erro ao carregar histórico de rotas.');
+    }
+
+    if (!data.trips || data.trips.length === 0) {
+      modalBody.innerHTML = '<p class="text-center">Este motorista ainda não tem rotas registadas.</p>';
+      return;
+    }
+
+    // Montar tabela de rotas
+    const rows = data.trips.map(trip => {
+      const distanciaKm = ((trip.metrics?.distance || 0) / 1000).toFixed(2);
+      const duracaoMin = ((trip.metrics?.duration || 0) / 60).toFixed(1);
+      const tipo = translateTripType(trip.type);
+      const status = translateTripStatus(trip.status);
+      const inicio = trip.startedAt ? new Date(trip.startedAt).toLocaleString('pt-PT') : '-';
+      const fim = trip.finishedAt ? new Date(trip.finishedAt).toLocaleString('pt-PT') : 'Em andamento';
+      const cliente = trip.order?.client_name || '-';
+      const velocidadeMedia = (trip.metrics?.avgSpeed || 0).toFixed(1);
+
+      return `
+        <tr>
+          <td><span class="badge bg-primary">${tipo}</span></td>
+          <td><span class="badge bg-${trip.status === 'concluida' ? 'success' : trip.status === 'em_andamento' ? 'warning' : 'danger'}">${status}</span></td>
+          <td>${inicio}</td>
+          <td>${fim}</td>
+          <td>${distanciaKm} km</td>
+          <td>${duracaoMin} min</td>
+          <td>${velocidadeMedia} km/h</td>
+          <td>${cliente}</td>
+          <td>
+            <button class="btn btn-sm btn-info" onclick="openTripDetailsOnMap('${trip._id}')" title="Ver no Mapa">
+              <i class="fas fa-map-marked-alt"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    modalBody.innerHTML = `
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Status</th>
+              <th>Início</th>
+              <th>Fim</th>
+              <th>Distância</th>
+              <th>Duração</th>
+              <th>Vel. Média</th>
+              <th>Cliente</th>
+              <th>Mapa</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+  } catch (error) {
+    console.error('Erro ao carregar rotas do motorista:', error);
+    modalBody.innerHTML = `<p class="text-center text-danger">Erro ao carregar rotas: ${error.message}</p>`;
+  }
+}
+
+/**
+ * Abre detalhes da viagem no mapa (reutiliza a função do adminMap.js se existir)
+ */
+async function openTripDetailsOnMap(tripId) {
+  // Se já tens a função openTripDetails no adminMap.js, chama ela
+  if (typeof openTripDetails === 'function') {
+    openTripDetails(tripId);
+  } else {
+    alert('Funcionalidade de mapa em desenvolvimento');
+  }
+}
+
 
 /* --- Lógica de API (POST/PUT/DELETE) --- */
 
