@@ -90,6 +90,15 @@ router.get(
   admin,
   adminController.getAllDriversLocation
 );
+// Importar o controller de trips
+const {
+  getDriverTripsHistory,
+  getTripDetails
+} = require('../controllers/adminTripController');
+
+// Rotas para histórico de viagens
+router.get('/drivers/:driverId/trips', adminAuth, getDriverTripsHistory);
+router.get('/trips/:tripId', adminAuth, getTripDetails);
 
 // Histórico de viagens (todos os motoristas, com filtros)
 router.get(
@@ -187,3 +196,4 @@ router.delete(
 );
 
 module.exports = router;
+
