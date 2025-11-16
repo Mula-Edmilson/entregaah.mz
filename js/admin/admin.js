@@ -500,11 +500,53 @@ function openChartResetModal() { console.warn('openChartResetModal não definida
 function handleChartReset() { console.warn('handleChartReset não definida'); }
 function closeChartResetModal() { console.warn('closeChartResetModal não definida'); }
 function handleImageUpload() { console.warn('handleImageUpload não definida'); }
-function handleGenerateStatement() { console.warn('handleGenerateStatement não definida'); }
-function handleDownloadPDF() { console.warn('handleDownloadPDF não definida'); }
-function setStatementDates() { console.warn('setStatementDates não definida'); }
-function closeConfirmationModal() { console.warn('closeConfirmationModal não definida'); }
-function handleLogout() { console.warn('handleLogout não definida'); }
+
+// Gera o extrato para um cliente e popula o modal (usa clientController.getStatement)
+async function handleGenerateStatement(event) {
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+
+    const clientId = document.getElementById('statement-client-id')?.value;
+    const startDate = document.getElementById('statement-start-date')?.value;
+    const endDate = document.getElementById('statement-end-date')?.value;
+
+    if (!clientId) {
+        showCustomAlert('Atenção', 'Cliente não selecionado. Abra o modal de extrato a partir da lista de clientes.');
+        return;
+    }
+    if (!startDate || !endDate) {
+        showCustomAlert('Atenção', 'Por favor selecione a data de início e fim.');
+        return;
+    }
+
+    try {
+        const endpoint = `/api/clients/${clientId}/statement?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+        const data = await apiRequest(endpoint, 'GET');
+        // data: { totalValue, totalOrders, ordersList }
+        if (!data) {
+            showCustomAlert('Erro', 'Resposta vazia do servidor ao gerar extrato.');
+            return;
+        }
+        populateStatementModal(data, startDate, endDate);
+    } catch (err) {
+        console.error('Erro ao gerar extrato:', err);
+        // apiRequest já chama showCustomAlert em caso de falha; apenas registro local
+    }
+}
+
+function handleDownloadPDF() { /* Implemented in adminModals.js (handleDownloadPDF) */ }
+
+// Fecha o modal de confirmação genérico
+function closeConfirmationModal() {
+    const modal = document.getElementById('confirmation-modal');
+    if (!modal) {
+        console.warn('closeConfirmationModal: modal não encontrado');
+        return;
+    }
+    modal.classList.add('hidden');
+}
+
+// Não sobrescrever handleLogout aqui — usa a função de js/common/auth.js
+
 
 /**
  * ✅ NOVA FUNÇÃO
