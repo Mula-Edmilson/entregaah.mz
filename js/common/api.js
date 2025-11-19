@@ -6,71 +6,95 @@
  * principal 'apiRequest' para comunicação com o backend.
  */
 
-const API_URL = 'https://entregaah-mz.onrender.com';
+/**
+ * Detecta automaticamente se estamos em ambiente local (dev)
+ * ou em produção (Render, domínio real, etc.) e escolhe a API adequada.
+ */
+(function () {
+    const hostname = window.location.hostname;
+
+    // Consideramos "local" quando:
+    // - estás a abrir o ficheiro pelo VS Code / ficheiro (file://)
+    // - ou estás em localhost / 127.0.0.1
+    const isLocalhost =
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '' || // caso de file://
+        hostname === '0.0.0.0';
+
+    // ⚙️ Ajusta aqui a porta se o teu backend local estiver noutra porta
+    const LOCAL_API = 'http://localhost:3000';
+    const PROD_API = 'https://entregaah-mz.onrender.com';
+
+    // Expor globalmente
+    window.API_URL = isLocalhost ? LOCAL_API : PROD_API;
+
+    console.log('[API] Usando base URL:', window.API_URL);
+})();
 
 /**
- * ✅ FUNÇÃO QUE FALTAVA
+ * ✅ FUNÇÃO REUTILIZÁVEL PARA FAZER PEDIDOS À API
  *
- * Função reutilizável para fazer pedidos à API.
- * Trata da autenticação, envio de dados e resposta.
- *
- * @param {string} endpoint - O caminho da API (ex: '/admin/stats')
- * @param {string} method - O método HTTP (ex: 'GET', 'POST', 'PUT')
- * @param {Object} [body=null] - O corpo do pedido para POST/PUT
- * @returns {Promise<Object>} - Os dados da resposta (JSON)
+ * @param {string} endpoint - ex: '/api/stats/overview'
+ * @param {object} options  - { method, headers, body }
+ * @returns {Promise<any>}  - JSON da resposta
  */
-async function apiRequest(endpoint, method, body = null) {
-    
-    // Assegura que getAuthToken() existe (de auth.js)
-    if (typeof getAuthToken !== 'function') {
-        console.error("Função getAuthToken() não encontrada. 'auth.js' foi carregado?");
-        throw new Error('Erro de autenticação.');
-    }
-    
-    const token = getAuthToken();
-    const headers = {
-        'Content-Type': 'application/json',
+async function apiRequest(endpoint, options = {}) {
+    const url = `${window.API_URL}${endpoint}`;
+
+    const defaultHeaders = {
+        'Accept': 'application/json'
     };
 
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const config = {
-        method: method,
-        headers: headers,
+    const finalOptions = {
+        method: options.method || 'GET',
+        headers: {
+            ...defaultHeaders,
+            ...(options.headers || {})
+        },
+        body: options.body || null,
+        credentials: 'include' // para cookies de sessão/JWT via cookie
     };
-
-    if (body && (method === 'POST' || method === 'PUT')) {
-        config.body = JSON.stringify(body);
-    }
 
     try {
-        const response = await fetch(API_URL + endpoint, config);
+        const response = await fetch(url, finalOptions);
 
-        // Trata respostas que não são JSON (ex: 204 No Content)
+        if (!response.ok) {
+            // tentar ler JSON de erro
+            let errorData = null;
+            try {
+                errorData = await response.json();
+            } catch (_) {
+                // ignore
+            }
+
+            const message =
+                errorData?.message ||
+                `Erro na API (${response.status} ${response.statusText})`;
+
+            console.error(`Erro na API [${finalOptions.method} ${endpoint}]:`, message);
+
+            if (typeof showCustomAlert === 'function') {
+                showCustomAlert('Erro de Comunicação', message);
+            }
+
+            throw new Error(message);
+        }
+
+        // Se não tiver conteúdo (204, etc.)
         if (response.status === 204) {
-            return { message: 'Operação bem-sucedida.' };
+            return null;
         }
 
         const data = await response.json();
-
-        if (!response.ok) {
-            // Se a API retornar um erro (ex: 400, 401, 404), usa a mensagem dela
-            throw new Error(data.message || `Erro ${response.status}: ${response.statusText}`);
-        }
-
-        return data; // Retorna o JSON de sucesso
-
+        return data;
     } catch (err) {
-        console.error(`Erro na API [${method} ${endpoint}]:`, err.message);
-        
-        // Assegura que showCustomAlert() existe (de ui.js ou adminModals.js)
+        console.error(`Erro na API [${finalOptions.method} ${endpoint}]:`, err.message);
+
         if (typeof showCustomAlert === 'function') {
             showCustomAlert('Erro de Comunicação', err.message || 'Não foi possível ligar ao servidor.');
         }
-        
-        // Re-lança o erro para que a função que chamou (ex: fetchStats) saiba que falhou
+
         throw err;
     }
 }
