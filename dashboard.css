@@ -391,4 +391,48 @@
     .form-group input, .form-group select {
         padding: 0.85rem;
     }
+
+}
+
+/* Layout da área de custos na Visão Geral */
+.costs-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.costs-form-card h3,
+.costs-list-card h3 {
+    margin-bottom: 0.75rem;
+}
+
+.costs-form-card .form-group {
+    margin-bottom: 0.75rem;
+}
+
+#costs-latest-table-body td {
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+#costs-latest-table-body td:nth-child(3) {
+    white-space: normal;
+}
+
+/* Garante altura mínima nos novos gráficos de custos */
+#costsByCategoryContainer,
+#revenueVsCostsContainer {
+    min-height: 260px;
+}
+
+#costsByCategoryContainer canvas,
+#revenueVsCostsContainer canvas {
+    max-height: 260px;
+}
+
+@media (max-width: 992px) {
+    .costs-layout {
+        grid-template-columns: 1fr;
+    }
 }
