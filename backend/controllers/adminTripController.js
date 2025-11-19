@@ -16,29 +16,42 @@ exports.getDriverTripsHistory = async (req, res) => {
       return res.status(404).json({ message: 'Motorista não encontrado' });
     }
 
-    const query = { driver: driverId };
+    const filter = { driver: driverProfile._id };
 
-    // Filtro por data (opcional)
+    // Filtro opcional por data de início/fim (usando createdAt da Trip)
     if (startDate || endDate) {
-      query.startedAt = {};
-      if (startDate) query.startedAt.$gte = new Date(startDate);
-      if (endDate) query.startedAt.$lte = new Date(endDate);
+      filter.createdAt = {};
+      if (startDate) {
+        filter.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        filter.createdAt.$lte = new Date(endDate);
+      }
     }
 
-    const trips = await Trip.find(query)
-      .sort({ startedAt: -1 })
-      .populate({ path: 'order', select: 'client_name service_type price' })
+    const trips = await Trip.find(filter)
+      .populate({
+        path: 'driver',
+        populate: { path: 'user', select: 'nome telefone email' }
+      })
+      .populate({
+        path: 'order',
+        // ✅ CAMPOS QUE EXISTEM MESMO NO Order.js
+        select:
+          'client_name client_phone1 client_phone2 service_type price address_text address_coords image_url status'
+      })
+      .sort({ createdAt: -1 })
       .lean();
 
     res.json({ trips });
   } catch (error) {
-    console.error('Erro ao buscar histórico de viagens:', error);
-    res.status(500).json({ message: 'Erro ao buscar histórico de viagens' });
+    console.error('Erro ao listar histórico de viagens do motorista:', error);
+    res.status(500).json({ message: 'Erro ao listar histórico de viagens do motorista' });
   }
 };
 
 /**
- * Detalhes completos de uma viagem (incluindo todas as posições GPS)
+ * Detalhes de uma viagem específica
  * GET /api/admin/trips/:tripId
  */
 exports.getTripDetails = async (req, res) => {
@@ -50,7 +63,12 @@ exports.getTripDetails = async (req, res) => {
         path: 'driver',
         populate: { path: 'user', select: 'nome telefone email' }
       })
-      .populate({ path: 'order', select: 'client_name service_type price pickup_address delivery_address' });
+      .populate({
+        path: 'order',
+        // ✅ Mesma correção aqui
+        select:
+          'client_name client_phone1 client_phone2 service_type price address_text address_coords image_url status'
+      });
 
     if (!trip) {
       return res.status(404).json({ message: 'Viagem não encontrada' });
