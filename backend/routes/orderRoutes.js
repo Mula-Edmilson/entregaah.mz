@@ -97,16 +97,4 @@ router.get(
   orderController.getOrderById
 );
 
-/* * ✅ ROTA ADICIONADA
- * Esta rota estava em falta e causava o erro 404
- */
-router.post(
-  '/:id/cancel',
-  protect,
-  admin,
-  [param('id', 'ID da encomenda inválido').isMongoId()],
-  validateRequest,
-  orderController.cancelOrder // Assumindo que a função se chama 'cancelOrder' no seu orderController
-);
-
 module.exports = router;

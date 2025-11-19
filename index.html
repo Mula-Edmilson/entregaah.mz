@@ -6,23 +6,24 @@
     <title>Dashboard - Entregaah Mz</title>
     <link rel="icon" href="https://i.postimg.cc/4xkWBYss/ISOTIPO.png" type="image/png">
     
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
     
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    
-    <link rel="stylesheet" href="global.css">
-    <link rel="stylesheet" href="dashboard.css">
+     <link rel="stylesheet" href="global.css">
+     <link rel="stylesheet" href="dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.socket.io/4.7.0/socket.io.min.js"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-</head>
+    </head>
 <body class="dashboard-body">
 
     <nav class="sidebar">
@@ -42,8 +43,6 @@
             <li class="menu-item" id="nav-entregas"><a href="#"><i class="fas fa-tasks"></i> Entregas Activas</a></li>
             <li class="menu-item" id="nav-motoristas"><a href="#"><i class="fas fa-motorcycle"></i> Motoristas</a></li>
             <li class="menu-item" id="nav-clientes"><a href="#"><i class="fas fa-users"></i> Clientes</a></li>
-            <li class="menu-item" id="nav-gestores"><a href="#"><i class="fas fa-user-tie"></i> Gestores</a></li>
-            <li class="menu-item" id="nav-custos"><a href="#"><i class="fas fa-coins"></i> Custos</a></li>
             <li class="menu-item" id="nav-historico"><a href="#"><i class="fas fa-history"></i> Histórico</a></li>
             <li class="menu-item" id="nav-mapa"><a href="#"><i class="fas fa-map-marked-alt"></i> Mapa em Tempo Real</a></li>
             <li class="menu-item" id="nav-config"><a href="#"><i class="fas fa-cog"></i> Configurações</a></li>
@@ -317,374 +316,257 @@
                     <button class="btn-danger" disabled style="margin-top: 1rem;"><i class="fas fa-users-slash"></i> Apagar Clientes Inativos (brevemente)</button>
                 </div>
             </div>
-
-            <!-- GESTÃO DE GESTORES -->
-            <div id="gestao-gestores" class="content-page hidden">
-                <button class="btn-submit" onclick="showAddManagerForm(true)" id="btn-show-manager-form">
-                    <i class="fas fa-plus"></i> Adicionar Novo Gestor
-                </button>
-                <form id="form-add-manager" class="hidden">
-                    <h3>Dados do Novo Gestor</h3>
-                    <div class="form-row">
-                        <div class="form-group"><label for="manager-name">Nome Completo</label><input type="text" id="manager-name" required></div>
-                        <div class="form-group"><label for="manager-phone">Telefone</label><input type="tel" id="manager-phone" required></div>
+            
+            </div> 
+        <div id="assign-modal" class="modal-backdrop hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Atribuir Encomenda <span id="modal-order-id"></span></h3>
+                        <button class="modal-close-btn" onclick="closeAssignModal()">×</button>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group"><label for="manager-email">Email (para login)</label><input type="email" id="manager-email" required></div>
-                        <div class="form-group"><label for="manager-password">Senha</label><input type="password" id="manager-password" required minlength="6"></div>
+                    <div class="modal-body">
+                        <p>Selecione um motorista disponível:</p>
+                        <select id="driver-select-dropdown"><option value="">A carregar...</option></select>
                     </div>
-                    <button type="submit" class="btn-submit">Salvar Gestor</button>
-                    <button type="button" class="btn-cancel" onclick="showAddManagerForm(false)">Cancelar</button>
-                </form>
-                <h3>Gestores Registados</h3>
-                <div class="table-container-responsive">
-                    <table class="table-motoristas">
-                        <thead><tr><th>Nome</th><th>Telefone</th><th>Email</th><th>Acções</th></tr></thead>
-                        <tbody id="managers-table-body"></tbody>
-                    </table>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-submit" id="btn-confirm-assign">Confirmar</button>
+                        <button type="button" class="btn-cancel" onclick="closeAssignModal()">Cancelar</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- GESTÃO DE CUSTOS -->
-            <div id="gestao-custos" class="content-page hidden">
-                <button class="btn-submit" onclick="showAddExpenseForm(true)" id="btn-show-expense-form">
-                    <i class="fas fa-plus"></i> Registar Novo Custo
-                </button>
-                <form id="form-add-expense" class="hidden">
-                    <h3>Dados do Custo</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="expense-category">Categoria</label>
-                            <select id="expense-category" required>
-                                <option value="">-- Selecione a categoria --</option>
-                                <option value="salarios">Salários</option>
-                                <option value="renda">Renda</option>
-                                <option value="diversos">Diversos</option>
-                                <option value="manutencao">Manutenção</option>
-                                <option value="comunicacao">Comunicação</option>
-                                <option value="marketing">Marketing</option>
-                                <option value="combustivel">Combustível</option>
-                            </select>
+            <div id="edit-driver-modal" class="modal-backdrop hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Editar Motorista</h3>
+                        <button class="modal-close-btn" onclick="closeEditDriverModal()">×</button>
+                    </div>
+                    <form id="form-edit-motorista">
+                        <div class="modal-body">
+                            <input type="hidden" id="edit-driver-id">
+                            <div class="form-group"><label for="edit-driver-name">Nome Completo</label><input type="text" id="edit-driver-name" required></div>
+                            <div class="form-group"><label for="edit-driver-phone">Telefone</label><input type="tel" id="edit-driver-phone" required></div>
+                            <div class="form-group"><label for="edit-driver-plate">Viatura (Placa)</label><input type="text" id="edit-driver-plate"></div>
+                            <div class="form-group">
+                                <label for="edit-driver-commission">Comissão (%)</label>
+                                <input type="number" id="edit-driver-commission" value="20" min="0" max="100" step="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-driver-status">Estado</label>
+                                <select id="edit-driver-status" required>
+                                    <option value="online_livre">Online (Livre)</option>
+                                    <option value="online_ocupado">Online (Ocupado)</option>
+                                    <option value="offline">Offline</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="form-group"><label for="expense-amount">Valor (MZN)</label><input type="number" id="expense-amount" step="0.01" min="0" required></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label for="expense-date">Data</label><input type="date" id="expense-date" required></div>
-                        <div class="form-group"><label for="expense-employee">Funcionário (Opcional)</label><select id="expense-employee"></select></div>
-                    </div>
-                    <div class="form-group"><label for="expense-description">Descrição</label><textarea id="expense-description" rows="3" required></textarea></div>
-                    <button type="submit" class="btn-submit">Salvar Custo</button>
-                    <button type="button" class="btn-cancel" onclick="showAddExpenseForm(false)">Cancelar</button>
-                </form>
-                <h3>Custos Registados</h3>
-                <div class="table-container-responsive">
-                    <table class="table-motoristas">
-                        <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Funcionário</th><th>Valor</th><th>Acções</th></tr></thead>
-                        <tbody id="expenses-table-body"></tbody>
-                    </table>
+                        <div class="modal-actions">
+                            <button type="submit" class="btn-submit">Salvar Alterações</button>
+                            <button type="button" class="btn-cancel" onclick="closeEditDriverModal()">Cancelar</button>
+                        </div>
+                    </form>
                 </div>
-                
-                <h3 style="margin-top: 3rem;">Exportar Relatório Financeiro (Excel)</h3>
-                <div class="form-row">
-                    <div class="form-group"><label for="export-start-date">De:</label><input type="date" id="export-start-date"></div>
-                    <div class="form-group"><label for="export-end-date">Até:</label><input type="date" id="export-end-date"></div>
-                </div>
-                <button type="button" class="btn-submit" onclick="exportFinancialReport()">
-                    <i class="fas fa-file-excel"></i> Exportar Relatório
-                </button>
             </div>
             
-        </div>
-
-        <!-- MODAIS -->
-        <div id="assign-modal" class="modal-backdrop hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Atribuir Encomenda <span id="modal-order-id"></span></h3>
-                    <button class="modal-close-btn" onclick="closeAssignModal()">×</button>
-                </div>
-                <div class="modal-body">
-                    <p>Selecione um motorista disponível:</p>
-                    <select id="driver-select-dropdown"><option value="">A carregar...</option></select>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-submit" id="btn-confirm-assign">Confirmar</button>
-                    <button type="button" class="btn-cancel" onclick="closeAssignModal()">Cancelar</button>
+            <div id="history-detail-modal" class="modal-backdrop hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Detalhes da Encomenda <span id="history-modal-id"></span></h3>
+                        <button class="modal-close-btn" onclick="closeHistoryDetailModal()">×</button>
+                    </div>
+                    <div class="modal-body" id="history-modal-body">
+                        <p>A carregar detalhes...</p>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeHistoryDetailModal()">Fechar</button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div id="edit-driver-modal" class="modal-backdrop hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Editar Motorista</h3>
-                    <button class="modal-close-btn" onclick="closeEditDriverModal()">×</button>
-                </div>
-                <form id="form-edit-motorista">
+            <div id="chart-reset-modal" class="modal-backdrop hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Resetar Estatísticas</h3>
+                        <button class="modal-close-btn" id="btn-close-chart-reset">×</button>
+                    </div>
                     <div class="modal-body">
-                        <input type="hidden" id="edit-driver-id">
-                        <div class="form-group"><label for="edit-driver-name">Nome Completo</label><input type="text" id="edit-driver-name" required></div>
-                        <div class="form-group"><label for="edit-driver-phone">Telefone</label><input type="tel" id="edit-driver-phone" required></div>
-                        <div class="form-group"><label for="edit-driver-plate">Viatura (Placa)</label><input type="text" id="edit-driver-plate"></div>
+                        <p>Esta ação é irreversível. Digite a senha de reset para confirmar:</p>
                         <div class="form-group">
-                            <label for="edit-driver-commission">Comissão (%)</label>
-                            <input type="number" id="edit-driver-commission" value="20" min="0" max="100" step="1">
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-driver-status">Estado</label>
-                            <select id="edit-driver-status" required>
-                                <option value="online_livre">Online (Livre)</option>
-                                <option value="online_ocupado">Online (Ocupado)</option>
-                                <option value="offline">Offline</option>
-                            </select>
+                            <label for="chart-reset-password">Senha</label>
+                            <input type="password" id="chart-reset-password" placeholder="Entregaah.wipe">
                         </div>
                     </div>
                     <div class="modal-actions">
-                        <button type="submit" class="btn-submit">Salvar Alterações</button>
-                        <button type="button" class="btn-cancel" onclick="closeEditDriverModal()">Cancelar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <div id="history-detail-modal" class="modal-backdrop hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Detalhes da Encomenda <span id="history-modal-id"></span></h3>
-                    <button class="modal-close-btn" onclick="closeHistoryDetailModal()">×</button>
-                </div>
-                <div class="modal-body" id="history-modal-body">
-                    <p>A carregar detalhes...</p>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-cancel" onclick="closeHistoryDetailModal()">Fechar</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="chart-reset-modal" class="modal-backdrop hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Resetar Estatísticas</h3>
-                    <button class="modal-close-btn" id="btn-close-chart-reset">×</button>
-                </div>
-                <div class="modal-body">
-                    <p>Esta ação é irreversível. Digite a senha de reset para confirmar:</p>
-                    <div class="form-group">
-                        <label for="chart-reset-password">Senha</label>
-                        <input type="password" id="chart-reset-password" placeholder="Entregaah.wipe">
+                        <button type="button" class="btn-submit btn-danger" id="btn-confirm-chart-reset">Confirmar Reset</button>
+                        <button type="button" class="btn-cancel" id="btn-cancel-chart-reset">Cancelar</button>
                     </div>
                 </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-submit btn-danger" id="btn-confirm-chart-reset">Confirmar Reset</button>
-                    <button type="button" class="btn-cancel" id="btn-cancel-chart-reset">Cancelar</button>
-                </div>
             </div>
-        </div>
 
-        <div id="custom-alert-modal" class="modal-backdrop hidden">
-            <div class="modal-content modal-alert">
-                <div class="modal-header">
-                    <h3 id="custom-alert-title"></h3>
-                    <button class="modal-close-btn" onclick="closeCustomAlert()">×</button>
-                </div>
-                <div class="modal-body">
-                    <p id="custom-alert-message"></p>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-submit" onclick="closeCustomAlert()">OK</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="driver-report-modal" class="modal-backdrop hidden">
-            <div class="modal-content modal-large">
-                <div class="modal-header">
-                    <h3 id="driver-report-title">Relatório do Motorista</h3>
-                    <button class="modal-close-btn" onclick="closeDriverReportModal()">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="report-summary">
-                        <div class="summary-card"><span>Total de Entregas</span><strong id="report-total-entregas">...</strong></div>
-                        <div class="summary-card"><span>Tempo Total em Rota</span><strong id="report-total-duracao">...</strong></div>
+            <div id="custom-alert-modal" class="modal-backdrop hidden">
+                <div class="modal-content modal-alert">
+                    <div class="modal-header">
+                        <h3 id="custom-alert-title"></h3>
+                        <button class="modal-close-btn" onclick="closeCustomAlert()">×</button>
                     </div>
-                    <h4>Histórico de Entregas Concluídas</h4>
-                    <div class="table-responsive">
-                        <table class="table-pedidos">
-                            <thead><tr><th>ID Pedido</th><th>Cliente</th><th>Natureza</th><th>Concluído Em</th><th>Duração</th></tr></thead>
-                            <tbody id="driver-report-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-cancel" onclick="closeDriverReportModal()">Fechar</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="edit-client-modal" class="modal-backdrop hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Editar Cliente</h3>
-                    <button class="modal-close-btn" onclick="closeEditClientModal()">×</button>
-                </div>
-                <form id="form-edit-cliente">
                     <div class="modal-body">
-                        <input type="hidden" id="edit-client-id">
-                        <div class="form-group"><label for="edit-client-nome">Nome Completo</label><input type="text" id="edit-client-nome" required></div>
-                        <div class="form-group"><label for="edit-client-telefone">Telefone</label><input type="tel" id="edit-client-telefone" required></div>
-                        <div class="form-group"><label for="edit-client-empresa">Empresa</label><input type="text" id="edit-client-empresa"></div>
-                        <div class="form-group"><label for="edit-client-email">Email</label><input type="email" id="edit-client-email"></div>
-                        <div class="form-group"><label for="edit-client-nuit">NUIT</label><input type="text" id="edit-client-nuit"></div>
-                        <div class="form-group"><label for="edit-client-endereco">Endereço</label><input type="text" id="edit-client-endereco"></div>
+                        <p id="custom-alert-message"></p>
                     </div>
                     <div class="modal-actions">
-                        <button type="submit" class="btn-submit">Salvar Alterações</button>
-                        <button type="button" class="btn-cancel" onclick="closeEditClientModal()">Cancelar</button>
+                        <button type="button" class="btn-submit" onclick="closeCustomAlert()">OK</button>
                     </div>
-                </form>
-            </div>
-        </div>
-
-        <div id="statement-modal" class="modal-backdrop hidden">
-            <div class="modal-content modal-large">
-                <div class="modal-header">
-                    <h3 id="statement-client-name">Extrato do Cliente</h3>
-                    <button class="modal-close-btn" onclick="closeStatementModal()">×</button>
                 </div>
-                <div class="modal-body">
-                    <input type="hidden" id="statement-client-id">
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="statement-start-date">De:</label>
-                            <input type="date" id="statement-start-date">
-                        </div>
-                        <div class="form-group">
-                            <label for="statement-end-date">Até:</label>
-                            <input type="date" id="statement-end-date">
-                        </div>
+            </div>
+
+            <div id="driver-report-modal" class="modal-backdrop hidden">
+                <div class="modal-content modal-large">
+                    <div class="modal-header">
+                        <h3 id="driver-report-title">Relatório do Motorista</h3>
+                        <button class="modal-close-btn" onclick="closeDriverReportModal()">×</button>
                     </div>
-                    <div class="form-group" style="display: flex; gap: 1rem; margin-top: -0.5rem;">
-                        <button type="button" class="btn-action-small btn-set-date" data-range="this_week">Esta Semana</button>
-                        <button type="button" class="btn-action-small btn-set-date" data-range="this_month">Este Mês</button>
-                    </div>
-                    
-                    <button type="button" class="btn-submit" id="btn-generate-statement">
-                        <i class="fas fa-search"></i> Gerar Extrato
-                    </button>
-                    
-                    <div id="statement-results" class="hidden" style="margin-top: 2rem;">
-                        <hr>
+                    <div class="modal-body">
                         <div class="report-summary">
-                            <div class="summary-card">
-                                <span>Total Gasto (MZN)</span>
-                                <strong id="statement-total-value">...</strong>
-                            </div>
-                            <div class="summary-card">
-                                <span>Total de Pedidos</span>
-                                <strong id="statement-total-orders">...</strong>
-                            </div>
+                            <div class="summary-card"><span>Total de Entregas</span><strong id="report-total-entregas">...</strong></div>
+                            <div class="summary-card"><span>Tempo Total em Rota</span><strong id="report-total-duracao">...</strong></div>
                         </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <h4 id="statement-date-range">Pedidos Concluídos</h4>
-                            <button type="button" class="btn-action-small" id="btn-download-pdf">
-                                <i class="fas fa-file-pdf"></i> Baixar PDF
-                            </button>
-                        </div>
+                        <h4>Histórico de Entregas Concluídas</h4>
                         <div class="table-responsive">
                             <table class="table-pedidos">
-                                <thead>
-                                    <tr>
-                                        <th>Data Conclusão</th>
-                                        <th>ID Pedido</th>
-                                        <th>Natureza</th>
-                                        <th>Valor (MZN)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="statement-table-body">
-                                </tbody>
+                                <thead><tr><th>ID Pedido</th><th>Cliente</th><th>Natureza</th><th>Concluído Em</th><th>Duração</th></tr></thead>
+                                <tbody id="driver-report-table-body"></tbody>
                             </table>
                         </div>
                     </div>
-
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-cancel" onclick="closeStatementModal()">Fechar</button>
-                </div>
-            </div>
-        </div>
-        
-        <div id="confirmation-modal" class="modal-backdrop hidden">
-            <div class="modal-content modal-alert">
-                <div class="modal-header error">
-                    <h3 id="confirmation-title">Confirmar Ação</h3>
-                    <button class="modal-close-btn" id="btn-close-confirmation-modal">×</button>
-                </div>
-                <div class="modal-body">
-                    <p id="confirmation-message" style="margin-bottom: 1rem;">Tem a certeza? Esta ação não pode ser revertida.</p>
-                    <div class="form-group">
-                        <label for="confirmation-input" id="confirmation-input-label">Para confirmar, digite a palavra:</label>
-                        <input type="text" id="confirmation-input" style="text-align: center; font-weight: bold; text-transform: uppercase;">
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-submit btn-danger" id="btn-confirm-action" disabled>Confirmar e Apagar</button>
-                    <button type="button" class="btn-cancel" id="btn-cancel-confirmation-modal">Cancelar</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- MODAL EDITAR GESTOR -->
-        <div id="edit-manager-modal" class="modal-backdrop hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Editar Gestor</h3>
-                    <button class="modal-close-btn" onclick="closeEditManagerModal()">×</button>
-                </div>
-                <form id="form-edit-manager">
-                    <div class="modal-body">
-                        <input type="hidden" id="edit-manager-id">
-                        <div class="form-group"><label for="edit-manager-name">Nome Completo</label><input type="text" id="edit-manager-name" required></div>
-                        <div class="form-group"><label for="edit-manager-phone">Telefone</label><input type="tel" id="edit-manager-phone" required></div>
-                        <div class="form-group"><label for="edit-manager-email">Email</label><input type="email" id="edit-manager-email" required></div>
-                    </div>
                     <div class="modal-actions">
-                        <button type="submit" class="btn-submit">Salvar Alterações</button>
-                        <button type="button" class="btn-cancel" onclick="closeEditManagerModal()">Cancelar</button>
+                        <button type="button" class="btn-cancel" onclick="closeDriverReportModal()">Fechar</button>
                     </div>
-                </form>
+                </div>
             </div>
-        </div>
 
-        <!-- Modal Histórico de Rotas do Motorista (Bootstrap) -->
-        <div class="modal fade" id="driverTripsModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div id="edit-client-modal" class="modal-backdrop hidden">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 id="driver-trips-modal-title" class="modal-title">Rotas do Motorista</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                        <h3>Editar Cliente</h3>
+                        <button class="modal-close-btn" onclick="closeEditClientModal()">×</button>
                     </div>
-                    <div id="driver-trips-modal-body" class="modal-body">
-                        <!-- Conteúdo preenchido via JS -->
+                    <form id="form-edit-cliente">
+                        <div class="modal-body">
+                            <input type="hidden" id="edit-client-id">
+                            <div class="form-group"><label for="edit-client-nome">Nome Completo</label><input type="text" id="edit-client-nome" required></div>
+                            <div class="form-group"><label for="edit-client-telefone">Telefone</label><input type="tel" id="edit-client-telefone" required></div>
+                            <div class="form-group"><label for="edit-client-empresa">Empresa</label><input type="text" id="edit-client-empresa"></div>
+                            <div class="form-group"><label for="edit-client-email">Email</label><input type="email" id="edit-client-email"></div>
+                            <div class="form-group"><label for="edit-client-nuit">NUIT</label><input type="text" id="edit-client-nuit"></div>
+                            <div class="form-group"><label for="edit-client-endereco">Endereço</label><input type="text" id="edit-client-endereco"></div>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="submit" class="btn-submit">Salvar Alterações</button>
+                            <button type="button" class="btn-cancel" onclick="closeEditClientModal()">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="statement-modal" class="modal-backdrop hidden">
+                <div class="modal-content modal-large">
+                    <div class="modal-header">
+                        <h3 id="statement-client-name">Extrato do Cliente</h3>
+                        <button class="modal-close-btn" onclick="closeStatementModal()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="statement-client-id">
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="statement-start-date">De:</label>
+                                <input type="date" id="statement-start-date">
+                            </div>
+                            <div class="form-group">
+                                <label for="statement-end-date">Até:</label>
+                                <input type="date" id="statement-end-date">
+                            </div>
+                        </div>
+                        <div class="form-group" style="display: flex; gap: 1rem; margin-top: -0.5rem;">
+                            <button type="button" class="btn-action-small btn-set-date" data-range="this_week">Esta Semana</button>
+                            <button type="button" class="btn-action-small btn-set-date" data-range="this_month">Este Mês</button>
+                        </div>
+                        
+                        <button type="button" class="btn-submit" id="btn-generate-statement">
+                            <i class="fas fa-search"></i> Gerar Extrato
+                        </button>
+                        
+                        <div id="statement-results" class="hidden" style="margin-top: 2rem;">
+                            <hr>
+                            <div class="report-summary">
+                                <div class="summary-card">
+                                    <span>Total Gasto (MZN)</span>
+                                    <strong id="statement-total-value">...</strong>
+                                </div>
+                                <div class="summary-card">
+                                    <span>Total de Pedidos</span>
+                                    <strong id="statement-total-orders">...</strong>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h4 id="statement-date-range">Pedidos Concluídos</h4>
+                                <button type="button" class="btn-action-small" id="btn-download-pdf">
+                                    <i class="fas fa-file-pdf"></i> Baixar PDF
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table-pedidos">
+                                    <thead>
+                                        <tr>
+                                            <th>Data Conclusão</th>
+                                            <th>ID Pedido</th>
+                                            <th>Natureza</th>
+                                            <th>Valor (MZN)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="statement-table-body">
+                                        </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeStatementModal()">Fechar</button>
                     </div>
                 </div>
             </div>
-        </div>
+            
+            <div id="confirmation-modal" class="modal-backdrop hidden">
+                <div class="modal-content modal-alert">
+                    <div class="modal-header error">
+                        <h3 id="confirmation-title">Confirmar Ação</h3>
+                        <button class="modal-close-btn" id="btn-close-confirmation-modal">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="confirmation-message" style="margin-bottom: 1rem;">Tem a certeza? Esta ação não pode ser revertida.</p>
+                        <div class="form-group">
+                            <label for="confirmation-input" id="confirmation-input-label">Para confirmar, digite a palavra:</label>
+                            <input type="text" id="confirmation-input" style="text-align: center; font-weight: bold; text-transform: uppercase;">
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-submit btn-danger" id="btn-confirm-action" disabled>Confirmar e Apagar</button>
+                        <button type="button" class="btn-cancel" id="btn-cancel-confirmation-modal">Cancelar</button>
+                    </div>
+                </div>
+            </div>
 
     </main>
-    
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     
     <script src="js/common/api.js"></script>
     <script src="js/common/auth.js"></script>
     <script src="js/common/ui.js"></script>
     
     <script src="js/admin/adminCharts.js"></script>
-    <script src="js/admin/adminModals.js"></script> <script src="js/admin/adminMap.js"></script>
-    <script src="js/admin/adminApi.js"></script>     <script src="js/admin/adminExpenses.js"></script>
-    <script src="js/admin/adminManagers.js"></script>
+    <script src="js/admin/adminMap.js"></script>
+
+    <script src="js/admin/adminApi.js"></script>
+    <script src="js/admin/adminModals.js"></script>
 
     <script src="js/admin/admin.js"></script>
 

@@ -67,25 +67,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), { maxAge: '1
 
 app.use('/api', rateLimiter);
 
-// Importar rotas
-const authRoutes = require('./routes/authRoutes');
-const orderRoutes = require('./routes/orderRoutes');
-const driverRoutes = require('./routes/driverRoutes');
-const statsRoutes = require('./routes/statsRoutes');
-const clientRoutes = require('./routes/clientRoutes');
-const adminRoutes = require('./routes/adminRoutes');
-const expenseRoutes = require('./routes/expenseRoutes');
-const managerRoutes = require('./routes/managerRoutes');
-
-// Registar rotas
-app.use('/api/auth', authRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/drivers', driverRoutes);
-app.use('/api/stats', statsRoutes);
-app.use('/api/clients', clientRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/expenses', expenseRoutes);
-app.use('/api/managers', managerRoutes);
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/orders', require('./routes/orderRoutes'));
+app.use('/api/drivers', require('./routes/driverRoutes'));
+app.use('/api/stats', require('./routes/statsRoutes'));
+app.use('/api/clients', require('./routes/clientRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
 
 app.get('/health', (_req, res) =>
   res.status(200).json({

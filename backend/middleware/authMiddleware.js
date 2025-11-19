@@ -1,76 +1,63 @@
 const jwt = require('jsonwebtoken');
-const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
 
-exports.protect = asyncHandler(async (req, res, next) => {
-  let token;
+const JWT_SECRET = process.env.JWT_SECRET;
 
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET não está definido nas variáveis de ambiente.');
+}
+
+const decodeToken = (token) => jwt.verify(token, JWT_SECRET);
+
+const extractToken = (req) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.split(' ')[1];
   }
-
-  if (!token) {
-    res.status(401);
-    throw new Error('Não autorizado, token em falta.');
+  if (req.cookies?.token) {
+    return req.cookies.token;
   }
+  return null;
+};
 
+const protect = async (req, res, next) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const token = extractToken(req);
 
-    // IMPORTANTE: o token foi gerado como { user: { id, role, nome } }
-    const userId = decoded.user?.id;
-
-    if (!userId) {
-      res.status(401);
-      throw new Error('Token inválido (sem ID de utilizador).');
+    if (!token) {
+      return res.status(401).json({ message: 'Não autorizado, token em falta' });
     }
 
-    req.user = await User.findById(userId).select('-password');
+    const decoded = decodeToken(token);
+    const user = await User.findById(decoded.user.id).select('-password');
 
-    if (!req.user) {
-      res.status(401);
-      throw new Error('Utilizador não encontrado.');
+    if (!user) {
+      return res.status(401).json({ message: 'Não autorizado, utilizador inexistente' });
     }
 
-    next();
+    req.user = user;
+    return next();
   } catch (error) {
-    res.status(401);
-    throw new Error('Não autorizado, token inválido.');
-  }
-});
-
-exports.admin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
-    next();
-  } else {
-    res.status(403);
-    throw new Error('Acesso negado. Apenas administradores.');
+    return res.status(401).json({ message: 'Sessão inválida ou expirada' });
   }
 };
 
-exports.driver = (req, res, next) => {
-  if (req.user && req.user.role === 'driver') {
-    next();
-  } else {
-    res.status(403);
-    throw new Error('Acesso negado. Apenas motoristas.');
+const admin = (req, res, next) => {
+  if (req.user?.role === 'admin') {
+    return next();
   }
+  return res.status(403).json({ message: 'Acesso restrito a administradores' });
 };
 
-exports.manager = (req, res, next) => {
-  if (req.user && req.user.role === 'manager') {
-    next();
-  } else {
-    res.status(403);
-    throw new Error('Acesso negado. Apenas gestores.');
+const driver = (req, res, next) => {
+  if (req.user?.role === 'driver') {
+    return next();
   }
+  return res.status(403).json({ message: 'Acesso restrito a motoristas' });
 };
 
-exports.adminOrManager = (req, res, next) => {
-  if (req.user && (req.user.role === 'admin' || req.user.role === 'manager')) {
-    next();
-  } else {
-    res.status(403);
-    throw new Error('Acesso negado. Apenas administradores ou gestores.');
-  }
+module.exports = {
+  protect,
+  admin,
+  driver
 };

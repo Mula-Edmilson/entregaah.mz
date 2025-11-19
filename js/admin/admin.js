@@ -1,420 +1,286 @@
-/**
- * js/admin/admin.js
- * Arquivo "central" do painel admin — navegação, utilitários e pequenas funções globais.
+/*
+ * Ficheiro: js/admin/admin.js (REFATORADO)
  *
- * Observações:
- * - Este ficheiro tenta não sobrescrever funções já definidas em outros ficheiros (ex.: adminManagers.js).
- *   Antes de definir uma função verifica-se `typeof <fn> !== 'function'`.
- * - Espera que `API_URL` e funções de autenticação (ex.: `getAuthHeaders`) possam existir em `js/common/*`.
- *   Caso não existam, fornece implementações de fallback seguras.
- * - Liga a navegação lateral, carrega páginas e chama loaders específicos (se existirem):
- *     loadManagers, loadDrivers, loadClients, loadExpenses, loadOverviewStats, loadActiveOrders, loadHistory
+ * Este é o ficheiro "controlador" principal.
+ * Ele apenas gere a navegação, os event listeners e os sockets.
+ *
+ * Depende de:
+ * - adminApi.js (para chamadas fetch)
+ * - adminModals.js (para abrir modais)
+ * - adminMap.js (para lógica de mapas)
+ * - adminCharts.js (para gráficos)
  */
 
-/* ======================
-   Helpers de Autenticação
-   ====================== */
+// --- Variáveis de Estado Globais ---
+let socket = null;
+let clientCache = []; // O cache de clientes ainda é útil aqui
 
-// Fallback para obter headers de autenticação. Se já existir `getAuthHeaders` global, usa-a.
-if (typeof getAuthHeaders !== 'function') {
-  function getAuthHeaders() {
-    const headers = {};
-    try {
-      const token = localStorage.getItem('token');
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-    } catch (err) {
-      // ignore
-    }
-    return headers;
-  }
-}
-
-/* ======================
-   Helper fetch com auth
-   ====================== */
-async function apiFetch(path, options = {}) {
-  const url = (typeof API_URL === 'string' && API_URL) ? `${API_URL}${path}` : path;
-  const headers = {
-    ...(options.headers || {}),
-    ...getAuthHeaders()
-  };
-
-  const opts = {
-    ...options,
-    headers
-  };
-
-  try {
-    const res = await fetch(url, opts);
-    // tenta parsear JSON; se falhar, devolve blob/text conforme status
-    const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      const json = await res.json();
-      if (!res.ok) {
-        const err = new Error(json.message || `Erro na requisição: ${res.status}`);
-        err.status = res.status;
-        err.payload = json;
-        throw err;
-      }
-      return json;
-    } else {
-      // não-json (ex.: download excel)
-      if (!res.ok) {
-        const text = await res.text();
-        const err = new Error(text || `Erro na requisição: ${res.status}`);
-        err.status = res.status;
-        throw err;
-      }
-      return res;
-    }
-  } catch (err) {
-    // se for 401, tenta fazer logout automático chamando handleLogout se existir
-    if (err.status === 401) {
-      if (typeof handleLogout === 'function') handleLogout('admin');
-    }
-    throw err;
-  }
-}
-
-/* ======================
-   UI: abrir/fechar modais e alertas
-   ====================== */
-
-// showCustomAlert / closeCustomAlert — define apenas se não existir
-if (typeof showCustomAlert !== 'function') {
-  function showCustomAlert(title, message, type = 'info') {
-    const modal = document.getElementById('custom-alert-modal');
-    const titleEl = document.getElementById('custom-alert-title');
-    const messageEl = document.getElementById('custom-alert-message');
-    if (!modal || !titleEl || !messageEl) {
-      // fallback: alert browser
-      alert(`${title}\n\n${message}`);
-      return;
-    }
-    titleEl.textContent = title || '';
-    messageEl.textContent = message || '';
-    modal.classList.remove('hidden');
-    modal.dataset.type = type;
-    // optionally auto-close after X seconds for non-error
-    if (type !== 'error') {
-      clearTimeout(modal._autoCloseTimer);
-      modal._autoCloseTimer = setTimeout(() => {
-        closeCustomAlert();
-      }, 4500);
-    }
-  }
-
-  function closeCustomAlert() {
-    const modal = document.getElementById('custom-alert-modal');
-    if (!modal) return;
-    modal.classList.add('hidden');
-    const titleEl = document.getElementById('custom-alert-title');
-    const messageEl = document.getElementById('custom-alert-message');
-    if (titleEl) titleEl.textContent = '';
-    if (messageEl) messageEl.textContent = '';
-  }
-}
-
-/* Funções de fechar modais genéricas — definidas somente se ainda não existirem */
-function _toggleModalById(id, show) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (show) el.classList.remove('hidden');
-  else el.classList.add('hidden');
-}
-
-if (typeof closeAssignModal !== 'function') {
-  function closeAssignModal() { _toggleModalById('assign-modal', false); }
-}
-if (typeof openAssignModal !== 'function') {
-  function openAssignModal() { _toggleModalById('assign-modal', true); }
-}
-if (typeof closeEditDriverModal !== 'function') {
-  function closeEditDriverModal() { _toggleModalById('edit-driver-modal', false); const f = document.getElementById('form-edit-motorista'); if (f) f.reset(); }
-}
-if (typeof openEditDriverModal !== 'function') {
-  function openEditDriverModal() { _toggleModalById('edit-driver-modal', true); }
-}
-if (typeof closeDriverReportModal !== 'function') {
-  function closeDriverReportModal() { _toggleModalById('driver-report-modal', false); }
-}
-if (typeof closeEditClientModal !== 'function') {
-  function closeEditClientModal() { _toggleModalById('edit-client-modal', false); const f = document.getElementById('form-edit-cliente'); if (f) f.reset(); }
-}
-if (typeof closeStatementModal !== 'function') {
-  function closeStatementModal() { _toggleModalById('statement-modal', false); }
-}
-if (typeof closeHistoryDetailModal !== 'function') {
-  function closeHistoryDetailModal() { _toggleModalById('history-detail-modal', false); }
-}
-
-/* ======================
-   Form toggles (Add forms)
-   ====================== */
-
-function showAddManagerForm(show) {
-  const form = document.getElementById('form-add-manager');
-  const btn = document.getElementById('btn-show-manager-form');
-  if (!form || !btn) return;
-  if (show) {
-    form.classList.remove('hidden');
-    btn.classList.add('hidden');
-  } else {
-    form.classList.add('hidden');
-    btn.classList.remove('hidden');
-    form.reset();
-  }
-}
-
-function showAddDriverForm(show) {
-  const form = document.getElementById('form-add-motorista');
-  const btn = document.getElementById('btn-show-driver-form');
-  if (!form || !btn) return;
-  if (show) {
-    form.classList.remove('hidden');
-    btn.classList.add('hidden');
-  } else {
-    form.classList.add('hidden');
-    btn.classList.remove('hidden');
-    form.reset();
-  }
-}
-
-function showAddClientForm(show) {
-  const form = document.getElementById('form-add-cliente');
-  const btn = document.getElementById('btn-show-client-form');
-  if (!form || !btn) return;
-  if (show) {
-    form.classList.remove('hidden');
-    btn.classList.add('hidden');
-  } else {
-    form.classList.add('hidden');
-    btn.classList.remove('hidden');
-    form.reset();
-  }
-}
-
-function showAddExpenseForm(show) {
-  const form = document.getElementById('form-add-expense');
-  const btn = document.getElementById('btn-show-expense-form');
-  if (!form || !btn) return;
-  if (show) {
-    form.classList.remove('hidden');
-    btn.classList.add('hidden');
-  } else {
-    form.classList.add('hidden');
-    btn.classList.remove('hidden');
-    form.reset();
-  }
-}
-
-/* ======================
-   Navegação lateral e roteamento simples das "content-pages"
-   ====================== */
-
-function _hideAllPages() {
-  const pages = document.querySelectorAll('.content-page');
-  pages.forEach(p => p.classList.add('hidden'));
-}
-
-function showPage(pageId) {
-  const pageEl = document.getElementById(pageId);
-  if (!pageEl) return;
-  // esconder todas
-  _hideAllPages();
-  // mostrar a pedida
-  pageEl.classList.remove('hidden');
-
-  // marca menu activo
-  document.querySelectorAll('.sidebar .menu-item').forEach(item => {
-    item.classList.remove('active');
-  });
-  // tenta encontrar menu correspondente por id nav-<page>
-  const menu = document.getElementById(`nav-${pageId.split('-')[0]}`) || Array.from(document.querySelectorAll('.sidebar .menu-item')).find(m => m.textContent && m.textContent.toLowerCase().includes(pageId.split('-')[0]));
-  if (menu) menu.classList.add('active');
-
-  // atualiza título principal
-  const title = pageEl.querySelector('h3') || pageEl.querySelector('h1') || pageEl.querySelector('h2');
-  const mainTitle = document.getElementById('main-title');
-  if (mainTitle) {
-    mainTitle.textContent = title ? title.textContent : (pageId.replace('-', ' ').toUpperCase());
-  }
-
-  // Dispara loaders específicos se existirem
-  try {
-    if (pageId === 'gestao-gestores' && typeof loadManagers === 'function') loadManagers();
-    if (pageId === 'gestao-motoristas' && typeof loadDrivers === 'function') loadDrivers();
-    if (pageId === 'gestao-clientes' && typeof loadClients === 'function') loadClients();
-    if (pageId === 'gestao-custos' && typeof loadExpenses === 'function') loadExpenses();
-    if (pageId === 'visao-geral' && typeof loadOverviewStats === 'function') loadOverviewStats();
-    if (pageId === 'entregas-activas' && typeof loadActiveOrders === 'function') loadActiveOrders();
-    if (pageId === 'historico' && typeof loadHistory === 'function') loadHistory();
-  } catch (err) {
-    console.error('Erro ao disparar loaders na mudança de página:', err);
-  }
-}
-
-function _setupSidebarNav() {
-  // liga cliques nos items da sidebar que tenham id "nav-..."
-  document.querySelectorAll('.sidebar .menu-item').forEach(item => {
-    if (!item.id) return;
-    item.addEventListener('click', (e) => {
-      e.preventDefault();
-      const id = item.id.replace('nav-', '');
-      // mapeamento simples: nav-visao-geral -> visao-geral, nav-gestores -> gestao-gestores etc.
-      const map = {
-        'visao-geral': 'visao-geral',
-        'entregas': 'entregas-activas',
-        'motoristas': 'gestao-motoristas',
-        'clientes': 'gestao-clientes',
-        'gestores': 'gestao-gestores',
-        'custos': 'gestao-custos',
-        'historico': 'historico',
-        'mapa': 'mapa-tempo-real',
-        'config': 'configuracoes'
-      };
-      const pageId = map[id] || id;
-      showPage(pageId);
-      // fecha menu mobile se aberto
-      const sidebar = document.querySelector('.sidebar');
-      if (sidebar && sidebar.classList.contains('open')) sidebar.classList.remove('open');
-    });
-  });
-}
-
-/* ======================
-   Utilitários (formatos)
-   ====================== */
-
-function formatCurrency(value, currency = 'MZN') {
-  if (value === null || value === undefined || isNaN(Number(value))) return '-';
-  return new Intl.NumberFormat('pt-MZ', { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(value));
-}
-
-function formatDateISO(dateStr) {
-  if (!dateStr) return '-';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString('pt-MZ');
-}
-
-/* ======================
-   Exportar Relatório Financeiro (Excel)
-   ====================== */
-
-async function exportFinancialReport() {
-  const start = document.getElementById('export-start-date').value;
-  const end = document.getElementById('export-end-date').value;
-
-  if (!start || !end) {
-    showCustomAlert('Erro', 'Escolha as datas de início e fim para exportar.', 'error');
-    return;
-  }
-
-  const query = `?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
-  const path = (typeof API_URL === 'string' && API_URL) ? `${API_URL}/api/expenses/export${query}` : `/api/expenses/export${query}`;
-
-  try {
-    const res = await fetch(path, {
-      method: 'GET',
-      headers: {
-        ...getAuthHeaders()
-      }
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text || `Erro ${res.status}`);
-    }
-
-    // response is a file blob (xlsx)
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    // nome sugestão
-    const filename = `relatorio_custos_${start}_a_${end}.xlsx`;
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-    showCustomAlert('Sucesso', 'Relatório gerado. Ficheiro será transferido.', 'success');
-  } catch (err) {
-    console.error('Erro ao exportar relatório:', err);
-    showCustomAlert('Erro', err.message || 'Erro ao exportar relatório', 'error');
-  }
-}
-
-/* ======================
-   Logout (fallback)
-   ====================== */
-
-if (typeof handleLogout !== 'function') {
-  function handleLogout(role) {
-    // remove token e redireciona
-    try { localStorage.removeItem('token'); } catch (e) {}
-    // optional: clear other session data
-    try { localStorage.removeItem('user'); } catch (e) {}
-    window.location.href = '/login.html';
-  }
-}
-
-/* ======================
-   Inicialização
-   ====================== */
-
+/* --- PONTO DE ENTRADA (Entry Point) --- */
 document.addEventListener('DOMContentLoaded', () => {
-  _setupSidebarNav();
-
-  // Default page: visão geral
-  showPage('visao-geral');
-
-  // Liga botões que existem no HTML para abrir forms/modals
-  const btnShowManager = document.getElementById('btn-show-manager-form');
-  if (btnShowManager) btnShowManager.addEventListener('click', () => showAddManagerForm(true));
-
-  const btnShowDriver = document.getElementById('btn-show-driver-form');
-  if (btnShowDriver) btnShowDriver.addEventListener('click', () => showAddDriverForm(true));
-
-  const btnShowClient = document.getElementById('btn-show-client-form');
-  if (btnShowClient) btnShowClient.addEventListener('click', () => showAddClientForm(true));
-
-  const btnShowExpense = document.getElementById('btn-show-expense-form');
-  if (btnShowExpense) btnShowExpense.addEventListener('click', () => showAddExpenseForm(true));
-
-  // Export button
-  const btnExport = document.querySelector('button[onclick="exportFinancialReport()"], button#btn-export-financial');
-  if (btnExport) btnExport.addEventListener('click', exportFinancialReport);
-
-  // Close custom alert button (if exists)
-  const customAlertCloseBtns = document.querySelectorAll('#custom-alert-modal .modal-close-btn, #custom-alert-modal button');
-  customAlertCloseBtns.forEach(b => b.addEventListener('click', closeCustomAlert));
-
-  // Fechar modais com clique fora (opcional, minimal)
-  document.querySelectorAll('.modal-backdrop').forEach(modal => {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        // tenta chamar um close específico, senão simplesmente esconde
-        if (modal.id === 'assign-modal' && typeof closeAssignModal === 'function') return closeAssignModal();
-        if (modal.id === 'custom-alert-modal' && typeof closeCustomAlert === 'function') return closeCustomAlert();
-        modal.classList.add('hidden');
-      }
-    });
-  });
-
-  // Confirmação de ações: habilita botão quando input corresponde
-  const confirmationInput = document.getElementById('confirmation-input');
-  const confirmBtn = document.getElementById('btn-confirm-action');
-  const confirmationLabel = document.getElementById('confirmation-input-label');
-  if (confirmationInput && confirmBtn && confirmationLabel) {
-    confirmationInput.addEventListener('input', () => {
-      const expected = confirmationLabel.dataset.expected || confirmationLabel.textContent.trim();
-      if (confirmationInput.value.trim().toUpperCase() === expected.trim().toUpperCase()) {
-        confirmBtn.disabled = false;
-      } else {
-        confirmBtn.disabled = true;
-      }
-    });
-  }
+    checkAuth('admin'); 
+    initializeMapIcons(); // (Vem do adminMap.js)
+    connectSocket(); 
+    attachEventListeners();
+    
+    // Carrega a página inicial
+    showPage('visao-geral', 'nav-visao-geral', 'Visão Geral');
 });
+
+/**
+ * Anexa todos os event listeners da aplicação.
+ * As funções 'handle...' e 'open...' vêm dos ficheiros importados.
+ */
+function attachEventListeners() {
+    // --- Formulários ---
+    document.getElementById('delivery-form').addEventListener('submit', handleNewDelivery);
+    document.getElementById('form-add-motorista').addEventListener('submit', handleAddDriver);
+    document.getElementById('form-edit-motorista').addEventListener('submit', handleUpdateDriver);
+    document.getElementById('form-add-cliente').addEventListener('submit', handleAddClient);
+    document.getElementById('form-edit-cliente').addEventListener('submit', handleUpdateClient);
+    document.getElementById('form-change-password').addEventListener('submit', handleChangePassword);
+
+    // --- Navegação Principal (Sidebar) ---
+    document.getElementById('nav-visao-geral').addEventListener('click', (e) => { e.preventDefault(); showPage('visao-geral', 'nav-visao-geral', 'Visão Geral'); });
+    document.getElementById('nav-entregas').addEventListener('click', (e) => { e.preventDefault(); showPage('entregas-activas', 'nav-entregas', 'Entregas Activas'); });
+    document.getElementById('nav-motoristas').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-motoristas', 'nav-motoristas', 'Gestão de Motoristas'); });
+    document.getElementById('nav-clientes').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-clientes', 'nav-clientes', 'Gestão de Clientes'); });
+    document.getElementById('nav-historico').addEventListener('click', (e) => { e.preventDefault(); showPage('historico', 'nav-historico', 'Histórico'); });
+    document.getElementById('nav-mapa').addEventListener('click', (e) => { e.preventDefault(); showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real'); });
+
+    // Submenu de Formulários
+    document.getElementById('nav-form-doc').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('doc'); });
+    document.getElementById('nav-form-farma').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('farma'); });
+    document.getElementById('nav-form-carga').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('carga'); });
+    document.getElementById('nav-form-rapido').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('rapido'); });
+    document.getElementById('nav-form-outros').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('outros'); });
+    
+    document.getElementById('nav-config').addEventListener('click', (e) => { e.preventDefault(); showPage('configuracoes', 'nav-config', 'Configurações'); });
+
+    // --- Autenticação ---
+    document.getElementById('admin-logout').addEventListener('click', (e) => { e.preventDefault(); handleLogout('admin'); });
+
+    // --- Modais e Botões (Listeners) ---
+    document.getElementById('btn-reset-chart').addEventListener('click', openChartResetModal);
+    document.getElementById('btn-confirm-chart-reset').addEventListener('click', handleChartReset);
+    document.getElementById('btn-close-chart-reset').addEventListener('click', closeChartResetModal);
+    document.getElementById('btn-cancel-chart-reset').addEventListener('click', closeChartResetModal);
+    
+    document.getElementById('history-search-input').addEventListener('input', filterHistoryTable);
+    document.getElementById('delivery-image').addEventListener('change', handleImageUpload);
+    document.getElementById('delivery-client-select').addEventListener('change', handleClientSelect);
+
+    // Listeners do Modal de Extrato (Statement)
+    document.getElementById('btn-generate-statement').addEventListener('click', handleGenerateStatement);
+    document.getElementById('btn-download-pdf').addEventListener('click', handleDownloadPDF); // (Esta função tem de ser movida)
+    document.querySelectorAll('.btn-set-date').forEach(btn => {
+        btn.addEventListener('click', () => setStatementDates(btn.dataset.range));
+    });
+
+    // Zona de Perigo
+    document.getElementById('btn-delete-old-history').addEventListener('click', handleDeleteOldHistoryClick);
+    document.getElementById('btn-close-confirmation-modal').addEventListener('click', closeConfirmationModal);
+    document.getElementById('btn-cancel-confirmation-modal').addEventListener('click', closeConfirmationModal);
+    
+    // --- Lógica do Menu Mobile ---
+    const menuToggle = document.getElementById('mobile-menu-toggle');
+    const mainContent = document.querySelector('.main-content');
+    if (menuToggle) {
+        menuToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.body.classList.toggle('mobile-menu-open');
+        });
+    }
+    if (mainContent) {
+        mainContent.addEventListener('click', () => {
+            if (document.body.classList.contains('mobile-menu-open')) {
+                document.body.classList.remove('mobile-menu-open');
+            }
+        });
+    }
+    // Fecha o menu mobile ao clicar num item (em ecrãs pequenos)
+    document.querySelectorAll('.sidebar-menu .menu-item a').forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth < 992 && !item.parentElement.classList.contains('has-submenu')) {
+                document.body.classList.remove('mobile-menu-open');
+            }
+        });
+    });
+}
+
+
+/* --- Lógica de Navegação (Router) --- */
+
+/**
+ * Mostra uma página de conteúdo e esconde as outras.
+ * Chama as funções de carregamento de dados necessárias.
+ * @param {string} pageId - ID do elemento da página (ex: 'visao-geral')
+ * @param {string} navId - ID do link da sidebar (ex: 'nav-visao-geral')
+ * @param {string} title - O título a mostrar no header
+ */
+function showPage(pageId, navId, title) {
+    // Limpa recursos de outras páginas
+    destroyFormMap(); // (adminMap.js)
+    destroyLiveMap(); // (adminMap.js)
+    destroyCharts();  // (adminCharts.js)     
+    
+    // Esconde todas as páginas e desativa todos os links
+    document.querySelectorAll('.content-page').forEach(page => page.classList.add('hidden'));
+    document.querySelectorAll('.sidebar-menu .menu-item').forEach(item => item.classList.remove('active'));
+    
+    // Mostra a página e ativa o link corretos
+    const pageToShow = document.getElementById(pageId);
+    if (pageToShow) pageToShow.classList.remove('hidden');
+    
+    const navLink = document.getElementById(navId);
+    if (navLink) navLink.classList.add('active');
+    
+    document.getElementById('main-title').innerText = title;
+    
+    // Carrega os dados específicos da página
+    switch (pageId) {
+        case 'visao-geral':
+            loadOverviewStats();
+            loadFinancialStats();
+            initServicesChart(false);
+            break;
+        case 'gestao-motoristas':
+            loadDrivers();
+            break;
+        case 'entregas-activas':
+            loadActiveDeliveries();
+            break;
+        case 'historico':
+            loadHistory();
+            break;
+        case 'gestao-clientes':
+            loadClients();
+            break;
+        case 'mapa-tempo-real':
+            initializeLiveMap();
+            break;
+        case 'configuracoes':
+            document.getElementById('form-change-password').reset();
+            break;
+    }
+}
+
+/**
+ * Controlador para mostrar o formulário de nova entrega.
+ * @param {string} serviceType - O tipo de serviço (ex: 'doc', 'farma')
+ */
+function showServiceForm(serviceType) {
+    const titles = {
+        'doc': 'Nova Tramitação de Documentos',
+        'farma': 'Novo Pedido Farmacêutico',
+        'carga': 'Novo Transporte de Carga',
+        'rapido': 'Novo Delivery Rápido',
+        'outros': 'Outros Serviços'
+    };
+    showPage('form-nova-entrega', null, titles[serviceType] || 'Nova Entrega');
+    
+    // Prepara o formulário
+    document.getElementById('service-type').value = serviceType;
+    removeImage(); // (ui.js)
+    resetDeliveryForm();
+    loadClientsIntoDropdown(); // (adminApi.js)
+    
+    // Atraso para garantir que o elemento #map está visível antes de inicializar
+    setTimeout(initializeFormMap, 100); // (adminMap.js)
+}
+
+
+/* --- Lógica de Socket.IO --- */
+function connectSocket() {
+    const token = getAuthToken(); // (auth.js)
+    if (!token) return;
+    
+    socket = io(API_URL, { auth: { token: token } }); // (api.js)
+    
+    socket.on('connect', () => {
+        console.log('Conectado ao servidor Socket.io com ID:', socket.id);
+        socket.emit('admin_join_room');
+    });
+
+    // Função auxiliar para saber qual página está ativa
+    const activePage = () => {
+        const page = document.querySelector('.content-page:not(.hidden)');
+        return page ? page.id : null;
+    };
+    
+    // Listeners de Socket que atualizam a UI
+    socket.on('delivery_started', (order) => {
+        if (activePage() === 'entregas-activas') loadActiveDeliveries();
+        if (activePage() === 'visao-geral') { loadOverviewStats(); loadFinancialStats(); }
+    });
+    
+    socket.on('delivery_completed', (order) => {
+        if (activePage() === 'entregas-activas') loadActiveDeliveries();
+        if (activePage() === 'historico') loadHistory();
+        if (activePage() === 'visao-geral') { loadOverviewStats(); loadFinancialStats(); }
+    });
+    
+    socket.on('driver_status_changed', (data) => {
+         if (activePage() === 'gestao-motoristas') loadDrivers();
+         if (activePage() === 'visao-geral') loadOverviewStats();
+    });
+
+    // Listeners do Mapa em Tempo Real (chamam funções do adminMap.js)
+    socket.on('driver_location_broadcast', (data) => {
+        updateDriverMarker(data);
+    });
+    
+    socket.on('driver_disconnected_broadcast', (data) => {
+        removeDriverMarker(data);
+    });
+}
+
+
+/* --- Lógica Auxiliar (UI Helpers) --- */
+
+/**
+ * Preenche o formulário de entrega quando um cliente registado é selecionado.
+ */
+function handleClientSelect(e) {
+    const selectedClientId = e.target.value;
+    const client = clientCache.find(c => c._id === selectedClientId);
+    
+    if (client) {
+        document.getElementById('client-name').value = client.nome;
+        document.getElementById('client-phone1').value = client.telefone;
+        document.getElementById('client-phone2').value = ''; // Limpa o tel. alternativo
+        document.getElementById('delivery-client-id').value = client._id;
+        
+        // Torna os campos read-only
+        document.getElementById('client-name').readOnly = true;
+        document.getElementById('client-phone1').readOnly = true;
+        
+    } else {
+        // Se selecionar "-- Selecione --", limpa e reativa os campos
+        resetDeliveryForm();
+    }
+}
+
+/**
+ * Limpa o formulário de entrega e reativa os campos.
+ */
+function resetDeliveryForm() {
+    document.getElementById('delivery-form').reset();
+    document.getElementById('delivery-client-id').value = ''; 
+    
+    document.getElementById('client-name').readOnly = false;
+    document.getElementById('client-phone1').readOnly = false;
+}
+
+/**
+ * Callback para a zona de perigo (Apagar Histórico).
+ */
+function handleDeleteOldHistoryClick() {
+    const confirmWord = 'APAGAR';
+    
+    openConfirmationModal({ // (adminModals.js)
+        title: "Apagar Histórico Antigo?",
+        message: `Esta ação é irreversível. Todas as encomendas concluídas com mais de 30 dias serão permanentemente apagadas.\n\nPara confirmar, digite <b>${confirmWord}</b> no campo abaixo.`,
+        confirmText: confirmWord,
+        onConfirm: handleDeleteOldHistory // (adminApi.js)
+    });
+}

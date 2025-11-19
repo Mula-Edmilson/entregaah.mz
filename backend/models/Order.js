@@ -14,39 +14,27 @@ const orderSchema = new mongoose.Schema(
       lng: { type: Number }
     },
     image_url: { type: String },
-
     verification_code: { type: String, required: true },
-
     created_by_admin: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
     },
-
     assigned_to_driver: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'DriverProfile'
     },
-
     client: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Client'
     },
-
     status: {
       type: String,
       enum: Object.values(ORDER_STATUS),
       default: ORDER_STATUS.PENDING,
       index: true
     },
-
-    // timestamps de estado da encomenda
     timestamp_started: { type: Date },
     timestamp_completed: { type: Date },
-
-    // ✅ ADICIONADO: usado em cancelOrder, agora fica realmente guardado no MongoDB
-    timestamp_canceled: { type: Date },
-
-    // valores financeiros
     valor_motorista: { type: Number, default: 0 },
     valor_empresa: { type: Number, default: 0 }
   },
