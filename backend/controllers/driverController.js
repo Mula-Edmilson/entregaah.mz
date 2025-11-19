@@ -1,5 +1,9 @@
+// backend/controllers/driverController.js
+
 const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
+
+// IMPORTS CORRETOS (estamos dentro da pasta controllers)
 const User = require('../models/User');
 const DriverProfile = require('../models/DriverProfile');
 const Order = require('../models/Order');
@@ -70,6 +74,41 @@ exports.updateDriver = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Lista de motoristas *disponíveis* para atribuição de encomenda.
+ * Usado pelo front em: GET /api/drivers/available
+ *
+ * Retorna no formato:
+ *   { drivers: [ { _id, nome, telefone, profile: { _id, vehicle_plate, status, commissionRate } } ] }
+ */
+exports.getAllDriversForAvailability = asyncHandler(async (_req, res) => {
+  // Fallback seguro caso a constante mude de nome
+  const ONLINE_FREE =
+    (DRIVER_STATUS && DRIVER_STATUS.ONLINE_FREE) || 'online_livre';
+
+  // Primeiro buscamos perfis com estado "online_livre"
+  const profiles = await DriverProfile.find({ status: ONLINE_FREE })
+    .populate('user') // para termos nome/telefone
+    .lean();
+
+  const drivers = profiles
+    .filter(p => p.user && p.user.role === 'driver')
+    .map(p => ({
+      _id: p.user._id,
+      nome: p.user.nome,
+      telefone: p.user.telefone,
+      profile: {
+        _id: p._id,
+        vehicle_plate: p.vehicle_plate,
+        status: p.status,
+        commissionRate: p.commissionRate
+      }
+    }))
+    .sort((a, b) => a.nome.localeCompare(b.nome));
+
+  return res.status(200).json({ drivers });
+});
+
 exports.getDriverReport = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -119,7 +158,10 @@ exports.getMyEarnings = asyncHandler(async (req, res) => {
     .sort({ timestamp_completed: -1 })
     .lean();
 
-  const totalGanhos = orders.reduce((total, order) => total + order.valor_motorista, 0);
+  const totalGanhos = orders.reduce(
+    (total, order) => total + order.valor_motorista,
+    0
+  );
 
   res.status(200).json({
     commissionRate: profile.commissionRate,
