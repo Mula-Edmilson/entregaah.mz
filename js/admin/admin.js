@@ -39,6 +39,12 @@ function attachEventListeners() {
     document.getElementById('form-edit-cliente').addEventListener('submit', handleUpdateClient);
     document.getElementById('form-change-password').addEventListener('submit', handleChangePassword);
 
+    // NOVO: formulário de custos (pode não existir em versões antigas)
+    const costForm = document.getElementById('form-add-cost');
+    if (costForm) {
+        costForm.addEventListener('submit', handleAddCost);
+    }
+
     // --- Navegação Principal (Sidebar) ---
     document.getElementById('nav-visao-geral').addEventListener('click', (e) => { e.preventDefault(); showPage('visao-geral', 'nav-visao-geral', 'Visão Geral'); });
     document.getElementById('nav-entregas').addEventListener('click', (e) => { e.preventDefault(); showPage('entregas-activas', 'nav-entregas', 'Entregas Activas'); });
@@ -141,6 +147,7 @@ function showPage(pageId, navId, title) {
         case 'visao-geral':
             loadOverviewStats();
             loadFinancialStats();
+            loadCostsDashboardSummary();
             initServicesChart(false);
             break;
         case 'gestao-motoristas':
