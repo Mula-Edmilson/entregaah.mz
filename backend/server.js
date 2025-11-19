@@ -1,3 +1,5 @@
+// backend/server.js
+
 require('dotenv').config();
 
 const path = require('node:path');
@@ -25,50 +27,34 @@ validateRequiredEnv(['MONGO_URI', 'JWT_SECRET']);
 connectDB();
 
 const app = express();
-app.set('trust proxy', 1);
 const server = http.createServer(app);
 
-/**
- * 🔐 ORIGENS PERMITIDAS (versão segura)
- * - GitHub Pages de produção: https://mula-edmilson.github.io
- * - FRONTEND_URL e FRONTEND_URL_DEV podem ser definidos no .env
- */
-const allowedOrigins = [
-  'https://mula-edmilson.github.io',
-  process.env.FRONTEND_URL,
-  process.env.FRONTEND_URL_DEV
-].filter(Boolean);
+const allowedOrigins = [process.env.FRONTEND_URL, process.env.FRONTEND_URL_DEV].filter(Boolean);
 
 const corsOptions = {
   origin(origin, callback) {
-    // Permite chamadas sem origin (ex.: Postman, scripts internos)
-    if (!origin) {
-      return callback(null, true);
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.error(`CORS bloqueado para a origem: ${origin}`);
+      callback(new Error('Não permitido pela política de CORS'));
     }
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    console.error(`CORS bloqueado para a origem não permitida: ${origin}`);
-    return callback(new Error('Não permitido pela política de CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 };
 
-// Socket.IO a usar as mesmas regras de CORS
 const io = new Server(server, { cors: corsOptions });
 app.set('socketio', io);
 
-// Middleware de CORS para todas as rotas HTTP
 app.use(cors(corsOptions));
-
-app.use(helmet({
-  crossOriginEmbedderPolicy: false,
-  crossOriginOpenerPolicy: false,
-  crossOriginResourcePolicy: { policy: 'cross-origin' }
-}));
+app.use(
+  helmet({
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+  })
+);
 app.use(compression());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
@@ -83,15 +69,19 @@ if (process.env.NODE_ENV !== 'production') {
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), { maxAge: '1d' }));
 
+// Rate limit em todas as rotas /api
 app.use('/api', rateLimiter);
 
+// Rotas da API
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/drivers', require('./routes/driverRoutes'));
 app.use('/api/stats', require('./routes/statsRoutes'));
 app.use('/api/clients', require('./routes/clientRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/costs', require('./routes/costRoutes')); // <- NOVO: custos da empresa
 
+// Healthcheck
 app.get('/health', (_req, res) =>
   res.status(200).json({
     status: 'ok',
@@ -100,6 +90,7 @@ app.get('/health', (_req, res) =>
   })
 );
 
+// Rota raiz
 app.get('/', (_req, res) => {
   res.send('<h1>Servidor Backend da Entregaah MZ está no ar!</h1>');
 });
@@ -113,5 +104,4 @@ const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
   console.log(`Servidor a correr na porta ${PORT}`);
-  console.log('Origens CORS permitidas:', allowedOrigins);
 });
