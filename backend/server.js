@@ -27,28 +27,42 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
-const allowedOrigins = [process.env.FRONTEND_URL, process.env.FRONTEND_URL_DEV].filter(Boolean);
+/**
+ * 🔐 ORIGENS PERMITIDAS (versão segura)
+ * - GitHub Pages de produção: https://mula-edmilson.github.io
+ * - FRONTEND_URL e FRONTEND_URL_DEV podem ser definidos no .env
+ */
+const allowedOrigins = [
+  'https://mula-edmilson.github.io',
+  process.env.FRONTEND_URL,
+  process.env.FRONTEND_URL_DEV
+].filter(Boolean);
 
 const corsOptions = {
   origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.error(`CORS bloqueado para a origem: ${origin}`);
-      callback(new Error('Não permitido pela política de CORS'));
+    // Permite chamadas sem origin (ex.: Postman, scripts internos)
+    if (!origin) {
+      return callback(null, true);
     }
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    console.error(`CORS bloqueado para a origem não permitida: ${origin}`);
+    return callback(new Error('Não permitido pela política de CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 };
 
-const cors = require("cors");
-app.use(cors());
-
+// Socket.IO a usar as mesmas regras de CORS
 const io = new Server(server, { cors: corsOptions });
 app.set('socketio', io);
 
+// Middleware de CORS para todas as rotas HTTP
 app.use(cors(corsOptions));
+
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: false,
@@ -98,5 +112,5 @@ const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
   console.log(`Servidor a correr na porta ${PORT}`);
-
+  console.log('Origens CORS permitidas:', allowedOrigins);
 });
