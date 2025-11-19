@@ -1,3 +1,5 @@
+// backend/routes/driverRoutes.js
+
 const express = require('express');
 const { body, param } = require('express-validator');
 const driverController = require('../controllers/driverController');
@@ -7,11 +9,15 @@ const { DRIVER_STATUS } = require('../utils/constants');
 
 const router = express.Router();
 
+// Lista todos os motoristas (para o ecrã de gestão)
 router.get('/', protect, admin, driverController.getAllDrivers);
 
-router.get('/available', protect, admin, async (_req, res) => {
-  const drivers = await driverController.getAllDriversForAvailability();
-  res.status(200).json(drivers);
-});
+// Lista motoristas DISPONÍVEIS (online_livre) para atribuir encomendas
+router.get(
+  '/available',
+  protect,
+  admin,
+  driverController.getAllDriversForAvailability
+);
 
 module.exports = router;
