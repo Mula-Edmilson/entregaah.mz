@@ -42,6 +42,9 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 };
 
+const cors = require("cors");
+app.use(cors());
+
 const io = new Server(server, { cors: corsOptions });
 app.set('socketio', io);
 
@@ -95,4 +98,5 @@ const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
   console.log(`Servidor a correr na porta ${PORT}`);
+
 });
