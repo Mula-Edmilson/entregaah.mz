@@ -64,55 +64,150 @@
         <div class="content-area">
             
             <div id="visao-geral" class="content-page">
-    
-                <div class="stats-cards">
-                    <div class="card card-warning"><h3>Pendentes</h3><p id="stats-pendentes">...</p></div>
-                    <div class="card card-info"><h3>Em Trânsito</h3><p id="stats-em-transito">...</p></div>
-                    <div class="card card-success"><h3>Concluídas (Hoje)</h3><p id="stats-concluidas-hoje">...</p></div>
-                    <div class="card card-success"><h3>Motoristas Online</h3><p id="stats-motoristas-online">...</p></div>
+
+    <!-- Estatísticas de entregas -->
+    <div class="stats-cards">
+        <div class="card card-warning"><h3>Pendentes</h3><p id="stats-pendentes">.</p></div>
+        <div class="card card-info"><h3>Em Trânsito</h3><p id="stats-em-transito">.</p></div>
+        <div class="card card-success"><h3>Concluídas (Hoje)</h3><p id="stats-concluidas-hoje">.</p></div>
+        <div class="card card-success"><h3>Motoristas Online</h3><p id="stats-motoristas-online">.</p></div>
+    </div>
+
+    <!-- Financeiro (Receita / Lucro / Motoristas) -->
+    <h3 style="margin-top: 2rem; color: var(--text-color); font-weight: 600;">Financeiro (Este Mês)</h3>
+    <div class="stats-cards" style="margin-top: 1rem;">
+        <div class="card card-success">
+            <h3><i class="fas fa-dollar-sign"></i> Receita Total</h3>
+            <p id="stats-receita-total">.</p>
+        </div>
+        <div class="card card-info">
+            <h3><i class="fas fa-wallet"></i> Lucro da Empresa</h3>
+            <p id="stats-lucro-empresa">.</p>
+        </div>
+        <div class="card card-warning">
+            <h3><i class="fas fa-motorcycle"></i> Ganhos (Motoristas)</h3>
+            <p id="stats-ganhos-motorista">.</p>
+        </div>
+        <div class="card">
+            <h3><i class="fas fa-trophy"></i> Top Motorista</h3>
+            <p id="stats-top-driver" style="font-size: 1.5rem; color: var(--primary-color);">.</p>
+        </div>
+    </div>
+
+    <!-- NOVO: Cards de Despesas e Saldo -->
+    <h3 style="margin-top: 2rem; color: var(--text-color); font-weight: 600;">Despesas &amp; Saldo (Este Mês)</h3>
+    <div class="stats-cards" style="margin-top: 1rem;">
+        <div class="card card-danger">
+            <h3><i class="fas fa-file-invoice-dollar"></i> Despesas da Empresa</h3>
+            <p id="stats-despesas-mes">.</p>
+        </div>
+        <div class="card card-success">
+            <h3><i class="fas fa-chart-line"></i> Saldo (Receita - Despesas)</h3>
+            <p id="stats-saldo-mes">.</p>
+        </div>
+    </div>
+
+    <!-- NOVO: Formulário de Custos + Últimos custos -->
+    <div class="costs-layout">
+        <!-- Card do formulário de custos -->
+        <div class="card costs-form-card">
+            <h3><i class="fas fa-plus-circle"></i> Registar Custo da Empresa</h3>
+            <form id="form-add-cost">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cost-category">Categoria</label>
+                        <select id="cost-category" required>
+                            <option value="">-- Selecione --</option>
+                            <option value="salarios">Salários</option>
+                            <option value="renda">Renda</option>
+                            <option value="manutencao">Manutenção</option>
+                            <option value="comunicacao">Comunicação</option>
+                            <option value="marketing">Marketing</option>
+                            <option value="combustivel">Combustível</option>
+                            <option value="diversos">Diversos</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cost-amount">Valor (MZN)</label>
+                        <input type="number" id="cost-amount" min="0" step="0.01" required placeholder="Ex: 15000.00">
+                    </div>
                 </div>
 
-                <h3 style="margin-top: 2rem; color: var(--text-color); font-weight: 600;">Financeiro (Este Mês)</h3>
-                <div class="stats-cards" style="margin-top: 1rem;">
-                    <div class="card card-success">
-                        <h3><i class="fas fa-dollar-sign"></i> Receita Total</h3>
-                        <p id="stats-receita-total">...</p>
-                    </div>
-                    <div class="card card-info">
-                        <h3><i class="fas fa-wallet"></i> Lucro da Empresa</h3>
-                        <p id="stats-lucro-empresa">...</p>
-                    </div>
-                    <div class="card card-warning">
-                        <h3><i class="fas fa-motorcycle"></i> Ganhos (Motoristas)</h3>
-                        <p id="stats-ganhos-motorista">...</p>
-                    </div>
-                    <div class="card">
-                        <h3><i class="fas fa-trophy"></i> Top Motorista</h3>
-                        <p id="stats-top-driver" style="font-size: 1.5rem; color: var(--primary-color);">...</p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cost-date">Data</label>
+                        <input type="date" id="cost-date">
                     </div>
                 </div>
 
-                <div class="charts-grid">
-                    <div class="chart-container" id="main-chart-container">
-                        <div class="chart-header">
-                            <h3>Desempenho dos Serviços</h3>
-                            <button class="btn-action-small btn-danger" id="btn-reset-chart"><i class="fas fa-sync"></i> Reset</button>
-                        </div>
-                        <canvas id="servicesChart"></canvas>
-                    </div>
-                    
-                    <div class="chart-container" id="deliveries-chart-container">
-                        <h3>Entregas Ativas</h3>
-                        <canvas id="deliveriesStatusChart"></canvas>
-                    </div>
-                    
-                    <div class="chart-container" id="financialChartContainer">
-                        <h3>Divisão da Receita (Este Mês)</h3>
-                        <canvas id="financialPieChart"></canvas>
-                    </div>
+                <div class="form-group">
+                    <label for="cost-description">Descrição</label>
+                    <input type="text" id="cost-description" placeholder="Ex: Salário Novembro, renda escritório, campanha marketing.">
                 </div>
-            
+
+                <button type="submit" class="btn-submit btn-small">
+                    <i class="fas fa-save"></i> Guardar Custo
+                </button>
+            </form>
+        </div>
+
+        <!-- Card com últimos custos registados -->
+        <div class="card costs-list-card">
+            <h3><i class="fas fa-list-ul"></i> Últimos Custos Registados</h3>
+            <div class="table-container-responsive" style="max-height: 240px; overflow-y: auto;">
+                <table class="table-pedidos">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Categoria</th>
+                            <th>Descrição</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="costs-latest-table-body">
+                        <tr><td colspan="4">Sem registos de custos.</td></tr>
+                    </tbody>
+                </table>
             </div>
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="charts-grid">
+        <div class="chart-container" id="main-chart-container">
+            <div class="chart-header">
+                <h3>Desempenho dos Serviços</h3>
+                <button class="btn-action-small btn-danger" id="btn-reset-chart">
+                    <i class="fas fa-sync"></i> Reset
+                </button>
+            </div>
+            <canvas id="servicesChart"></canvas>
+        </div>
+        
+        <div class="chart-container" id="deliveries-chart-container">
+            <h3>Entregas Ativas</h3>
+            <canvas id="deliveriesStatusChart"></canvas>
+        </div>
+        
+        <div class="chart-container" id="financialChartContainer">
+            <h3>Divisão da Receita (Este Mês)</h3>
+            <canvas id="financialPieChart"></canvas>
+        </div>
+
+        <!-- NOVO: Despesas por categoria (mês atual) -->
+        <div class="chart-container" id="costsByCategoryContainer">
+            <h3>Despesas por Categoria (Mês Atual)</h3>
+            <canvas id="costsByCategoryChart"></canvas>
+        </div>
+
+        <!-- NOVO: Receita vs Custos (Histórico) -->
+        <div class="chart-container" id="revenueVsCostsContainer">
+            <h3>Receita vs Custos (Histórico)</h3>
+            <canvas id="revenueVsCostsChart"></canvas>
+        </div>
+    </div>
+
+</div>
 
             <div id="form-nova-entrega" class="content-page hidden">
                 <form id="delivery-form">
@@ -571,4 +666,5 @@
     <script src="js/admin/admin.js"></script>
 
 </body>
+
 </html>
