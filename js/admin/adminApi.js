@@ -57,6 +57,200 @@ async function loadFinancialStats() {
     }
 }
 
+async function loadCostsDashboardSummary() {
+    const formatMZN = (value) => new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(value);
+
+    const despesasEl = document.getElementById('stats-despesas-mes');
+    const saldoEl = document.getElementById('stats-saldo-mes');
+    const tableBody = document.getElementById('costs-latest-table-body');
+
+    // Se a secção não existir (versão antiga do HTML), sai silenciosamente
+    if (!despesasEl || !saldoEl) return;
+
+    despesasEl.innerText = '.';
+    saldoEl.innerText = '.';
+    if (tableBody) {
+        tableBody.innerHTML = '<tr><td colspan="4">A carregar.</td></tr>';
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/api/costs/dashboard-summary?months=6`, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.status === 401) {
+            return handleLogout('admin');
+        }
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+
+        const current = data.currentMonth || { totalCosts: 0, costsByCategory: {} };
+        const history = data.history || { labels: [], revenue: [], costs: [] };
+
+        // Card: despesas do mês
+        despesasEl.innerText = formatMZN(current.totalCosts || 0);
+
+        // Card: saldo = receita (mês atual) - despesas (mês atual)
+        let saldo = 0;
+        if (Array.isArray(history.labels) && history.labels.length > 0) {
+            const lastIndex = history.labels.length - 1;
+            const receitaMesAtual = history.revenue[lastIndex] || 0;
+            saldo = receitaMesAtual - (current.totalCosts || 0);
+        }
+        saldoEl.innerText = formatMZN(saldo);
+
+        // Gráfico: despesas por categoria
+        initCostsByCategoryChart(current.costsByCategory || {});
+
+        // Gráfico: receita vs custos (histórico)
+        initRevenueVsCostsChart(history.labels || [], history.revenue || [], history.costs || []);
+
+        // Tabela: últimos custos registados (por mês atual, se possível)
+        if (tableBody) {
+            let monthParam = null;
+            if (current.label && current.label.includes('/')) {
+                const [mm, yyyy] = current.label.split('/');
+                monthParam = `${yyyy}-${mm}`; // ex: "2025-11"
+            }
+            await loadLatestCosts(tableBody, monthParam);
+        }
+
+    } catch (error) {
+        console.error('Falha ao carregar resumo de custos:', error);
+        despesasEl.innerText = formatMZN(0);
+        saldoEl.innerText = formatMZN(0);
+        if (tableBody) {
+            tableBody.innerHTML = '<tr><td colspan="4">Erro ao carregar custos.</td></tr>';
+        }
+        initCostsByCategoryChart({});
+        initRevenueVsCostsChart([], [], []);
+    }
+}
+
+function initCostsByCategoryChart(costsByCategory) {
+    const canvas = document.getElementById('costsByCategoryChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    if (costsByCategoryChart) {
+        costsByCategoryChart.destroy();
+        costsByCategoryChart = null;
+    }
+
+    const keys = Object.keys(COST_CATEGORY_LABELS);
+    const labels = keys.map(k => COST_CATEGORY_LABELS[k]);
+    const values = keys.map(k => (costsByCategory && typeof costsByCategory[k] === 'number') ? costsByCategory[k] : 0);
+
+    costsByCategoryChart = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Despesas (MZN)',
+                data: values,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+}
+
+function initRevenueVsCostsChart(labels, revenueData, costsData) {
+    const canvas = document.getElementById('revenueVsCostsChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    if (revenueVsCostsChart) {
+        revenueVsCostsChart.destroy();
+        revenueVsCostsChart = null;
+    }
+
+    const safeLabels = Array.isArray(labels) ? labels : [];
+    const safeRevenue = Array.isArray(revenueData) ? revenueData : [];
+    const safeCosts = Array.isArray(costsData) ? costsData : [];
+
+    revenueVsCostsChart = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: safeLabels,
+            datasets: [
+                {
+                    label: 'Receita (MZN)',
+                    data: safeRevenue,
+                    tension: 0.3
+                },
+                {
+                    label: 'Custos (MZN)',
+                    data: safeCosts,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+}
+
+async function loadLatestCosts(tableBody, monthParam) {
+    try {
+        const params = new URLSearchParams();
+        params.set('limit', '10');
+        if (monthParam) {
+            params.set('month', monthParam);
+        }
+
+        const response = await fetch(`${API_URL}/api/costs?${params.toString()}`, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.status === 401) {
+            return handleLogout('admin');
+        }
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+
+        const formatMZN = (value) => new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(value);
+
+        tableBody.innerHTML = '';
+        if (!data.costs || data.costs.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4">Sem registos de custos.</td></tr>';
+            return;
+        }
+
+        data.costs.forEach(cost => {
+            const date = cost.date ? new Date(cost.date) : null;
+            const dateStr = date ? date.toLocaleDateString('pt-MZ') : 'N/D';
+            const catLabel = COST_CATEGORY_LABELS[cost.category] || cost.category || 'N/D';
+            const desc = cost.description || '-';
+            const amountStr = formatMZN(cost.amount || 0);
+
+            tableBody.innerHTML += `
+                <tr>
+                    <td>${dateStr}</td>
+                    <td>${catLabel}</td>
+                    <td>${desc}</td>
+                    <td>${amountStr}</td>
+                </tr>
+            `;
+        });
+
+    } catch (error) {
+        console.error('Falha ao carregar lista de custos:', error);
+        tableBody.innerHTML = '<tr><td colspan="4">Erro ao carregar custos.</td></tr>';
+    }
+}
+
 async function loadDrivers() {
     const tableBody = document.getElementById('drivers-table-body');
     tableBody.innerHTML = '<tr><td colspan="5">A carregar...</td></tr>';
@@ -284,6 +478,63 @@ async function handleChangePassword(e) {
         showCustomAlert('Erro', error.message, 'error');
         submitButton.disabled = false;
         submitButton.innerHTML = 'Atualizar Senha';
+    }
+}
+
+async function handleAddCost(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const submitButton = form.querySelector('button[type="submit"]');
+
+    const category = document.getElementById('cost-category').value;
+    const amountStr = document.getElementById('cost-amount').value;
+    const date = document.getElementById('cost-date').value;
+    const description = document.getElementById('cost-description').value.trim();
+
+    if (!category) {
+        showCustomAlert('Erro', 'Por favor, selecione uma categoria de custo.', 'error');
+        return;
+    }
+
+    const amount = Number(amountStr);
+    if (Number.isNaN(amount) || amount <= 0) {
+        showCustomAlert('Erro', 'Introduza um valor de custo válido (maior que 0).', 'error');
+        return;
+    }
+
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A guardar...';
+
+    try {
+        const body = {
+            category,
+            amount,
+            description: description || undefined,
+            date: date || undefined
+        };
+
+        const response = await fetch(`${API_URL}/api/costs`, {
+            method: 'POST',
+            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Falha ao registar custo.');
+
+        showCustomAlert('Sucesso', 'Custo registado com sucesso!', 'success');
+        form.reset();
+
+        // Recarrega cards, gráficos e lista de custos
+        loadCostsDashboardSummary();
+
+    } catch (error) {
+        console.error('Falha ao registar custo:', error);
+        showCustomAlert('Erro', error.message || 'Erro ao registar custo.', 'error');
+    } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-save"></i> Guardar Custo';
     }
 }
 
@@ -647,3 +898,18 @@ async function handleGenerateStatement() {
         button.innerHTML = '<i class="fas fa-search"></i> Gerar Extrato';
     }
 }
+
+// Mapa de categorias de custos -> label amigável
+const COST_CATEGORY_LABELS = {
+    salarios: 'Salários',
+    renda: 'Renda',
+    manutencao: 'Manutenção',
+    comunicacao: 'Comunicação',
+    marketing: 'Marketing',
+    combustivel: 'Combustível',
+    diversos: 'Diversos'
+};
+
+// Estado global para os gráficos de custos
+let costsByCategoryChart = null;
+let revenueVsCostsChart = null;
