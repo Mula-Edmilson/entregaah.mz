@@ -196,6 +196,7 @@ function showPage(pageId, navId, title) {
             loadOverviewStats();
             loadFinancialStats();
             loadCostsDashboardSummary();
+            loadCostAssignmentOptions();
             initServicesChart(false);
             break;
         case 'gestao-motoristas':
