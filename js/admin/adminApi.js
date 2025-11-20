@@ -200,6 +200,62 @@ function initRevenueVsCostsChart(labels, revenueData, costsData) {
         }
     });
 }
+async function loadCostAssignmentOptions() {
+    const select = document.getElementById('cost-assigned-entity');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- Não atribuir --</option>';
+
+    try {
+        // Busca motoristas
+        const driversResp = await fetch(`${API_URL}/api/drivers`, {
+            headers: getAuthHeaders()
+        });
+        if (driversResp.status === 401) return handleLogout('admin');
+        const driversData = await driversResp.json();
+
+        // Busca clientes
+        const clientsResp = await fetch(`${API_URL}/api/clients`, {
+            headers: getAuthHeaders()
+        });
+        if (clientsResp.status === 401) return handleLogout('admin');
+        const clientsData = await clientsResp.json();
+
+        // Funcionários (motoristas)
+        if (driversData.drivers && driversData.drivers.length > 0) {
+            const optGroupStaff = document.createElement('optgroup');
+            optGroupStaff.label = 'Funcionários (Motoristas)';
+
+            driversData.drivers.forEach((d) => {
+                const opt = document.createElement('option');
+                opt.value = `driver:${d._id}`;
+                opt.textContent = d.nome ? d.nome : d.name || 'Motorista';
+                optGroupStaff.appendChild(opt);
+            });
+
+            select.appendChild(optGroupStaff);
+        }
+
+        // Clientes
+        if (clientsData.clients && clientsData.clients.length > 0) {
+            const optGroupClients = document.createElement('optgroup');
+            optGroupClients.label = 'Clientes';
+
+            clientsData.clients.forEach((c) => {
+                const opt = document.createElement('option');
+                opt.value = `client:${c._id}`;
+                opt.textContent = c.nome || c.name || 'Cliente';
+                optGroupClients.appendChild(opt);
+            });
+
+            select.appendChild(optGroupClients);
+        }
+    } catch (error) {
+        console.error('Falha ao carregar lista de funcionários/clientes para custos:', error);
+        // em caso de erro, mantemos só o "Não atribuir"
+    }
+}
+
 
 async function loadLatestCosts(tableBody, monthParam) {
     try {
@@ -491,6 +547,7 @@ async function handleAddCost(e) {
     const amountStr = document.getElementById('cost-amount').value;
     const date = document.getElementById('cost-date').value;
     const description = document.getElementById('cost-description').value.trim();
+    const assignedRaw = document.getElementById('cost-assigned-entity').value;
 
     if (!category) {
         showCustomAlert('Erro', 'Por favor, selecione uma categoria de custo.', 'error');
@@ -503,6 +560,18 @@ async function handleAddCost(e) {
         return;
     }
 
+    let assignedUserId;
+    let assignedClientId;
+
+    if (assignedRaw) {
+        const [type, id] = assignedRaw.split(':');
+        if (type === 'driver') {
+            assignedUserId = id;  // vais associar a um utilizador/motorista
+        } else if (type === 'client') {
+            assignedClientId = id;
+        }
+    }
+
     submitButton.disabled = true;
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A guardar...';
 
@@ -511,7 +580,9 @@ async function handleAddCost(e) {
             category,
             amount,
             description: description || undefined,
-            date: date || undefined
+            date: date || undefined,
+            assignedUserId: assignedUserId || undefined,
+            assignedClientId: assignedClientId || undefined
         };
 
         const response = await fetch(`${API_URL}/api/costs`, {
@@ -525,9 +596,8 @@ async function handleAddCost(e) {
 
         showCustomAlert('Sucesso', 'Custo registado com sucesso!', 'success');
         form.reset();
-
-        // Recarrega cards, gráficos e lista de custos
         loadCostsDashboardSummary();
+        loadCostAssignmentOptions(); // recarrega dropdown (opcional)
 
     } catch (error) {
         console.error('Falha ao registar custo:', error);
@@ -571,6 +641,73 @@ async function handleDeleteOldHistory() {
     }
 }
 
+async function handleExportCostsExcel() {
+    try {
+        const params = new URLSearchParams();
+        // se quiseres no futuro: params.set('month', '2025-11');
+        params.set('limit', '500'); // exportar até 500 registos, por exemplo
+
+        const response = await fetch(`${API_URL}/api/costs?${params.toString()}`, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.status === 401) {
+            return handleLogout('admin');
+        }
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Erro ao carregar custos.');
+
+        const rows = [];
+        rows.push(['Data', 'Categoria', 'Atribuído a', 'Descrição', 'Valor']);
+
+        const formatDate = (d) => d ? new Date(d).toLocaleDateString('pt-MZ') : '';
+        const catLabel = (cat) => COST_CATEGORY_LABELS[cat] || cat || '';
+        
+        (data.costs || []).forEach(cost => {
+            const dateStr = formatDate(cost.date);
+            const categoryStr = catLabel(cost.category);
+            let assignedStr = '';
+
+            if (cost.assignedUser && cost.assignedUser.nome) {
+                assignedStr = `Funcionário: ${cost.assignedUser.nome}`;
+            } else if (cost.assignedClient && cost.assignedClient.nome) {
+                assignedStr = `Cliente: ${cost.assignedClient.nome}`;
+            }
+
+            rows.push([
+                dateStr,
+                categoryStr,
+                assignedStr,
+                cost.description || '',
+                (cost.amount || 0).toString().replace('.', ',')
+            ]);
+        });
+
+        const csvContent = rows.map(r => r.map((field) => {
+            const safe = String(field).replace(/"/g, '""');
+            return `"${safe}"`;
+        }).join(';')).join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+
+        const today = new Date();
+        const fileName = `relatorio_custos_${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}.csv`;
+
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+    } catch (error) {
+        console.error('Falha ao exportar custos:', error);
+        showCustomAlert('Erro', error.message || 'Erro ao exportar relatório de custos.', 'error');
+    }
+}
 async function handleNewDelivery(e) {
     e.preventDefault();
     const form = e.target;
