@@ -6,6 +6,72 @@
  */
 
 /**
+ * Calcula as durações por fase da entrega (central → recolha, recolha → entrega).
+ * Usa timestamps específicos se existirem, senão faz fallback para timestamp_started/completed.
+ * @param {object} order
+ * @returns {{pickupMs:number|null, deliveryMs:number|null, totalMs:number, pickupLabel:string, deliveryLabel:string, totalLabel:string}}
+ */
+function getPhaseDurations(order) {
+    const toMs = (value) => {
+        if (!value) return null;
+        const d = new Date(value);
+        const t = d.getTime();
+        return Number.isNaN(t) ? null : t;
+    };
+
+    const pickupStart = toMs(order.pickupStartAt);
+    const pickupEnd = toMs(order.pickupCompletedAt);
+    const deliveryStart = toMs(order.deliveryStartAt);
+    const deliveryEnd = toMs(order.deliveryCompletedAt || order.timestamp_completed);
+
+    const computeDiff = (start, end) => {
+        if (start == null || end == null) return null;
+        if (end < start) return null;
+        return end - start;
+    };
+
+    const pickupMs = computeDiff(pickupStart, pickupEnd);
+    const deliveryMs = computeDiff(deliveryStart, deliveryEnd);
+
+    let totalMs = 0;
+    if (pickupMs != null) totalMs += pickupMs;
+    if (deliveryMs != null) totalMs += deliveryMs;
+
+    // Fallback para duração total clássica, se por algum motivo as fases não estiverem marcadas
+    if (totalMs === 0 && order.timestamp_started && order.timestamp_completed) {
+        const start = toMs(order.timestamp_started);
+        const end = toMs(order.timestamp_completed);
+        const diff = computeDiff(start, end);
+        if (diff != null) {
+            totalMs = diff;
+        }
+    }
+
+    const formatFromMs = (ms) => {
+        if (ms == null) return 'N/D';
+        const totalMinutes = Math.round(ms / 60000);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        if (hours <= 0) {
+            return `${totalMinutes} min`;
+        }
+        if (minutes === 0) {
+            return `${hours}h`;
+        }
+        return `${hours}h ${minutes}min`;
+    };
+
+    return {
+        pickupMs,
+        deliveryMs,
+        totalMs,
+        pickupLabel: formatFromMs(pickupMs),
+        deliveryLabel: formatFromMs(deliveryMs),
+        totalLabel: formatFromMs(totalMs)
+    };
+}
+
+/**
  * Abre o modal genérico de confirmação (para ações destrutivas).
  * @param {object} options - { title, message, confirmText, onConfirm }
  */
@@ -126,6 +192,10 @@ async function openEditDriverModal(driverUserId) {
 
 /**
  * Abre o modal com os detalhes de uma encomenda do histórico.
+ * Agora mostra também:
+ *  - Tempo Central → Recolha
+ *  - Tempo Recolha → Entrega
+ *  - Duração Total
  * @param {string} orderId - O ID da encomenda.
  */
 async function openHistoryDetailModal(orderId) {
@@ -150,6 +220,8 @@ async function openHistoryDetailModal(orderId) {
         if (order.address_coords && order.address_coords.lat) {
             coordsHtml = `<p><strong>Pin do Mapa:</strong> ${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}</p>`;
         }
+
+        const phases = getPhaseDurations(order);
         
         body.innerHTML = `
             <p><strong>Cliente:</strong> ${order.client_name}</p>
@@ -165,7 +237,10 @@ async function openHistoryDetailModal(orderId) {
             <p><strong>Criado em:</strong> ${new Date(order.timestamp_created).toLocaleString('pt-MZ')}</p>
             <p><strong>Iniciado em:</strong> ${order.timestamp_started ? new Date(order.timestamp_started).toLocaleString('pt-MZ') : 'N/D'}</p>
             <p><strong>Concluído em:</strong> ${order.timestamp_completed ? new Date(order.timestamp_completed).toLocaleString('pt-MZ') : 'N/D'}</p>
-            <p><strong>Duração:</strong> ${formatDuration(order.timestamp_started, order.timestamp_completed)}</p>
+            <hr style="margin: 0.75rem 0;">
+            <p><strong>Tempo Central → Recolha:</strong> ${phases.pickupLabel}</p>
+            <p><strong>Tempo Recolha → Entrega:</strong> ${phases.deliveryLabel}</p>
+            <p><strong>Duração Total:</strong> ${phases.totalLabel}</p>
         `;
     } catch (error) { 
         console.error('Falha ao carregar detalhes do histórico:', error); 
@@ -175,6 +250,9 @@ async function openHistoryDetailModal(orderId) {
 
 /**
  * Abre o modal de relatório de entregas de um motorista.
+ * Agora mostra também, por linha:
+ *  - C → R (Central → Recolha)
+ *  - R → E (Recolha → Entrega)
  * @param {string} driverUserId - O ID do *User* do motorista.
  * @param {string} driverName - O nome do motorista.
  */
@@ -197,9 +275,11 @@ async function openDriverReportModal(driverUserId, driverName) {
         
         const orders = data.orders;
         let totalMs = 0;
+
         orders.forEach(order => {
-            if (order.timestamp_started && order.timestamp_completed) {
-                totalMs += (new Date(order.timestamp_completed) - new Date(order.timestamp_started));
+            const phases = getPhaseDurations(order);
+            if (phases.totalMs) {
+                totalMs += phases.totalMs;
             }
         });
         
@@ -214,13 +294,18 @@ async function openDriverReportModal(driverUserId, driverName) {
         
         orders.forEach(order => {
             const serviceName = SERVICE_NAMES[order.service_type] || order.service_type;
+            const phases = getPhaseDurations(order);
+
             tableBody.innerHTML += `
                 <tr>
                     <td>#${order._id.slice(-6)}</td>
                     <td>${order.client_name}</td>
                     <td>${serviceName}</td>
                     <td>${new Date(order.timestamp_completed).toLocaleDateString('pt-MZ')}</td>
-                    <td>${formatDuration(order.timestamp_started, order.timestamp_completed)}</td>
+                    <td>
+                        <div><strong>C → R:</strong> ${phases.pickupLabel}</div>
+                        <div><strong>R → E:</strong> ${phases.deliveryLabel}</div>
+                    </td>
                 </tr>
             `;
         });
