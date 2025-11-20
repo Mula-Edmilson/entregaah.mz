@@ -402,28 +402,41 @@ async function loadActiveDeliveries() {
 
 async function loadHistory() {
     const tableBody = document.getElementById('history-orders-table-body');
-    tableBody.innerHTML = '<tr><td colspan="7">A carregar...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="7">A carregar.</td></tr>';
     try {
         const response = await fetch(`${API_URL}/api/orders/history`, { headers: getAuthHeaders() });
         if (response.status === 401) { return handleLogout('admin'); }
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
+
         tableBody.innerHTML = '';
-        if (data.orders.length === 0) {
+        if (!data.orders || data.orders.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="7">Nenhum histórico encontrado.</td></tr>';
             return;
         }
+
         data.orders.forEach(order => {
             const motoristaNome = order.assigned_to_driver ? order.assigned_to_driver.user.nome : 'N/D';
-            const duracao = formatDuration(order.timestamp_started, order.timestamp_completed);
             const serviceName = SERVICE_NAMES[order.service_type] || order.service_type;
+
+            let duracaoHtml = '';
+            if (typeof getPhaseDurations === 'function') {
+                const phases = getPhaseDurations(order);
+                duracaoHtml =
+                    '<div><strong>C → R:</strong> ' + phases.pickupLabel + '</div>' +
+                    '<div><strong>R → E:</strong> ' + phases.deliveryLabel + '</div>';
+            } else {
+                const duracao = formatDuration(order.timestamp_started, order.timestamp_completed);
+                duracaoHtml = duracao;
+            }
+
             tableBody.innerHTML += `
                 <tr class="history-row">
                     <td>#${order._id.slice(-6)}</td>
                     <td>${order.client_name}</td>
                     <td>${serviceName}</td>
                     <td>${motoristaNome}</td>
-                    <td>${duracao}</td>
+                    <td>${duracaoHtml}</td>
                     <td class="verification-code">${order.verification_code}</td> 
                     <td><button class="btn-action-small" onclick="openHistoryDetailModal('${order._id}')"><i class="fas fa-eye"></i></button></td>
                 </tr>
