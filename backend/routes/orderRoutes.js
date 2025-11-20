@@ -28,6 +28,10 @@ const upload = multer({
   limits: { fileSize: parseInt(process.env.UPLOAD_IMAGE_MAX_SIZE || `${5 * 1024 * 1024}`, 10) }
 });
 
+// -----------------------------------------------------------------------------
+// CRIAÇÃO
+// -----------------------------------------------------------------------------
+
 router.post(
   '/',
   protect,
@@ -47,17 +51,71 @@ router.post(
   orderController.createOrder
 );
 
+// -----------------------------------------------------------------------------
+// ROTAS DO MOTORISTA
+// -----------------------------------------------------------------------------
+
+// lista das minhas entregas activas
 router.get('/my-deliveries', protect, driver, orderController.getMyDeliveries);
 
+// NOVO: iniciar RECOLHA (motorista sai da central)
+// Compatível com a lógica nova de fases
+router.post(
+  '/:id/pickup-start',
+  protect,
+  driver,
+  [param('id', 'ID da encomenda inválido').isMongoId()],
+  validateRequest,
+  orderController.startPickup
+);
+
+// NOVO: concluir RECOLHA (motorista chegou ao ponto de recolha)
+router.post(
+  '/:id/pickup-complete',
+  protect,
+  driver,
+  [param('id', 'ID da encomenda inválido').isMongoId()],
+  validateRequest,
+  orderController.completePickup
+);
+
+// NOVO: iniciar ENTREGA (motorista sai do ponto de recolha para o destino)
+router.post(
+  '/:id/delivery-start',
+  protect,
+  driver,
+  [param('id', 'ID da encomenda inválido').isMongoId()],
+  validateRequest,
+  orderController.startDeliveryPhase
+);
+
+// NOVO: concluir ENTREGA (equivalente moderno ao /:id/complete)
+router.post(
+  '/:id/delivery-complete',
+  protect,
+  driver,
+  [
+    param('id', 'ID da encomenda inválido').isMongoId(),
+    body('verification_code', 'O código de verificação é obrigatório e deve ter 5 caracteres')
+      .trim()
+      .isLength({ min: 5, max: 5 })
+  ],
+  validateRequest,
+  orderController.completeDelivery
+);
+
+// COMPATIBILIDADE: rotas antigas (mantidas)
+// /:id/start -> agora inicia a RECOLHA (usa startPickup internamente)
 router.post(
   '/:id/start',
   protect,
   driver,
   [param('id', 'ID da encomenda inválido').isMongoId()],
   validateRequest,
-  orderController.startDelivery
+  orderController.startDelivery // alias para startPickup
 );
 
+// /:id/complete -> agora conclui a ENTREGA (usa completeDelivery internamente)
 router.post(
   '/:id/complete',
   protect,
@@ -72,6 +130,10 @@ router.post(
   orderController.completeDelivery
 );
 
+// -----------------------------------------------------------------------------
+// ADMIN – ATRIBUIR E CANCELAR
+// -----------------------------------------------------------------------------
+
 router.put(
   '/:orderId/assign',
   protect,
@@ -83,6 +145,27 @@ router.put(
   validateRequest,
   orderController.assignOrder
 );
+
+// NOVO: cancelar encomenda (ADMIN)
+router.post(
+  '/:id/cancel',
+  protect,
+  admin,
+  [
+    param('id', 'ID da encomenda inválido').isMongoId(),
+    body('reason')
+      .optional({ checkFalsy: true })
+      .isString()
+      .isLength({ max: 500 })
+      .withMessage('Motivo demasiado longo (máx. 500 caracteres).')
+  ],
+  validateRequest,
+  orderController.cancelOrder
+);
+
+// -----------------------------------------------------------------------------
+// LISTAGENS PARA ADMIN
+// -----------------------------------------------------------------------------
 
 router.get('/active', protect, admin, orderController.getActiveOrders);
 router.get('/history', protect, admin, orderController.getHistoryOrders);
