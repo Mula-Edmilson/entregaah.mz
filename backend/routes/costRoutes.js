@@ -22,7 +22,7 @@ router.post(
       .isString()
       .notEmpty()
       .withMessage('Categoria é obrigatória.')
-      .custom(value => COMPANY_COST_CATEGORIES.includes(value))
+      .custom((value) => COMPANY_COST_CATEGORIES.includes(value))
       .withMessage('Categoria de custo inválida.'),
     body('amount')
       .notEmpty()
@@ -42,8 +42,14 @@ router.get('/', protect, admin, costController.getCostsList);
 
 /**
  * GET /api/costs/dashboard-summary
- * Resumo para o dashboard (gráficos)
+ * Resumo para o dashboard (gráficos de custos + receita)
  */
-router.get('/dashboard-summary', protect, admin, costController.getDashboardSummary);
+router.get(
+  '/dashboard-summary',
+  protect,
+  admin,
+  // Usa qualquer um dos dois nomes que existir (por segurança extra)
+  costController.getCostsDashboardSummary || costController.getDashboardSummary
+);
 
 module.exports = router;
