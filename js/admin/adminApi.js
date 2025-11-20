@@ -566,7 +566,7 @@ async function handleAddCost(e) {
     if (assignedRaw) {
         const [type, id] = assignedRaw.split(':');
         if (type === 'driver') {
-            assignedUserId = id;  // vais associar a um utilizador/motorista
+            assignedUserId = id;  // associar a utilizador/motorista
         } else if (type === 'client') {
             assignedClientId = id;
         }
@@ -587,7 +587,10 @@ async function handleAddCost(e) {
 
         const response = await fetch(`${API_URL}/api/costs`, {
             method: 'POST',
-            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            headers: { 
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(body)
         });
 
@@ -596,8 +599,10 @@ async function handleAddCost(e) {
 
         showCustomAlert('Sucesso', 'Custo registado com sucesso!', 'success');
         form.reset();
+
+        // Recarrega dashboard de custos + opções de atribuição
         loadCostsDashboardSummary();
-        loadCostAssignmentOptions(); // recarrega dropdown (opcional)
+        loadCostAssignmentOptions();
 
     } catch (error) {
         console.error('Falha ao registar custo:', error);
