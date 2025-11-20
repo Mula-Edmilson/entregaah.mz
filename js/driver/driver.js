@@ -83,7 +83,7 @@ function attachDriverEventListeners() {
     document.getElementById('btn-close-alert').addEventListener('click', closeCustomAlert);
     document.getElementById('btn-ok-alert').addEventListener('click', closeCustomAlert);
     
-    // Listener de Notificação
+    // Listener de Notificação (socket -> driver.js recarrega lista)
     document.addEventListener('nova_entrega', () => {
         console.log('Evento "nova_entrega" recebido. A recarregar a lista...');
         const listaSection = document.getElementById('lista-entregas');
@@ -226,6 +226,7 @@ async function loadMyEarnings() {
 function fillDetalheEntrega(order) {
     const detalheSection = document.getElementById('detalhe-entrega');
     detalheSection.querySelector('#detalhe-entrega-title').innerText = `Detalhes do Pedido #${order._id.slice(-6)}`;
+    
     const img = detalheSection.querySelector('#encomenda-imagem');
     const noImg = detalheSection.querySelector('#no-image-placeholder');
     if (order.image_url) {
@@ -236,41 +237,80 @@ function fillDetalheEntrega(order) {
         img.classList.add('hidden');
         noImg.classList.remove('hidden');
     }
+
     document.getElementById('detalhe-cliente-nome').innerHTML = `<strong>Nome:</strong> ${order.client_name}`;
     document.getElementById('detalhe-cliente-telefone').innerHTML = `<strong>Telefone:</strong> ${order.client_phone1}`;
     document.getElementById('detalhe-cliente-endereco').innerHTML = `<strong>Endereço:</strong> ${order.address_text || 'N/D'}`;
+
     const coordsP = document.getElementById('detalhe-cliente-coords');
     const mapButton = document.getElementById('btn-google-maps');
     if (order.address_coords && order.address_coords.lat) {
         coordsP.querySelector('span').innerText = `${order.address_coords.lat.toFixed(5)}, ${order.address_coords.lng.toFixed(5)}`;
         coordsP.classList.remove('hidden');
-        
-        // --- (A CORREÇÃO DEFINITIVA ESTÁ AQUI) ---
-        // O domínio correto é 'http://googleusercontent.com'
-        // O formato correto é '/maps?q=LAT,LNG'
         mapButton.href = `https://www.google.com/maps?q=${order.address_coords.lat},${order.address_coords.lng}`;
-        // --- FIM DA CORREÇÃO ---
-        
         mapButton.classList.remove('hidden');
     } else {
         coordsP.classList.add('hidden');
         mapButton.classList.add('hidden');
     }
+
+    // --- Controlo dos botões consoante o ESTADO da encomenda ---
     const btnIniciar = detalheSection.querySelector('#btn-iniciar-entrega');
     const formFinalizacao = detalheSection.querySelector('#form-finalizacao');
+
     btnIniciar.onclick = null;
     formFinalizacao.onsubmit = null;
-    if (order.status === 'em_progresso') {
+
+    const status = order.status; // valores tipo: 'pendente', 'atribuido', 'recolha_em_progresso', 'recolha_concluida', 'entrega_em_progresso', 'concluido', 'cancelado'
+
+    // 1) Estados iniciais: ainda não começou recolha
+    if (status === 'pendente' || status === 'atribuido') {
+        btnIniciar.classList.remove('hidden');
+        btnIniciar.innerHTML = '<i class="fas fa-play-circle"></i> Iniciar Recolha';
+        formFinalizacao.classList.add('hidden');
+        btnIniciar.onclick = () => handleStartPickup(order._id);
+        return;
+    }
+
+    // 2) Recolha em progresso (ou estado legacy 'em_progresso')
+    if (status === 'recolha_em_progresso' || status === 'em_progresso') {
+        btnIniciar.classList.remove('hidden');
+        btnIniciar.innerHTML = '<i class="fas fa-flag-checkered"></i> Concluir Recolha';
+        formFinalizacao.classList.add('hidden');
+        btnIniciar.onclick = () => handleCompletePickup(order._id);
+        return;
+    }
+
+    // 3) Recolha concluída -> pronto para iniciar entrega
+    if (status === 'recolha_concluida') {
+        btnIniciar.classList.remove('hidden');
+        btnIniciar.innerHTML = '<i class="fas fa-route"></i> Iniciar Entrega';
+        formFinalizacao.classList.add('hidden');
+        btnIniciar.onclick = () => handleStartDeliveryPhase(order._id);
+        return;
+    }
+
+    // 4) Entrega em progresso -> mostra formulário de finalização com código
+    if (status === 'entrega_em_progresso') {
         btnIniciar.classList.add('hidden');
         formFinalizacao.classList.remove('hidden');
-        formFinalizacao.reset(); 
+        formFinalizacao.reset();
         formFinalizacao.onsubmit = (event) => handleCompleteDelivery(event, order._id);
-    } else {
-        btnIniciar.classList.remove('hidden');
-        formFinalizacao.classList.add('hidden');
-        btnIniciar.onclick = () => handleStartDelivery(order._id);
+        return;
     }
+
+    // 5) Concluído ou cancelado -> nada para fazer
+    if (status === 'concluido' || status === 'cancelado') {
+        btnIniciar.classList.add('hidden');
+        formFinalizacao.classList.add('hidden');
+        return;
+    }
+
+    // Qualquer outro estado desconhecido -> não mostrar acções
+    btnIniciar.classList.add('hidden');
+    formFinalizacao.classList.add('hidden');
 }
+
 function showListaEntregas() {
     showDriverPage('lista-entregas');
 }
@@ -316,34 +356,96 @@ async function handleChangePasswordDriver(e) {
     }
 }
 
-async function handleStartDelivery(orderId) {
+/**
+ * 1) Iniciar RECOLHA (central -> cliente)
+ */
+async function handleStartPickup(orderId) {
     const button = document.getElementById('btn-iniciar-entrega');
+    if (!button) return;
+
     button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A iniciar...';
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A iniciar recolha...';
 
     try {
-        const response = await fetch(`${API_URL}/api/orders/${orderId}/start`, {
+        const response = await fetch(`${API_URL}/api/orders/${orderId}/pickup-start`, {
             method: 'POST',
             headers: getAuthHeaders()
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        showCustomAlert('Sucesso', 'Entrega Iniciada!', 'success');
+        if (!response.ok) throw new Error(data.message || 'Falha ao iniciar recolha.');
         
-        button.classList.add('hidden');
-        const formFinalizacao = document.getElementById('form-finalizacao');
-        formFinalizacao.classList.remove('hidden');
-        formFinalizacao.onsubmit = (event) => handleCompleteDelivery(event, orderId);
+        showCustomAlert('Sucesso', 'Recolha iniciada. Dirija-se ao ponto do cliente.', 'success');
+        showListaEntregas();
+    } catch (error) {
+        console.error('Falha ao iniciar recolha:', error);
+        showCustomAlert('Erro', error.message, 'error');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-play-circle"></i> Iniciar Recolha';
+    }
+}
 
+/**
+ * 2) Concluir RECOLHA (chegou ao cliente / recolheu)
+ */
+async function handleCompletePickup(orderId) {
+    const button = document.getElementById('btn-iniciar-entrega');
+    if (!button) return;
+
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A concluir recolha...';
+
+    try {
+        const response = await fetch(`${API_URL}/api/orders/${orderId}/pickup-complete`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Falha ao concluir recolha.');
+        
+        showCustomAlert('Sucesso', 'Recolha concluída. Pode iniciar a entrega.', 'success');
+        showListaEntregas();
+    } catch (error) {
+        console.error('Falha ao concluir recolha:', error);
+        showCustomAlert('Erro', error.message, 'error');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-flag-checkered"></i> Concluir Recolha';
+    }
+}
+
+/**
+ * 3) Iniciar ENTREGA (cliente -> destino)
+ */
+async function handleStartDeliveryPhase(orderId) {
+    const button = document.getElementById('btn-iniciar-entrega');
+    if (!button) return;
+
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A iniciar entrega...';
+
+    try {
+        const response = await fetch(`${API_URL}/api/orders/${orderId}/delivery-start`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Falha ao iniciar entrega.');
+        
+        showCustomAlert('Sucesso', 'Entrega iniciada. Dirija-se ao ponto de entrega.', 'success');
+        showListaEntregas();
     } catch (error) {
         console.error('Falha ao iniciar entrega:', error);
         showCustomAlert('Erro', error.message, 'error');
     } finally {
         button.disabled = false;
-        button.innerHTML = '<i class="fas fa-play-circle"></i> Iniciar Entrega';
+        button.innerHTML = '<i class="fas fa-route"></i> Iniciar Entrega';
     }
 }
 
+/**
+ * 4) Concluir ENTREGA (entrega final com código)
+ */
 async function handleCompleteDelivery(event, orderId) {
     event.preventDefault();
     const form = event.target;
@@ -366,7 +468,7 @@ async function handleCompleteDelivery(event, orderId) {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
-        showCustomAlert('Sucesso', 'Entrega Finalizada com sucesso!', 'success');
+        showCustomAlert('Sucesso', 'Entrega finalizada com sucesso!', 'success');
         showListaEntregas();
     } catch (error) {
         console.error('Falha ao finalizar entrega:', error);
@@ -374,4 +476,12 @@ async function handleCompleteDelivery(event, orderId) {
         submitButton.disabled = false;
         submitButton.innerHTML = '<i class="fas fa-check-circle"></i> Finalizar Entrega';
     }
+}
+
+/**
+ * Compatibilidade: se algum código antigo chamar handleStartDelivery,
+ * encaminhamos para o início da recolha.
+ */
+async function handleStartDelivery(orderId) {
+    return handleStartPickup(orderId);
 }
