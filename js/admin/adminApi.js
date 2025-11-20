@@ -276,34 +276,45 @@ async function loadLatestCosts(tableBody, monthParam) {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
 
-        const formatMZN = (value) => new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(value);
+        const formatMZN = (value) =>
+            new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(value);
+
+        const catLabel = (cat) => COST_CATEGORY_LABELS[cat] || cat || '';
 
         tableBody.innerHTML = '';
         if (!data.costs || data.costs.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="4">Sem registos de custos.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="5">Sem registos de custos.</td></tr>';
             return;
         }
 
-        data.costs.forEach(cost => {
-            const date = cost.date ? new Date(cost.date) : null;
-            const dateStr = date ? date.toLocaleDateString('pt-MZ') : 'N/D';
-            const catLabel = COST_CATEGORY_LABELS[cost.category] || cost.category || 'N/D';
-            const desc = cost.description || '-';
-            const amountStr = formatMZN(cost.amount || 0);
+        data.costs.forEach((cost) => {
+            const dateStr = cost.date
+                ? new Date(cost.date).toLocaleDateString('pt-MZ')
+                : '';
+
+            let assignedStr = '';
+
+            if (cost.assignedUser && cost.assignedUser.nome) {
+                assignedStr = `Funcionário: ${cost.assignedUser.nome}`;
+            } else if (cost.assignedClient && cost.assignedClient.nome) {
+                assignedStr = `Cliente: ${cost.assignedClient.nome}`;
+            } else {
+                assignedStr = '-';
+            }
 
             tableBody.innerHTML += `
                 <tr>
                     <td>${dateStr}</td>
-                    <td>${catLabel}</td>
-                    <td>${desc}</td>
-                    <td>${amountStr}</td>
+                    <td>${catLabel(cost.category)}</td>
+                    <td>${assignedStr}</td>
+                    <td>${cost.description || ''}</td>
+                    <td>${formatMZN(cost.amount || 0)}</td>
                 </tr>
             `;
         });
-
     } catch (error) {
-        console.error('Falha ao carregar lista de custos:', error);
-        tableBody.innerHTML = '<tr><td colspan="4">Erro ao carregar custos.</td></tr>';
+        console.error('Falha ao carregar custos:', error);
+        tableBody.innerHTML = '<tr><td colspan="5">Erro ao carregar custos.</td></tr>';
     }
 }
 
