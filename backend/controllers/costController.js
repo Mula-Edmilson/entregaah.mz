@@ -19,7 +19,6 @@ function getMonthRange(year, monthIndex) {
 
 /**
  * POST /api/costs
- * Cria um novo custo da empresa.
  * Body: { category, amount, description?, date?, assignedUserId?, assignedClientId? }
  */
 exports.createCost = asyncHandler(async (req, res) => {
@@ -49,7 +48,6 @@ exports.createCost = asyncHandler(async (req, res) => {
     if (!Number.isNaN(tmp.getTime())) parsedDate = tmp;
   }
 
-  // Validação simples dos IDs (se vierem)
   let assignedUser = null;
   let assignedClient = null;
 
@@ -69,7 +67,6 @@ exports.createCost = asyncHandler(async (req, res) => {
     assignedClient = assignedClientId;
   }
 
-  // Evitar ter os dois ao mesmo tempo (opcional, mas faz sentido)
   if (assignedUser && assignedClient) {
     res.status(400);
     throw new Error('O custo não pode ser atribuído simultaneamente a utilizador e cliente.');
@@ -93,8 +90,7 @@ exports.createCost = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/costs
- * Lista custos com filtros simples (opcional):
- *   ?month=YYYY-MM  (ex: 2025-11)
+ *   ?month=YYYY-MM
  *   ?limit=50
  */
 exports.getCostsList = asyncHandler(async (req, res) => {
@@ -128,23 +124,9 @@ exports.getCostsList = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/costs/dashboard-summary
- *   ?months=6  (opcional, nº de meses de histórico)
- *
- * Devolve:
- * {
- *   currentMonth: {
- *     label: '11/2025',
- *     totalCosts: 1234,
- *     costsByCategory: { salarios: 500, renda: 300, ... }
- *   },
- *   history: {
- *     labels: ['06/2025', ...],
- *     revenue: [1000, ...],
- *     costs: [500, ...]
- *   }
- * }
+ *   ?months=6
  */
-exports.getCostsDashboardSummary = asyncHandler(async (req, res) => {
+const getCostsDashboardSummary = asyncHandler(async (req, res) => {
   const monthsBack = Number(req.query.months) && Number(req.query.months) > 0
     ? Number(req.query.months)
     : 6;
@@ -238,3 +220,7 @@ exports.getCostsDashboardSummary = asyncHandler(async (req, res) => {
     }
   });
 });
+
+// ✅ Exportar com os dois nomes, para ser compatível com qualquer versão de costRoutes
+exports.getCostsDashboardSummary = getCostsDashboardSummary;
+exports.getDashboardSummary = getCostsDashboardSummary;
