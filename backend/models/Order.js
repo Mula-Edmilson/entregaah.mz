@@ -1,48 +1,39 @@
-const mongoose = require('mongoose');
-const { ORDER_STATUS } = require('../utils/constants');
+// backend/utils/constants.js
 
-const orderSchema = new mongoose.Schema(
-  {
-    service_type: { type: String, required: true, trim: true },
-    price: { type: Number, required: true, default: 0 },
-    client_name: { type: String, required: true, trim: true },
-    client_phone1: { type: String, required: true, trim: true },
-    client_phone2: { type: String, trim: true },
-    address_text: { type: String, trim: true },
-    address_coords: {
-      lat: { type: Number },
-      lng: { type: Number }
-    },
-    image_url: { type: String },
-    verification_code: { type: String, required: true },
-    created_by_admin: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    assigned_to_driver: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'DriverProfile'
-    },
-    client: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Client'
-    },
-    status: {
-      type: String,
-      enum: Object.values(ORDER_STATUS),
-      default: ORDER_STATUS.PENDING,
-      index: true
-    },
-    timestamp_started: { type: Date },
-    timestamp_completed: { type: Date },
-    valor_motorista: { type: Number, default: 0 },
-    valor_empresa: { type: Number, default: 0 }
-  },
-  { timestamps: true }
-);
+const ADMIN_ROOM = 'admin_room';
 
-orderSchema.index({ status: 1, createdAt: -1 });
-orderSchema.index({ assigned_to_driver: 1, status: 1 });
-orderSchema.index({ client: 1, status: 1, timestamp_completed: -1 });
+const DRIVER_STATUS = Object.freeze({
+  ONLINE_FREE: 'online_livre',
+  ONLINE_BUSY: 'online_ocupado',
+  PICKUP: 'em_recolha',        // novo: em processo de recolha
+  DELIVERY: 'em_entrega',      // novo: em processo de entrega
+  OFFLINE: 'offline'
+});
 
-module.exports = mongoose.model('Order', orderSchema);
+const ORDER_STATUS = Object.freeze({
+  PENDING: 'pendente',
+  ASSIGNED: 'atribuido',
+
+  // legado / genérico (podes continuar a usar onde quiseres algo geral)
+  IN_PROGRESS: 'em_progresso',
+
+  // novos estados detalhados para controlo de fluxo
+  PICKUP_IN_PROGRESS: 'recolha_em_progresso',     // motorista saiu da central para recolher
+  PICKUP_DONE: 'recolha_concluida',              // chegou ao cliente e recolheu
+
+  DELIVERY_IN_PROGRESS: 'entrega_em_progresso',  // a caminho do ponto de entrega
+
+  COMPLETED: 'concluido',
+  CANCELED: 'cancelado'
+});
+
+const FINANCIAL = Object.freeze({
+  DEFAULT_COMMISSION_RATE: 20
+});
+
+module.exports = {
+  ADMIN_ROOM,
+  DRIVER_STATUS,
+  ORDER_STATUS,
+  FINANCIAL
+};
