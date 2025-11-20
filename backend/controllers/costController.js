@@ -20,10 +20,17 @@ function getMonthRange(year, monthIndex) {
 /**
  * POST /api/costs
  * Cria um novo custo da empresa.
- * Body: { category, amount, description?, date? }
+ * Body: { category, amount, description?, date?, assignedUserId?, assignedClientId? }
  */
 exports.createCost = asyncHandler(async (req, res) => {
-  const { category, amount, description, date } = req.body;
+  const {
+    category,
+    amount,
+    description,
+    date,
+    assignedUserId,
+    assignedClientId
+  } = req.body;
 
   if (!COMPANY_COST_CATEGORIES.includes(category)) {
     res.status(400);
@@ -42,12 +49,40 @@ exports.createCost = asyncHandler(async (req, res) => {
     if (!Number.isNaN(tmp.getTime())) parsedDate = tmp;
   }
 
+  // Validação simples dos IDs (se vierem)
+  let assignedUser = null;
+  let assignedClient = null;
+
+  if (assignedUserId) {
+    if (!mongoose.Types.ObjectId.isValid(assignedUserId)) {
+      res.status(400);
+      throw new Error('ID de utilizador inválido para atribuição do custo.');
+    }
+    assignedUser = assignedUserId;
+  }
+
+  if (assignedClientId) {
+    if (!mongoose.Types.ObjectId.isValid(assignedClientId)) {
+      res.status(400);
+      throw new Error('ID de cliente inválido para atribuição do custo.');
+    }
+    assignedClient = assignedClientId;
+  }
+
+  // Evitar ter os dois ao mesmo tempo (opcional, mas faz sentido)
+  if (assignedUser && assignedClient) {
+    res.status(400);
+    throw new Error('O custo não pode ser atribuído simultaneamente a utilizador e cliente.');
+  }
+
   const cost = await CompanyCost.create({
     category,
     amount: parsedAmount,
     description: description || '',
     date: parsedDate,
-    createdBy: req.user ? req.user.id : undefined
+    createdBy: req.user ? req.user.id : undefined,
+    assignedUser,
+    assignedClient
   });
 
   res.status(201).json({
@@ -81,6 +116,8 @@ exports.getCostsList = asyncHandler(async (req, res) => {
   const costs = await CompanyCost.find(query)
     .sort({ date: -1 })
     .limit(max)
+    .populate('assignedUser', 'nome telefone role')
+    .populate('assignedClient', 'nome telefone empresa')
     .lean();
 
   res.status(200).json({
@@ -101,31 +138,26 @@ exports.getCostsList = asyncHandler(async (req, res) => {
  *     costsByCategory: { salarios: 500, renda: 300, ... }
  *   },
  *   history: {
- *     labels: ['06/2025', '07/2025', ...],
- *     revenue: [ ... ], // receita total por mês (sum(price))
- *     costs: [ ... ]    // custos totais por mês
+ *     labels: ['06/2025', ...],
+ *     revenue: [1000, ...],
+ *     costs: [500, ...]
  *   }
  * }
  */
-exports.getDashboardSummary = asyncHandler(async (req, res) => {
-  const monthsCount = Number(req.query.months) && Number(req.query.months) > 0
+exports.getCostsDashboardSummary = asyncHandler(async (req, res) => {
+  const monthsBack = Number(req.query.months) && Number(req.query.months) > 0
     ? Number(req.query.months)
     : 6;
 
   const now = new Date();
   const currentYear = now.getUTCFullYear();
-  const currentMonthIndex = now.getUTCMonth();
+  const currentMonthIndex = now.getUTCMonth(); // 0-11
 
-  // Range do mês atual
+  // 1) Mês atual – total e por categoria
   const { start: currentStart, end: currentEnd } = getMonthRange(currentYear, currentMonthIndex);
 
-  // Agrega custos por categoria no mês atual
-  const categoryAgg = await CompanyCost.aggregate([
-    {
-      $match: {
-        date: { $gte: currentStart, $lte: currentEnd }
-      }
-    },
+  const currentCostsAgg = await CompanyCost.aggregate([
+    { $match: { date: { $gte: currentStart, $lte: currentEnd } } },
     {
       $group: {
         _id: '$category',
@@ -135,32 +167,32 @@ exports.getDashboardSummary = asyncHandler(async (req, res) => {
   ]);
 
   const costsByCategory = {};
+  let totalCosts = 0;
   COMPANY_COST_CATEGORIES.forEach(cat => {
     costsByCategory[cat] = 0;
   });
-  let totalCostsCurrentMonth = 0;
 
-  categoryAgg.forEach(item => {
+  currentCostsAgg.forEach(item => {
     costsByCategory[item._id] = item.total;
-    totalCostsCurrentMonth += item.total;
+    totalCosts += item.total;
   });
 
-  // Histórico de receita x custos (últimos N meses)
+  // 2) Histórico de meses para gráfico Receita vs Custos
   const labels = [];
-  const revenue = [];
-  const costs = [];
+  const revenueSeries = [];
+  const costsSeries = [];
 
-  for (let i = monthsCount - 1; i >= 0; i--) {
-    const date = new Date(Date.UTC(currentYear, currentMonthIndex - i, 1, 0, 0, 0, 0));
-    const year = date.getUTCFullYear();
-    const monthIndex = date.getUTCMonth();
-
+  for (let i = monthsBack - 1; i >= 0; i--) {
+    const refDate = new Date(Date.UTC(currentYear, currentMonthIndex - i, 1));
+    const year = refDate.getUTCFullYear();
+    const monthIndex = refDate.getUTCMonth();
     const { start, end } = getMonthRange(year, monthIndex);
+
     const label = `${String(monthIndex + 1).padStart(2, '0')}/${year}`;
     labels.push(label);
 
-    // Receita: soma do price de encomendas concluídas nesse mês
-    const revenueAgg = await Order.aggregate([
+    // Receita (orders COMPLETED)
+    const ordersAgg = await Order.aggregate([
       {
         $match: {
           status: ORDER_STATUS.COMPLETED,
@@ -170,44 +202,39 @@ exports.getDashboardSummary = asyncHandler(async (req, res) => {
       {
         $group: {
           _id: null,
-          totalReceita: { $sum: '$price' }
+          total: { $sum: '$price' }
         }
       }
     ]);
 
-    const totalReceita = revenueAgg.length > 0 ? revenueAgg[0].totalReceita : 0;
+    const monthlyRevenue = ordersAgg.length > 0 ? ordersAgg[0].total : 0;
+    revenueSeries.push(monthlyRevenue);
 
-    // Custos totais no mês
-    const costAgg = await CompanyCost.aggregate([
-      {
-        $match: {
-          date: { $gte: start, $lte: end }
-        }
-      },
+    // Custos
+    const costsAgg = await CompanyCost.aggregate([
+      { $match: { date: { $gte: start, $lte: end } } },
       {
         $group: {
           _id: null,
-          totalCosts: { $sum: '$amount' }
+          total: { $sum: '$amount' }
         }
       }
     ]);
 
-    const totalCosts = costAgg.length > 0 ? costAgg[0].totalCosts : 0;
-
-    revenue.push(totalReceita);
-    costs.push(totalCosts);
+    const monthlyCosts = costsAgg.length > 0 ? costsAgg[0].total : 0;
+    costsSeries.push(monthlyCosts);
   }
 
   res.status(200).json({
     currentMonth: {
       label: `${String(currentMonthIndex + 1).padStart(2, '0')}/${currentYear}`,
-      totalCosts: totalCostsCurrentMonth,
+      totalCosts,
       costsByCategory
     },
     history: {
       labels,
-      revenue,
-      costs
+      revenue: revenueSeries,
+      costs: costsSeries
     }
   });
 });
