@@ -33,9 +33,25 @@ const companyCostSchema = new mongoose.Schema(
       type: Date,
       default: Date.now
     },
+
+    // Quem criou o registo
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
+    },
+
+    // NOVO: custo atribuído a um funcionário (motorista/gestor)
+    assignedUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
+
+    // NOVO: custo atribuído a um cliente
+    assignedClient: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Client',
+      default: null
     }
   },
   {
@@ -43,7 +59,7 @@ const companyCostSchema = new mongoose.Schema(
   }
 );
 
-// Guardar as categorias disponíveis no próprio schema (útil se quisermos ler noutros sítios)
+// Guardar as categorias disponíveis no próprio schema
 companyCostSchema.statics.CATEGORIES = COMPANY_COST_CATEGORIES;
 
 const CompanyCost = mongoose.model('CompanyCost', companyCostSchema);
