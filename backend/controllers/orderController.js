@@ -82,6 +82,10 @@ const findBestDriverProfile = async (coordinates) => {
   return bestProfileId;
 };
 
+// -----------------------------------------------------------------------------
+// CRIAÇÃO / ATRIBUIÇÃO
+// -----------------------------------------------------------------------------
+
 exports.createOrder = asyncHandler(async (req, res) => {
   const data = req.filtered || req.body;
   const {
@@ -176,7 +180,14 @@ exports.assignOrder = asyncHandler(async (req, res) => {
     throw new Error('Encomenda não encontrada.');
   }
 
-  if (order.status === ORDER_STATUS.IN_PROGRESS) {
+  // não reatribuir se já estiver em andamento (qualquer fase)
+  if (
+    [
+      ORDER_STATUS.IN_PROGRESS,
+      ORDER_STATUS.PICKUP_IN_PROGRESS,
+      ORDER_STATUS.DELIVERY_IN_PROGRESS
+    ].includes(order.status)
+  ) {
     res.status(400);
     throw new Error('Não é possível reatribuir uma encomenda em progresso.');
   }
@@ -209,6 +220,10 @@ exports.assignOrder = asyncHandler(async (req, res) => {
   res.status(200).json({ message: 'Encomenda atribuída com sucesso.', order });
 });
 
+// -----------------------------------------------------------------------------
+// LISTAGENS
+// -----------------------------------------------------------------------------
+
 exports.getMyDeliveries = asyncHandler(async (req, res) => {
   const driverProfile = await DriverProfile.findOne({ user: req.user._id });
   if (!driverProfile) {
@@ -216,9 +231,17 @@ exports.getMyDeliveries = asyncHandler(async (req, res) => {
     throw new Error('Perfil de motorista não encontrado.');
   }
 
+  const activeStatuses = [
+    ORDER_STATUS.ASSIGNED,
+    ORDER_STATUS.IN_PROGRESS,
+    ORDER_STATUS.PICKUP_IN_PROGRESS,
+    ORDER_STATUS.PICKUP_DONE,
+    ORDER_STATUS.DELIVERY_IN_PROGRESS
+  ];
+
   const orders = await Order.find({
     assigned_to_driver: driverProfile._id,
-    status: { $in: [ORDER_STATUS.ASSIGNED, ORDER_STATUS.IN_PROGRESS] }
+    status: { $in: activeStatuses }
   })
     .sort({ createdAt: -1 })
     .lean();
@@ -226,7 +249,15 @@ exports.getMyDeliveries = asyncHandler(async (req, res) => {
   res.status(200).json({ orders });
 });
 
-exports.startDelivery = asyncHandler(async (req, res) => {
+// -----------------------------------------------------------------------------
+// FLUXO DO MOTORISTA – RECOLHA E ENTREGA
+// -----------------------------------------------------------------------------
+
+/**
+ * Motorista inicia a RECOLHA (sai da central para o ponto de recolha)
+ * Também é usado pela rota antiga POST /:id/start
+ */
+const startPickup = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const driverProfile = await DriverProfile.findOne({ user: req.user._id });
   if (!driverProfile) {
@@ -245,11 +276,152 @@ exports.startDelivery = asyncHandler(async (req, res) => {
     throw new Error('Não autorizado para esta encomenda.');
   }
 
-  order.status = ORDER_STATUS.IN_PROGRESS;
-  order.timestamp_started = Date.now();
+  // apenas permite iniciar se estiver atribuída / pendente de início
+  if (
+    ![
+      ORDER_STATUS.ASSIGNED,
+      ORDER_STATUS.PENDING,
+      ORDER_STATUS.PICKUP_IN_PROGRESS
+    ].includes(order.status)
+  ) {
+    res.status(400);
+    throw new Error('Esta encomenda não está disponível para iniciar a recolha.');
+  }
+
+  const now = new Date();
+
+  if (!order.pickupStartAt) {
+    order.pickupStartAt = now;
+  }
+  if (!order.timestamp_started) {
+    order.timestamp_started = now;
+  }
+
+  order.status = ORDER_STATUS.PICKUP_IN_PROGRESS;
   await order.save();
 
+  driverProfile.status = DRIVER_STATUS.PICKUP;
+  await driverProfile.save();
+
+  const io = req.app.get('socketio');
+  io.to(ADMIN_ROOM).emit('pickup_started', {
+    id: order._id,
+    driverName: req.user.nome
+  });
+  io.to(ADMIN_ROOM).emit('driver_status_changed', {
+    driverId: driverProfile._id,
+    newStatus: driverProfile.status
+  });
+
+  res.status(200).json({ message: 'Recolha iniciada.', order });
+});
+
+/**
+ * Motorista conclui a RECOLHA (chega ao ponto de recolha)
+ */
+const completePickup = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const driverProfile = await DriverProfile.findOne({ user: req.user._id });
+  if (!driverProfile) {
+    res.status(404);
+    throw new Error('Perfil de motorista não encontrado.');
+  }
+
+  const order = await Order.findById(id);
+  if (!order) {
+    res.status(404);
+    throw new Error('Encomenda não encontrada.');
+  }
+
+  if (!order.assigned_to_driver?.equals(driverProfile._id)) {
+    res.status(403);
+    throw new Error('Não autorizado para esta encomenda.');
+  }
+
+  if (
+    ![
+      ORDER_STATUS.ASSIGNED,
+      ORDER_STATUS.PICKUP_IN_PROGRESS,
+      ORDER_STATUS.IN_PROGRESS
+    ].includes(order.status)
+  ) {
+    res.status(400);
+    throw new Error('Esta encomenda não está numa fase válida para concluir a recolha.');
+  }
+
+  const now = new Date();
+
+  if (!order.pickupStartAt) {
+    order.pickupStartAt = order.timestamp_started || now;
+  }
+  order.pickupCompletedAt = now;
+  order.status = ORDER_STATUS.PICKUP_DONE;
+  await order.save();
+
+  // Mantemos o motorista como "ocupado" até iniciar entrega
   driverProfile.status = DRIVER_STATUS.ONLINE_BUSY;
+  await driverProfile.save();
+
+  const io = req.app.get('socketio');
+  io.to(ADMIN_ROOM).emit('pickup_completed', {
+    id: order._id,
+    driverName: req.user.nome
+  });
+  io.to(ADMIN_ROOM).emit('driver_status_changed', {
+    driverId: driverProfile._id,
+    newStatus: driverProfile.status
+  });
+
+  res.status(200).json({ message: 'Recolha concluída.', order });
+});
+
+/**
+ * Motorista inicia a ENTREGA (sai do ponto de recolha para o destino)
+ */
+const startDeliveryPhase = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const driverProfile = await DriverProfile.findOne({ user: req.user._id });
+  if (!driverProfile) {
+    res.status(404);
+    throw new Error('Perfil de motorista não encontrado.');
+  }
+
+  const order = await Order.findById(id);
+  if (!order) {
+    res.status(404);
+    throw new Error('Encomenda não encontrada.');
+  }
+
+  if (!order.assigned_to_driver?.equals(driverProfile._id)) {
+    res.status(403);
+    throw new Error('Não autorizado para esta encomenda.');
+  }
+
+  if (!order.pickupCompletedAt) {
+    res.status(400);
+    throw new Error('Ainda não foi registada a conclusão da recolha desta encomenda.');
+  }
+
+  if (
+    ![
+      ORDER_STATUS.PICKUP_DONE,
+      ORDER_STATUS.DELIVERY_IN_PROGRESS,
+      ORDER_STATUS.IN_PROGRESS
+    ].includes(order.status)
+  ) {
+    res.status(400);
+    throw new Error('Esta encomenda não está numa fase válida para iniciar a entrega.');
+  }
+
+  const now = new Date();
+  if (!order.deliveryStartAt) {
+    order.deliveryStartAt = now;
+  }
+
+  order.status = ORDER_STATUS.DELIVERY_IN_PROGRESS;
+  await order.save();
+
+  driverProfile.status = DRIVER_STATUS.DELIVERY;
   await driverProfile.save();
 
   const io = req.app.get('socketio');
@@ -265,7 +437,10 @@ exports.startDelivery = asyncHandler(async (req, res) => {
   res.status(200).json({ message: 'Entrega iniciada.', order });
 });
 
-exports.completeDelivery = asyncHandler(async (req, res) => {
+/**
+ * Motorista conclui a ENTREGA (entrega final) – também usado pela rota antiga POST /:id/complete
+ */
+const completeDelivery = asyncHandler(async (req, res) => {
   const data = req.filtered || req.body;
   const { id } = req.params;
   const { verification_code } = data;
@@ -292,6 +467,24 @@ exports.completeDelivery = asyncHandler(async (req, res) => {
     throw new Error('Código de verificação incorreto.');
   }
 
+  const now = new Date();
+
+  // Garantir consistência dos tempos
+  if (!order.timestamp_started) {
+    order.timestamp_started = order.pickupStartAt || now;
+  }
+  if (!order.pickupStartAt) {
+    order.pickupStartAt = order.timestamp_started;
+  }
+  if (!order.pickupCompletedAt) {
+    order.pickupCompletedAt = now;
+  }
+  if (!order.deliveryStartAt) {
+    order.deliveryStartAt = now;
+  }
+  order.deliveryCompletedAt = now;
+
+  // Cálculo financeiro
   const commissionRate = parseCommissionRate(
     driverProfile.commissionRate,
     FINANCIAL.DEFAULT_COMMISSION_RATE
@@ -303,7 +496,7 @@ exports.completeDelivery = asyncHandler(async (req, res) => {
   order.valor_motorista = driverValue;
   order.valor_empresa = companyValue;
   order.status = ORDER_STATUS.COMPLETED;
-  order.timestamp_completed = Date.now();
+  order.timestamp_completed = now;
   await order.save();
 
   driverProfile.status = DRIVER_STATUS.ONLINE_FREE;
@@ -319,6 +512,19 @@ exports.completeDelivery = asyncHandler(async (req, res) => {
   res.status(200).json({ message: 'Entrega finalizada com sucesso!' });
 });
 
+// Exportações das fases (nomes novos + compatibilidade)
+exports.startPickup = startPickup;
+exports.completePickup = completePickup;
+exports.startDeliveryPhase = startDeliveryPhase;
+exports.completeDelivery = completeDelivery;
+
+// Compatibilidade com a rota antiga /:id/start
+exports.startDelivery = startPickup;
+
+// -----------------------------------------------------------------------------
+// LISTAS PARA ADMIN
+// -----------------------------------------------------------------------------
+
 exports.getAllOrders = asyncHandler(async (_req, res) => {
   const orders = await Order.find()
     .populate('assigned_to_driver')
@@ -330,8 +536,17 @@ exports.getAllOrders = asyncHandler(async (_req, res) => {
 });
 
 exports.getActiveOrders = asyncHandler(async (_req, res) => {
+  const activeStatuses = [
+    ORDER_STATUS.PENDING,
+    ORDER_STATUS.ASSIGNED,
+    ORDER_STATUS.IN_PROGRESS,
+    ORDER_STATUS.PICKUP_IN_PROGRESS,
+    ORDER_STATUS.PICKUP_DONE,
+    ORDER_STATUS.DELIVERY_IN_PROGRESS
+  ];
+
   const orders = await Order.find({
-    status: { $in: [ORDER_STATUS.PENDING, ORDER_STATUS.ASSIGNED, ORDER_STATUS.IN_PROGRESS] }
+    status: { $in: activeStatuses }
   })
     .populate('created_by_admin', 'nome')
     .populate({
@@ -380,4 +595,58 @@ exports.getOrderById = asyncHandler(async (req, res) => {
   }
 
   res.status(200).json({ order });
+});
+
+// -----------------------------------------------------------------------------
+// CANCELAMENTO DE ENCOMENDAS (ADMIN)
+// -----------------------------------------------------------------------------
+
+exports.cancelOrder = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.filtered || req.body || {};
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(404);
+    throw new Error('Encomenda não encontrada (ID inválido).');
+  }
+
+  const order = await Order.findById(id);
+  if (!order) {
+    res.status(404);
+    throw new Error('Encomenda não encontrada.');
+  }
+
+  if (order.status === ORDER_STATUS.COMPLETED || order.status === ORDER_STATUS.CANCELED) {
+    res.status(400);
+    throw new Error('Esta encomenda já foi concluída ou cancelada.');
+  }
+
+  order.status = ORDER_STATUS.CANCELED;
+  order.cancelledAt = new Date();
+  order.cancelledBy = req.user._id;
+  order.cancelReason = (reason || 'Cancelado pelo administrador').slice(0, 500);
+
+  await order.save();
+
+  // Se tinha motorista atribuído, libertar
+  if (order.assigned_to_driver) {
+    const driverProfile = await DriverProfile.findById(order.assigned_to_driver);
+    if (driverProfile) {
+      driverProfile.status = DRIVER_STATUS.ONLINE_FREE;
+      await driverProfile.save();
+    }
+  }
+
+  const io = req.app.get('socketio');
+  if (io) {
+    io.to(ADMIN_ROOM).emit('order_canceled', {
+      id: order._id,
+      reason: order.cancelReason
+    });
+  }
+
+  res.status(200).json({
+    message: 'Encomenda cancelada com sucesso.',
+    order
+  });
 });
