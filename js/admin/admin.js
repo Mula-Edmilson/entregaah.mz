@@ -38,6 +38,49 @@ function attachEventListeners() {
     document.getElementById('form-add-cliente').addEventListener('submit', handleAddClient);
     document.getElementById('form-edit-cliente').addEventListener('submit', handleUpdateClient);
     document.getElementById('form-change-password').addEventListener('submit', handleChangePassword);
+    // Navegação Principal (Sidebar)
+document.getElementById('nav-visao-geral').addEventListener('click', (e) => {
+    e.preventDefault();
+    showPage('visao-geral', 'nav-visao-geral', 'Visão Geral');
+});
+document.getElementById('nav-entregas').addEventListener('click', (e) => {
+    e.preventDefault();
+    showPage('entregas-activas', 'nav-entregas', 'Entregas Activas');
+});
+document.getElementById('nav-motoristas').addEventListener('click', (e) => {
+    e.preventDefault();
+    showPage('gestao-motoristas', 'nav-motoristas', 'Gestão de Motoristas');
+});
+document.getElementById('nav-clientes').addEventListener('click', (e) => {
+    e.preventDefault();
+    showPage('gestao-clientes', 'nav-clientes', 'Gestão de Clientes');
+});
+
+// NOVO: custos
+document.getElementById('nav-custos').addEventListener('click', (e) => {
+    e.preventDefault();
+    showPage('custos', 'nav-custos', 'Custos');
+});
+
+// NOVO: cargos
+document.getElementById('nav-cargos').addEventListener('click', (e) => {
+    e.preventDefault();
+    showPage('cargos', 'nav-cargos', 'Cargos');
+});
+
+document.getElementById('nav-historico').addEventListener('click', (e) => {
+    e.preventDefault();
+    showPage('historico', 'nav-historico', 'Histórico');
+});
+document.getElementById('nav-mapa').addEventListener('click', (e) => {
+    e.preventDefault();
+    showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real');
+});
+document.getElementById('nav-config').addEventListener('click', (e) => {
+    e.preventDefault();
+    showPage('configuracoes', 'nav-config', 'Configurações');
+});
+
 
     // NOVO: formulário de custos (pode não existir em versões antigas)
     const costForm = document.getElementById('form-add-cost');
@@ -45,6 +88,11 @@ function attachEventListeners() {
         costForm.addEventListener('submit', handleAddCost);
     }
 
+// Botão exportar Excel
+const exportCostsBtn = document.getElementById('btn-export-costs-excel');
+if (exportCostsBtn) {
+    exportCostsBtn.addEventListener('click', handleExportCostsExcel);
+}
     // --- Navegação Principal (Sidebar) ---
     document.getElementById('nav-visao-geral').addEventListener('click', (e) => { e.preventDefault(); showPage('visao-geral', 'nav-visao-geral', 'Visão Geral'); });
     document.getElementById('nav-entregas').addEventListener('click', (e) => { e.preventDefault(); showPage('entregas-activas', 'nav-entregas', 'Entregas Activas'); });
@@ -165,6 +213,11 @@ function showPage(pageId, navId, title) {
         case 'mapa-tempo-real':
             initializeLiveMap();
             break;
+            case 'cargos':
+        // opcional: recarregar listas após criar, etc.
+        loadDrivers();
+        loadClients();
+        break;
         case 'configuracoes':
             document.getElementById('form-change-password').reset();
             break;
