@@ -6,6 +6,11 @@ const { validateRequest } = require('../middleware/validateRequest');
 
 const router = express.Router();
 
+const { getMe } = require('../controllers/authController');
+const { protect } = require('../middleware/authMiddleware');
+
+router.get('/me', protect, getMe);
+
 router.post(
   '/register-driver',
   protect,
