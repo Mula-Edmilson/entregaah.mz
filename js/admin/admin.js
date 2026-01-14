@@ -21,6 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeMapIcons(); // (Vem do adminMap.js)
     connectSocket(); 
     attachEventListeners();
+
+    loadAdminProfile(); // 👈 ESTA LINHA
     
     // Carrega a página inicial
     showPage('visao-geral', 'nav-visao-geral', 'Visão Geral');
@@ -344,4 +346,32 @@ function handleDeleteOldHistoryClick() {
         confirmText: confirmWord,
         onConfirm: handleDeleteOldHistory // (adminApi.js)
     });
+}
+
+
+
+async function loadAdminProfile() {
+    try {
+        const response = await fetch(`${API_URL}/api/auth/me`, {
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Sessão inválida');
+        }
+
+        const data = await response.json();
+
+        const adminNameEl = document.getElementById('admin-name');
+        if (adminNameEl) {
+            adminNameEl.textContent = data.nome;
+        }
+
+    } catch (error) {
+        console.error('Erro ao carregar perfil do admin:', error);
+        handleLogout('admin');
+    }
 }
