@@ -164,3 +164,14 @@ exports.changePassword = asyncHandler(async (req, res) => {
 
   res.status(200).json({ message: 'Senha atualizada com sucesso.' });
 });
+
+// GET /api/auth/me
+// Retorna os dados do utilizador autenticado
+exports.getMe = asyncHandler(async (req, res) => {
+  res.status(200).json({
+    id: req.user._id,
+    nome: req.user.nome,
+    email: req.user.email,
+    role: req.user.role
+  });
+});
