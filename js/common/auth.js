@@ -1,17 +1,16 @@
 /*
  * Ficheiro: js/common/auth.js
  *
- * (Dependência #2) - Precisa do 'api.js'
- * (MELHORIA 4: Adicionado feedback de loading ao botão de login)
- *
- * Centraliza toda a lógica de autenticação:
- * - Login, Logout, Verificação de token, Obtenção de token.
+ * Versão CORRIGIDA E BLINDADA
+ * - Protecção contra múltiplos logins
+ * - Tratamento de erro 429 (rate limit)
+ * - Evita loops e estados inconsistentes
  */
+
+let loginInProgress = false;
 
 /**
  * Verifica se um utilizador (admin ou motorista) está autenticado.
- * Se não estiver, redireciona para a página de login apropriada.
- * @param {string} role - 'admin' ou 'driver'.
  */
 function checkAuth(role) {
     let token;
@@ -31,12 +30,9 @@ function checkAuth(role) {
 }
 
 /**
- * Obtém o token de autenticação correto (admin ou driver) com base
- * na página/corpo (body) onde o script está a ser executado.
- * @returns {string|null} O token JWT ou null.
+ * Obtém o token correcto consoante o tipo de painel.
  */
 function getAuthToken() {
-    // Verifica a classe no body para saber qual token devolver
     if (document.body.classList.contains('dashboard-body')) {
         return localStorage.getItem('adminToken');
     }
@@ -47,39 +43,31 @@ function getAuthToken() {
 }
 
 /**
- * Cria o objeto de cabeçalho (headers) de autenticação para
- * usar em chamadas 'fetch' à API.
- * @returns {Object} Ex: { 'Authorization': 'Bearer <token>' }
+ * Headers de autenticação seguros.
  */
 function getAuthHeaders() {
+    const token = getAuthToken();
+    if (!token) return {};
     return {
-        'Authorization': `Bearer ${getAuthToken()}`
+        'Authorization': `Bearer ${token}`
     };
 }
 
 /**
- * Processa o formulário de login para admin ou motorista.
- * @param {Event} e - O evento de 'submit' do formulário.
- * @param {string} role - 'admin' ou 'driver'.
+ * Processa login (admin ou motorista).
  */
 async function handleLogin(e, role) {
-    e.preventDefault(); // Impede o recarregamento da página
+    e.preventDefault();
+
+    if (loginInProgress) return;
+    loginInProgress = true;
 
     const form = e.target;
-    // --- (MELHORIA 4) ---
     const submitButton = form.querySelector('button[type="submit"]');
 
-    const email = form.querySelector('#email').value;
+    const email = form.querySelector('#email').value.trim();
     const password = form.querySelector('#password').value;
-    const showAlert = (title, message, type) => {
-        if (typeof showCustomAlert === 'function') {
-            showCustomAlert(title, message, type);
-        } else {
-            alert(`${title}: ${message}`); // Fallback para o alerta padrão
-        }
-    };
 
-    // --- (MELHORIA 4) Desativa o botão ---
     submitButton.disabled = true;
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A entrar...';
 
@@ -90,14 +78,22 @@ async function handleLogin(e, role) {
             body: JSON.stringify({ email, password, role })
         });
 
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || 'Erro desconhecido');
+        // RATE LIMIT → parar tudo
+        if (response.status === 429) {
+            throw new Error(
+                'Demasiadas tentativas a partir deste IP. Aguarde alguns minutos antes de tentar novamente.'
+            );
         }
 
-        // Se o login for bem-sucedido
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro no login');
+        }
+
         if (role === 'admin') {
             localStorage.setItem('adminToken', data.token);
+            localStorage.setItem('adminName', data.name || 'Admin');
             window.location.href = 'index.html';
         } else {
             localStorage.setItem('driverToken', data.token);
@@ -106,28 +102,31 @@ async function handleLogin(e, role) {
 
     } catch (error) {
         console.error('Falha no login:', error);
-        
-        // Se o modal de alerta existir na página de login, usa-o
+
         if (typeof showCustomAlert === 'function') {
             showCustomAlert('Erro de Login', error.message, 'error');
         } else {
-            // Fallback para o alerta padrão do browser
-            alert(`Erro de Login: ${error.message}`);
+            alert(error.message);
         }
+
+        // Em erro grave → limpar sessão por segurança
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('driverToken');
+
     } finally {
-        // --- (MELHORIA 4) Reativa o botão (mesmo se der erro) ---
+        loginInProgress = false;
         submitButton.disabled = false;
         submitButton.innerHTML = 'Entrar';
     }
 }
 
 /**
- * Faz o logout do utilizador (admin ou motorista) e redireciona.
- * @param {string} role - 'admin' ou 'driver'.
+ * Logout seguro.
  */
 function handleLogout(role) {
     if (role === 'admin') {
         localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminName');
         window.location.href = 'login.html';
     } else {
         localStorage.removeItem('driverToken');
