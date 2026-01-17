@@ -856,14 +856,27 @@
     </main>
     
     <script src="js/common/api.js"></script>
-    <script src="js/common/auth.js"></script>
-    <script src="js/common/ui.js"></script>
-    
-    <script src="js/admin/adminCharts.js"></script>
-    <script src="js/admin/adminMap.js"></script>
-    <script src="js/admin/adminApi.js"></script>
-    <script src="js/admin/adminModals.js"></script>
-    <script src="js/admin/admin.js"></script>
+<script src="js/common/auth.js"></script>
+
+<script>
+    // BLOQUEIO ABSOLUTO antes de qualquer chamada à API
+    checkAuth('admin');
+
+    // Mostrar nome do admin com segurança
+    const adminName = localStorage.getItem('adminName');
+    if (adminName) {
+        const el = document.getElementById('admin-name');
+        if (el) el.textContent = adminName;
+    }
+</script>
+
+<script src="js/common/ui.js"></script>
+
+<script src="js/admin/adminCharts.js"></script>
+<script src="js/admin/adminMap.js"></script>
+<script src="js/admin/adminApi.js"></script>
+<script src="js/admin/adminModals.js"></script>
+<script src="js/admin/admin.js"></script>
 
 </body>
 </html>
