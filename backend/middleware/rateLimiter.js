@@ -1,13 +1,10 @@
 const rateLimit = require('express-rate-limit');
 
 const apiLimiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || `${15 * 60 * 1000}`, 10),
-  max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+  windowMs: 15 * 60 * 1000,
+  max: 1000, // 🔥 aumentado para evitar falsos bloqueios
   standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    message: 'Demasiados pedidos a partir deste IP. Tente novamente dentro de alguns minutos.'
-  }
+  legacyHeaders: false
 });
 
 module.exports = apiLimiter;
