@@ -89,17 +89,18 @@ const findBestDriverProfile = async (coordinates) => {
 exports.createOrder = asyncHandler(async (req, res) => {
   const data = req.filtered || req.body;
   const {
-    service_type,
-    client_name,
-    client_phone1,
-    client_phone2,
-    address_text,
-    price,
-    lat,
-    lng,
-    clientId,
-    autoAssign
-  } = data;
+  service_type,
+  client_name,
+  client_phone1,
+  client_phone2,
+  address_text,
+  price,
+  lat,
+  lng,
+  clientId,
+  autoAssign,
+  payment_method // ✅ NOVO
+} = data;
 
   let imageUrl = null;
 
@@ -148,7 +149,8 @@ exports.createOrder = asyncHandler(async (req, res) => {
     verification_code: verificationCode,
     created_by_admin: req.user._id,
     assigned_to_driver: assignedDriverProfileId,
-    status: orderStatus
+    status: orderStatus,
+    payment_method: payment_method || 'cash' // ✅ NOVO
   });
 
   const io = req.app.get('socketio');

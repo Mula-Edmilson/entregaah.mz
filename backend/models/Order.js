@@ -72,7 +72,16 @@ const orderSchema = new mongoose.Schema(
 
     // financeiro (já existia)
     valor_motorista: { type: Number, default: 0 },
-    valor_empresa: { type: Number, default: 0 }
+    valor_empresa: { type: Number, default: 0 },
+
+// ✅ NOVO — método de pagamento
+payment_method: {
+  type: String,
+  enum: ['cash', 'mpesa', 'emola', 'mkesh', 'bank_transfer'],
+  default: 'cash',
+  index: true
+}
+    
   },
   { timestamps: true }
 );

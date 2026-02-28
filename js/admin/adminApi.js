@@ -742,6 +742,10 @@ async function handleNewDelivery(e) {
     const form = e.target;
     const submitButton = form.querySelector('button[type="submit"]');
     const formData = new FormData(form);
+    // ✅ NOVO — método de pagamento
+    const paymentMethodEl = document.getElementById('payment-method');
+    const paymentMethod = paymentMethodEl ? paymentMethodEl.value : 'cash';
+    formData.append('payment_method', paymentMethod);
     
     const autoAssign = document.getElementById('autoAssignCheckbox').checked;
     

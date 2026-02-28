@@ -116,7 +116,10 @@ if (exportCostsBtn) {
     document.getElementById('admin-logout').addEventListener('click', (e) => { e.preventDefault(); handleLogout('admin'); });
 
     // --- Modais e Botões (Listeners) ---
-    document.getElementById('btn-reset-chart').addEventListener('click', openChartResetModal);
+    const resetBtn = document.getElementById('btn-reset-chart');
+    if (resetBtn) {
+    resetBtn.addEventListener('click', openChartResetModal);
+    }
     document.getElementById('btn-confirm-chart-reset').addEventListener('click', handleChartReset);
     document.getElementById('btn-close-chart-reset').addEventListener('click', closeChartResetModal);
     document.getElementById('btn-cancel-chart-reset').addEventListener('click', closeChartResetModal);

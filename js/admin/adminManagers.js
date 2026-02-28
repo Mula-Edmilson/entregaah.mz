@@ -178,6 +178,7 @@ async function handleUpdateManager(event) {
   try {
     const payload = { nome, telefone, email };
     if (password && password.length >= 6) payload.password = password;
+    
 
     const res = await fetch(`${API_URL}/api/managers/${id}`, {
       method: 'PUT',
