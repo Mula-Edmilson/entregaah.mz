@@ -3,13 +3,15 @@
  *
  * Contém toda a lógica de API (fetch) para o painel de admin.
  * (Movido de admin.js)
+ * 
+ * CORREÇÃO: Todas as chamadas getAuthHeaders() agora têm o parâmetro 'admin'
  */
 
 /* --- Lógica de API (Carregamento de Dados - GET) --- */
 
 async function loadOverviewStats() {
     try {
-        const response = await fetch(`${API_URL}/api/stats/overview`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/stats/overview`, { headers: getAuthHeaders('admin') });
         if (response.status === 401) {
             console.error('Token inválido ou expirado. A forçar logout.');
             showCustomAlert('Sessão Expirada', 'A sua sessão é inválida ou expirou. Por favor, faça login novamente.', 'error');
@@ -32,7 +34,7 @@ async function loadOverviewStats() {
 async function loadFinancialStats() {
     const formatMZN = (value) => new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(value);
     try {
-        const response = await fetch(`${API_URL}/api/stats/financials`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/stats/financials`, { headers: getAuthHeaders('admin') });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
@@ -75,7 +77,7 @@ async function loadCostsDashboardSummary() {
 
     try {
         const response = await fetch(`${API_URL}/api/costs/dashboard-summary?months=6`, {
-            headers: getAuthHeaders()
+            headers: getAuthHeaders('admin')
         });
 
         if (response.status === 401) {
@@ -209,14 +211,14 @@ async function loadCostAssignmentOptions() {
     try {
         // Busca motoristas
         const driversResp = await fetch(`${API_URL}/api/drivers`, {
-            headers: getAuthHeaders()
+            headers: getAuthHeaders('admin')
         });
         if (driversResp.status === 401) return handleLogout('admin');
         const driversData = await driversResp.json();
 
         // Busca clientes
         const clientsResp = await fetch(`${API_URL}/api/clients`, {
-            headers: getAuthHeaders()
+            headers: getAuthHeaders('admin')
         });
         if (clientsResp.status === 401) return handleLogout('admin');
         const clientsData = await clientsResp.json();
@@ -266,7 +268,7 @@ async function loadLatestCosts(tableBody, monthParam) {
         }
 
         const response = await fetch(`${API_URL}/api/costs?${params.toString()}`, {
-            headers: getAuthHeaders()
+            headers: getAuthHeaders('admin')
         });
 
         if (response.status === 401) {
@@ -322,7 +324,7 @@ async function loadDrivers() {
     const tableBody = document.getElementById('drivers-table-body');
     tableBody.innerHTML = '<tr><td colspan="5">A carregar...</td></tr>';
     try {
-        const response = await fetch(`${API_URL}/api/drivers`, { method: 'GET', headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/drivers`, { method: 'GET', headers: getAuthHeaders('admin') });
         if (response.status === 401) { return handleLogout('admin'); }
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
@@ -358,7 +360,7 @@ async function loadActiveDeliveries() {
     const tableBody = document.getElementById('active-orders-table-body');
     tableBody.innerHTML = '<tr><td colspan="7">A carregar...</td></tr>';
     try {
-        const response = await fetch(`${API_URL}/api/orders/active`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/orders/active`, { headers: getAuthHeaders('admin') });
         if (response.status === 401) { return handleLogout('admin'); }
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
@@ -404,7 +406,7 @@ async function loadHistory() {
     const tableBody = document.getElementById('history-orders-table-body');
     tableBody.innerHTML = '<tr><td colspan="7">A carregar.</td></tr>';
     try {
-        const response = await fetch(`${API_URL}/api/orders/history`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/orders/history`, { headers: getAuthHeaders('admin') });
         if (response.status === 401) { return handleLogout('admin'); }
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
@@ -429,6 +431,13 @@ async function loadHistory() {
                 const duracao = formatDuration(order.timestamp_started, order.timestamp_completed);
                 duracaoHtml = duracao;
             }
+                const paymentMap = {
+                cash: '💵 Dinheiro',
+                mpesa: '📱 M-Pesa',
+                emola: '📱 e-Mola',
+                mkesh: '📱 mKesh',
+                bank_transfer: '🏦 Transferência'
+              };
 
             tableBody.innerHTML += `
                 <tr class="history-row">
@@ -436,6 +445,9 @@ async function loadHistory() {
                     <td>${order.client_name}</td>
                     <td>${serviceName}</td>
                     <td>${motoristaNome}</td>
+                    <td>${
+                      paymentMap[order.payment_method] || order.payment_method || '—'
+                    }</td>
                     <td>${duracaoHtml}</td>
                     <td class="verification-code">${order.verification_code}</td> 
                     <td><button class="btn-action-small" onclick="openHistoryDetailModal('${order._id}')"><i class="fas fa-eye"></i></button></td>
@@ -452,7 +464,7 @@ async function loadClients() {
     const tableBody = document.getElementById('clients-table-body');
     tableBody.innerHTML = '<tr><td colspan="4">A carregar...</td></tr>';
     try {
-        const response = await fetch(`${API_URL}/api/clients`, { method: 'GET', headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/clients`, { method: 'GET', headers: getAuthHeaders('admin') });
         if (response.status === 401) { return handleLogout('admin'); }
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
@@ -485,7 +497,7 @@ async function loadClientsIntoDropdown() {
     const select = document.getElementById('delivery-client-select');
     select.innerHTML = '<option value="">A carregar clientes...</option>';
     try {
-        const response = await fetch(`${API_URL}/api/clients`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/clients`, { headers: getAuthHeaders('admin') });
         if (response.status === 401) { 
             select.innerHTML = '<option value="">-- Erro de Sessão --</option>';
             return handleLogout('admin');
@@ -538,7 +550,7 @@ async function handleChangePassword(e) {
     try {
         const response = await fetch(`${API_URL}/api/auth/change-password`, {
             method: 'PUT',
-            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            headers: { ...getAuthHeaders('admin'), 'Content-Type': 'application/json' },
             body: JSON.stringify({ senhaAntiga, senhaNova })
         });
         
@@ -612,7 +624,7 @@ async function handleAddCost(e) {
         const response = await fetch(`${API_URL}/api/costs`, {
             method: 'POST',
             headers: { 
-                ...getAuthHeaders(),
+                ...getAuthHeaders('admin'),
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(body)
@@ -645,7 +657,7 @@ async function handleDeleteOldHistory() {
     try {
         const response = await fetch(`${API_URL}/api/admin/orders/history`, {
             method: 'DELETE',
-            headers: getAuthHeaders()
+            headers: getAuthHeaders('admin')
         });
 
         const data = await response.json();
@@ -677,7 +689,7 @@ async function handleExportCostsExcel() {
         params.set('limit', '500'); // exportar até 500 registos, por exemplo
 
         const response = await fetch(`${API_URL}/api/costs?${params.toString()}`, {
-            headers: getAuthHeaders()
+            headers: getAuthHeaders('admin')
         });
 
         if (response.status === 401) {
@@ -742,9 +754,18 @@ async function handleNewDelivery(e) {
     const form = e.target;
     const submitButton = form.querySelector('button[type="submit"]');
     const formData = new FormData(form);
-    // ✅ NOVO — método de pagamento
+    
+    // ===== GARANTIR MÉTODO DE PAGAMENTO =====
     const paymentMethodEl = document.getElementById('payment-method');
     const paymentMethod = paymentMethodEl ? paymentMethodEl.value : 'cash';
+
+    // Log para debug - vais ver no console qual valor está a ser enviado
+    console.log('Método de pagamento selecionado:', paymentMethod);
+
+    // Remove duplicados se existirem
+    formData.delete('payment_method');
+
+    // Adiciona valor correto
     formData.append('payment_method', paymentMethod);
     
     const autoAssign = document.getElementById('autoAssignCheckbox').checked;
@@ -763,9 +784,14 @@ async function handleNewDelivery(e) {
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A gerar...';
 
     try {
+        // IMPORTANTE: NÃO definir o header 'Content-Type' quando usas FormData
+        // O browser define automaticamente com o boundary correto
         const response = await fetch(`${API_URL}/api/orders`, {
             method: 'POST',
-            headers: getAuthHeaders(),
+            headers: {
+                // APENAS o header de Authorization, NÃO o Content-Type
+                'Authorization': `Bearer ${getAuthToken('admin')}`
+            },
             body: formData
         });
         
@@ -777,7 +803,7 @@ async function handleNewDelivery(e) {
         showCustomAlert('Sucesso!', `Pedido Criado! \nCódigo do Destinatário: ${data.order.verification_code}`, 'success');
         form.reset();
         removeImage();
-        destroyFormMap();
+        if (typeof destroyFormMap === 'function') destroyFormMap();
         showPage('entregas-activas', 'nav-entregas', 'Entregas Activas');
 
     } catch (error) {
@@ -812,7 +838,7 @@ async function handleAddDriver(e) {
     try {
         const response = await fetch(`${API_URL}/api/auth/register-driver`, {
             method: 'POST',
-            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            headers: { ...getAuthHeaders('admin'), 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 nome: name, 
                 email, 
@@ -860,7 +886,7 @@ async function handleUpdateDriver(event) {
     try {
         const response = await fetch(`${API_URL}/api/drivers/${userId}`, { 
             method: 'PUT', 
-            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, 
+            headers: { ...getAuthHeaders('admin'), 'Content-Type': 'application/json' }, 
             body: JSON.stringify(updatedData)
         });
         
@@ -904,7 +930,7 @@ async function handleAddClient(e) {
     try {
         const response = await fetch(`${API_URL}/api/clients`, {
             method: 'POST',
-            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            headers: { ...getAuthHeaders('admin'), 'Content-Type': 'application/json' },
             body: JSON.stringify(clientData)
         });
         const data = await response.json();
@@ -947,7 +973,7 @@ async function handleUpdateClient(e) {
     try {
         const response = await fetch(`${API_URL}/api/clients/${clientId}`, {
             method: 'PUT',
-            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            headers: { ...getAuthHeaders('admin'), 'Content-Type': 'application/json' },
             body: JSON.stringify(updatedData)
         });
         const data = await response.json();
@@ -972,7 +998,7 @@ async function handleDeleteClient(clientId, clientName) {
     try {
         const response = await fetch(`${API_URL}/api/clients/${clientId}`, {
             method: 'DELETE',
-            headers: getAuthHeaders()
+            headers: getAuthHeaders('admin')
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
@@ -992,7 +1018,7 @@ async function confirmAssign(orderId, driverId) {
     try {
         const response = await fetch(`${API_URL}/api/orders/${orderId}/assign`, { 
             method: 'PUT', 
-            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, 
+            headers: { ...getAuthHeaders('admin'), 'Content-Type': 'application/json' }, 
             body: JSON.stringify({ driverId }) 
         });
         const data = await response.json();
@@ -1054,7 +1080,7 @@ async function handleGenerateStatement() {
     try {
         // showCustomAlert('A Gerar...', 'A buscar os dados do extrato.', 'info'); // (Removido para não sobrepor)
         const response = await fetch(`${API_URL}/api/clients/${clientId}/statement?startDate=${startDate}&endDate=${endDate}`, {
-            headers: getAuthHeaders()
+            headers: getAuthHeaders('admin')
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);

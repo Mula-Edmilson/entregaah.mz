@@ -5,6 +5,7 @@
  * - Protecção contra múltiplos logins
  * - Tratamento de erro 429 (rate limit)
  * - Evita loops e estados inconsistentes
+ * - CORREÇÃO: Apenas UMA função getAuthHeaders, sempre com role explícito
  */
 
 let loginInProgress = false;
@@ -13,30 +14,55 @@ let loginInProgress = false;
  * Verifica se um utilizador (admin ou motorista) está autenticado.
  */
 function checkAuth(role) {
-    let token;
-    let loginPage;
+    console.log('checkAuth iniciado para role:', role);
+
+    let token = null;
+    let loginPage = 'login.html';
 
     if (role === 'admin') {
         token = localStorage.getItem('adminToken');
         loginPage = 'login.html';
-    } else {
+    } else if (role === 'driver') {
         token = localStorage.getItem('driverToken');
         loginPage = 'login-motorista.html';
+    } else {
+        console.error('checkAuth: role inválido:', role);
+        return false;
     }
 
-    if (!token) {
-        window.location.href = loginPage;
+    console.log('Token encontrado:', token);
+
+    const tokenInvalid =
+        !token ||
+        token === 'undefined' ||
+        token === 'null' ||
+        token.trim() === '';
+
+    if (tokenInvalid) {
+        console.warn('Token inválido → redirecionando');
+
+        setTimeout(() => {
+            if (!window.location.pathname.includes(loginPage)) {
+                window.location.replace(loginPage);
+            }
+        }, 50);
+
+        return false;
     }
+
+    console.log('checkAuth: acesso permitido');
+    return true;
 }
 
 /**
- * Obtém o token correcto consoante o tipo de painel.
+ * Obtém o token correto baseado no role passado como parâmetro.
+ * @param {string} role - 'admin' ou 'driver'
+ * @returns {string|null} O token ou null
  */
-function getAuthToken() {
-    if (document.body.classList.contains('dashboard-body')) {
+function getAuthToken(role) {
+    if (role === 'admin') {
         return localStorage.getItem('adminToken');
-    }
-    if (document.body.classList.contains('motorista-body')) {
+    } else if (role === 'driver') {
         return localStorage.getItem('driverToken');
     }
     return null;
@@ -44,9 +70,11 @@ function getAuthToken() {
 
 /**
  * Headers de autenticação seguros.
+ * @param {string} role - 'admin' ou 'driver' (obrigatório)
+ * @returns {Object} Headers com Authorization
  */
-function getAuthHeaders() {
-    const token = getAuthToken();
+function getAuthHeaders(role) {
+    const token = getAuthToken(role);
     if (!token) return {};
     return {
         'Authorization': `Bearer ${token}`
@@ -87,17 +115,46 @@ async function handleLogin(e, role) {
 
         const data = await response.json();
 
+        // 🔥 LOG CRÍTICO (NOVO)
+        console.log('LOGIN RESPONSE:', data);
+
         if (!response.ok) {
             throw new Error(data.message || 'Erro no login');
         }
 
+        // Guardar token conforme o role
         if (role === 'admin') {
-            localStorage.setItem('adminToken', data.token);
-            localStorage.setItem('adminName', data.name || 'Admin');
-            window.location.href = 'index.html';
+            const token =
+    data.token ||
+    data.accessToken ||
+    data.jwt ||
+    data?.data?.token ||
+    data?.user?.token;
+
+if (!token) {
+    console.error('TOKEN NÃO ENCONTRADO NA RESPONSE:', data);
+    throw new Error('Falha de autenticação: token não recebido do servidor.');
+}
+
+localStorage.setItem('adminToken', token);
+            localStorage.setItem('adminName', data.user?.nome || 'Admin');
+            window.location.replace('index.html');
         } else {
-            localStorage.setItem('driverToken', data.token);
-            window.location.href = 'painel-de-entrega.html';
+            const token =
+    data.token ||
+    data.accessToken ||
+    data.jwt ||
+    data?.data?.token ||
+    data?.user?.token;
+
+if (!token) {
+    console.error('TOKEN NÃO ENCONTRADO NA RESPONSE:', data);
+    throw new Error('Falha de autenticação: token não recebido do servidor.');
+}
+
+localStorage.setItem('driverToken', token);
+            localStorage.setItem('driverName', data.user?.nome || 'Motorista');
+            window.location.replace('painel-de-entrega.html');
         }
 
     } catch (error) {
@@ -109,14 +166,25 @@ async function handleLogin(e, role) {
             alert(error.message);
         }
 
-        // Em erro grave → limpar sessão por segurança
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('driverToken');
-
     } finally {
         loginInProgress = false;
         submitButton.disabled = false;
-        submitButton.innerHTML = 'Entrar';
+        submitButton.innerHTML = role === 'admin' ? 'Entrar' : 'Iniciar Turno';
+    }
+}
+
+function handle401Safely(role) {
+    console.warn('⚠️ 401 recebido — verificação segura');
+
+    const tokenKey = role === 'admin' ? 'adminToken' : 'driverToken';
+    const token = localStorage.getItem(tokenKey);
+
+    // 🔒 só faz logout se realmente não houver token
+    if (!token) {
+        console.warn('🔴 Sem token — logout forçado');
+        handleLogout(role);
+    } else {
+        console.warn('🟡 Token existe — NÃO fazer logout automático');
     }
 }
 
@@ -130,6 +198,7 @@ function handleLogout(role) {
         window.location.href = 'login.html';
     } else {
         localStorage.removeItem('driverToken');
+        localStorage.removeItem('driverName');
         window.location.href = 'login-motorista.html';
     }
 }

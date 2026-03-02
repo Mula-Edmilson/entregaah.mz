@@ -45,7 +45,7 @@
                 <p class="login-subtitle">Painel Administrativo</p>
             </div>
 
-            <form id="login-form" data-validate data-redirect="index.html">
+            <form id="login-form">
                 <div class="form-group">
                     <label class="form-label" for="email">Email</label>
                     <input type="email" id="email" class="form-input" placeholder="Introduza o seu email" required>
@@ -102,12 +102,21 @@
     <script src="templatemo-glass-admin-script.js"></script>
     
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const loginForm = document.getElementById('login-form');
-            if (loginForm) {
-                loginForm.addEventListener('submit', (e) => handleLogin(e, 'admin'));
-            }
-        });
-    </script>
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Login DOM ready');
+
+    const loginForm = document.getElementById('login-form');
+
+    if (!loginForm) {
+        console.error('Form login não encontrado');
+        return;
+    }
+
+    loginForm.addEventListener('submit', function (e) {
+        console.log('Submit capturado');
+        handleLogin(e, 'admin');
+    });
+});
+</script>
 </body>
 </html>

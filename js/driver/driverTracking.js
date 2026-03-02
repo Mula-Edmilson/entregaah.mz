@@ -54,7 +54,9 @@ function unlockAudio() {
 
 
 function connectDriverSocket() {
-    const token = getAuthToken();
+    // ANTES: const token = getAuthToken();
+    // DEPOIS: const token = getAuthToken('driver');
+    const token = getAuthToken('driver');
     if (!token) {
         console.error("Não foi possível conectar o socket: Token do motorista não encontrado.");
         return;

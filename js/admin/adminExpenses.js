@@ -12,7 +12,10 @@ async function loadExpenses() {
       headers: getAuthHeaders()
     });
 
-    if (response.status === 401) return handleLogout('admin');
+    if (response.status === 401) {
+    handle401Safely('admin');
+    return;
+}
 
     const data = await response.json();
     if (!response.ok) throw new Error(data.message);

@@ -120,7 +120,7 @@ async function openAssignModal(orderId) {
     select.innerHTML = '<option value="">A carregar...</option>';
     
     try {
-        const response = await fetch(`${API_URL}/api/drivers/available`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/drivers/available`, { headers: getAuthHeaders('admin') });
         if (response.status === 401) { return handleLogout('admin'); }
 
         const data = await response.json();
@@ -167,7 +167,7 @@ async function openEditDriverModal(driverUserId) {
     document.getElementById('edit-driver-phone').value = 'A carregar...';
     
     try {
-        const response = await fetch(`${API_URL}/api/drivers/${driverUserId}`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/drivers/${driverUserId}`, { headers: getAuthHeaders('admin') });
         if (response.status === 401) { return handleLogout('admin'); }
 
         const data = await response.json();
@@ -206,7 +206,7 @@ async function openHistoryDetailModal(orderId) {
     body.innerHTML = '<p>A carregar detalhes...</p>';
     
     try {
-        const response = await fetch(`${API_URL}/api/orders/${orderId}`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/orders/${orderId}`, { headers: getAuthHeaders('admin') });
         if (response.status === 401) { return handleLogout('admin'); }
 
         const data = await response.json();
@@ -267,7 +267,7 @@ async function openDriverReportModal(driverUserId, driverName) {
     tableBody.innerHTML = '<tr><td colspan="5">A carregar relatório...</td></tr>';
     
     try {
-        const response = await fetch(`${API_URL}/api/drivers/${driverUserId}/report`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/drivers/${driverUserId}/report`, { headers: getAuthHeaders('admin') });
         if (response.status === 401) { return handleLogout('admin'); }
 
         const data = await response.json();
@@ -329,7 +329,7 @@ async function openEditClientModal(clientId) {
     document.getElementById('edit-client-telefone').value = 'A carregar...';
 
     try {
-        const response = await fetch(`${API_URL}/api/clients/${clientId}`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/clients/${clientId}`, { headers: getAuthHeaders('admin') });
         if (response.status === 401) { return handleLogout('admin'); }
 
         const data = await response.json();

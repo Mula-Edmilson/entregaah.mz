@@ -256,11 +256,14 @@ function showServiceForm(serviceType) {
 
 
 /* --- Lógica de Socket.IO --- */
+/* --- Lógica de Socket.IO --- */
 function connectSocket() {
-    const token = getAuthToken(); // (auth.js)
+    // ANTES: const token = getAuthToken(); 
+    // DEPOIS: const token = getAuthToken('admin');
+    const token = getAuthToken('admin');
     if (!token) return;
     
-    socket = io(API_URL, { auth: { token: token } }); // (api.js)
+    socket = io(API_URL, { auth: { token: token } });
     
     socket.on('connect', () => {
         console.log('Conectado ao servidor Socket.io com ID:', socket.id);
@@ -358,7 +361,7 @@ async function loadAdminProfile() {
         const response = await fetch(`${API_URL}/api/auth/me`, {
             headers: {
                 'Content-Type': 'application/json',
-                ...getAuthHeaders()
+                ...getAuthHeaders('admin')  // ← SÓ ALTERAR AQUI
             }
         });
 

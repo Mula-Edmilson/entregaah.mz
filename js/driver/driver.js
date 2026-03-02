@@ -37,63 +37,63 @@ function attachDriverEventListeners() {
     }
     
     // Links do menu mobile
-    document.getElementById('mobile-nav-ganhos').addEventListener('click', (e) => {
+    document.getElementById('mobile-nav-ganhos')?.addEventListener('click', (e) => {
         e.preventDefault();
         showDriverPage('meus-ganhos');
         mobileMenu.classList.remove('open');
     });
-    document.getElementById('mobile-nav-config').addEventListener('click', (e) => {
+    document.getElementById('mobile-nav-config')?.addEventListener('click', (e) => {
         e.preventDefault();
         showDriverPage('configuracoes-motorista');
         mobileMenu.classList.remove('open');
     });
-    document.getElementById('mobile-nav-logout').addEventListener('click', (e) => {
+    document.getElementById('mobile-nav-logout')?.addEventListener('click', (e) => {
         e.preventDefault();
         handleLogout('driver');
     });
 
     // Botão de Logout (Desktop)
-    document.getElementById('driver-logout').addEventListener('click', (e) => {
+    document.getElementById('driver-logout')?.addEventListener('click', (e) => {
         e.preventDefault();
         handleLogout('driver');
     });
     
     // Botão de Configurações (Desktop)
-    document.getElementById('driver-settings').addEventListener('click', () => {
+    document.getElementById('driver-settings')?.addEventListener('click', () => {
         showDriverPage('configuracoes-motorista');
     });
     
     // Botão de Ganhos (Desktop)
-    document.getElementById('driver-earnings').addEventListener('click', () => {
+    document.getElementById('driver-earnings')?.addEventListener('click', () => {
         showDriverPage('meus-ganhos');
     });
     
     // Botões "Voltar"
-    document.getElementById('btn-voltar-lista').addEventListener('click', () => {
+    document.getElementById('btn-voltar-lista')?.addEventListener('click', () => {
         showDriverPage('lista-entregas');
     });
-    document.getElementById('btn-voltar-lista-config').addEventListener('click', () => {
+    document.getElementById('btn-voltar-lista-config')?.addEventListener('click', () => {
         showDriverPage('lista-entregas');
     });
-    document.getElementById('btn-voltar-lista-ganhos').addEventListener('click', () => {
+    document.getElementById('btn-voltar-lista-ganhos')?.addEventListener('click', () => {
         showDriverPage('lista-entregas');
     });
 
     // Botões do Modal de Alerta
-    document.getElementById('btn-close-alert').addEventListener('click', closeCustomAlert);
-    document.getElementById('btn-ok-alert').addEventListener('click', closeCustomAlert);
+    document.getElementById('btn-close-alert')?.addEventListener('click', closeCustomAlert);
+    document.getElementById('btn-ok-alert')?.addEventListener('click', closeCustomAlert);
     
     // Listener de Notificação (socket -> driver.js recarrega lista)
     document.addEventListener('nova_entrega', () => {
         console.log('Evento "nova_entrega" recebido. A recarregar a lista...');
         const listaSection = document.getElementById('lista-entregas');
-        if (!listaSection.classList.contains('hidden')) {
+        if (listaSection && !listaSection.classList.contains('hidden')) {
             loadMyDeliveries();
         }
     });
 
     // Listener do formulário de senha
-    document.getElementById('form-change-password-driver').addEventListener('submit', handleChangePasswordDriver);
+    document.getElementById('form-change-password-driver')?.addEventListener('submit', handleChangePasswordDriver);
 }
 
 
@@ -101,10 +101,10 @@ function attachDriverEventListeners() {
 
 function showDriverPage(pageId) {
     // Esconde todas as secções
-    document.getElementById('lista-entregas').classList.add('hidden');
-    document.getElementById('detalhe-entrega').classList.add('hidden');
-    document.getElementById('configuracoes-motorista').classList.add('hidden');
-    document.getElementById('meus-ganhos').classList.add('hidden'); 
+    document.getElementById('lista-entregas')?.classList.add('hidden');
+    document.getElementById('detalhe-entrega')?.classList.add('hidden');
+    document.getElementById('configuracoes-motorista')?.classList.add('hidden');
+    document.getElementById('meus-ganhos')?.classList.add('hidden'); 
 
     // Mostra a secção pedida
     const pageToShow = document.getElementById(pageId);
@@ -117,7 +117,7 @@ function showDriverPage(pageId) {
         loadMyDeliveries();
     }
     if (pageId === 'configuracoes-motorista') {
-        document.getElementById('form-change-password-driver').reset();
+        document.getElementById('form-change-password-driver')?.reset();
     }
     if (pageId === 'meus-ganhos') {
         loadMyEarnings(); 
@@ -134,7 +134,7 @@ async function loadMyDeliveries() {
     try {
         const response = await fetch(`${API_URL}/api/orders/my-deliveries`, {
             method: 'GET',
-            headers: getAuthHeaders()
+            headers: getAuthHeaders('driver')
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
@@ -146,7 +146,14 @@ async function loadMyDeliveries() {
         data.orders.forEach(order => {
             const card = document.createElement('div');
             card.className = 'entrega-card';
-            card.dataset.order = JSON.stringify(order); 
+            card.dataset.order = JSON.stringify(order);
+            const paymentMap = {
+            cash: '💵 Dinheiro',
+            mpesa: '📱 M-Pesa',
+            emola: '📱 e-Mola',
+            mkesh: '📱 mKesh',
+            bank_transfer: '🏦 Transferência'
+          }; 
             card.innerHTML = `
                 <div class="entrega-card-header">
                     <strong>Pedido #${order._id.slice(-6)}</strong>
@@ -154,6 +161,7 @@ async function loadMyDeliveries() {
                 </div>
                 <p><strong>Cliente:</strong> ${order.client_name}</p>
                 <p><strong>Serviço:</strong> ${SERVICE_NAMES[order.service_type] || order.service_type}</p>
+                <p><strong>Pagamento:</strong> ${paymentMap[order.payment_method] || order.payment_method || '—'}</p>
                 <span class="ver-detalhes-btn">${order.status === 'atribuido' ? 'Ver Detalhes' : 'Continuar Entrega'}</span>
             `;
             card.addEventListener('click', () => { 
@@ -166,6 +174,7 @@ async function loadMyDeliveries() {
         console.error('Falha ao carregar entregas:', error); 
         listaEntregas.innerHTML = '<h2>Minhas Entregas Pendentes</h2><p style="color: var(--danger-color);">Erro ao carregar entregas.</p>';
     }
+
 }
 
 async function loadMyEarnings() {
@@ -176,6 +185,8 @@ async function loadMyEarnings() {
     const commissionEl = document.getElementById('driver-commission-rate');
     const tableBody = document.getElementById('driver-earnings-table-body');
     
+    if (!totalGanhosEl || !totalOrdersEl || !commissionEl || !tableBody) return;
+
     totalGanhosEl.innerText = '...';
     totalOrdersEl.innerText = '...';
     commissionEl.innerText = '... %';
@@ -184,7 +195,7 @@ async function loadMyEarnings() {
     try {
         const response = await fetch(`${API_URL}/api/drivers/my-earnings`, {
             method: 'GET',
-            headers: getAuthHeaders()
+            headers: getAuthHeaders('driver')
         });
 
         if (response.status === 401) {
@@ -225,6 +236,8 @@ async function loadMyEarnings() {
 
 function fillDetalheEntrega(order) {
     const detalheSection = document.getElementById('detalhe-entrega');
+    if (!detalheSection) return;
+
     detalheSection.querySelector('#detalhe-entrega-title').innerText = `Detalhes do Pedido #${order._id.slice(-6)}`;
     
     const img = detalheSection.querySelector('#encomenda-imagem');
@@ -241,6 +254,22 @@ function fillDetalheEntrega(order) {
     document.getElementById('detalhe-cliente-nome').innerHTML = `<strong>Nome:</strong> ${order.client_name}`;
     document.getElementById('detalhe-cliente-telefone').innerHTML = `<strong>Telefone:</strong> ${order.client_phone1}`;
     document.getElementById('detalhe-cliente-endereco').innerHTML = `<strong>Endereço:</strong> ${order.address_text || 'N/D'}`;
+    
+    // ===== PAYMENT METHOD (EXECUTA SEMPRE) =====
+    const paymentMap = {
+        cash: '💵 Dinheiro',
+        mpesa: '📱 M-Pesa',
+        emola: '📱 e-Mola',
+        mkesh: '📱 mKesh',
+        bank_transfer: '🏦 Transferência'
+    };
+
+    const paymentEl = document
+        .getElementById('detalhe-payment-method')
+        ?.querySelector('span');
+    if (paymentEl) {
+        paymentEl.textContent = paymentMap[order.payment_method] || order.payment_method || '—';
+    }
 
     const coordsP = document.getElementById('detalhe-cliente-coords');
     const mapButton = document.getElementById('btn-google-maps');
@@ -253,6 +282,7 @@ function fillDetalheEntrega(order) {
         coordsP.classList.add('hidden');
         mapButton.classList.add('hidden');
     }
+
 
     // --- Controlo dos botões consoante o ESTADO da encomenda ---
     const btnIniciar = detalheSection.querySelector('#btn-iniciar-entrega');
@@ -309,6 +339,8 @@ function fillDetalheEntrega(order) {
     // Qualquer outro estado desconhecido -> não mostrar acções
     btnIniciar.classList.add('hidden');
     formFinalizacao.classList.add('hidden');
+
+    
 }
 
 function showListaEntregas() {
@@ -369,7 +401,7 @@ async function handleStartPickup(orderId) {
     try {
         const response = await fetch(`${API_URL}/api/orders/${orderId}/pickup-start`, {
             method: 'POST',
-            headers: getAuthHeaders()
+            headers: getAuthHeaders('driver')
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Falha ao iniciar recolha.');
@@ -398,7 +430,7 @@ async function handleCompletePickup(orderId) {
     try {
         const response = await fetch(`${API_URL}/api/orders/${orderId}/pickup-complete`, {
             method: 'POST',
-            headers: getAuthHeaders()
+            headers: getAuthHeaders('driver')
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Falha ao concluir recolha.');
@@ -427,7 +459,7 @@ async function handleStartDeliveryPhase(orderId) {
     try {
         const response = await fetch(`${API_URL}/api/orders/${orderId}/delivery-start`, {
             method: 'POST',
-            headers: getAuthHeaders()
+            headers: getAuthHeaders('driver')
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Falha ao iniciar entrega.');

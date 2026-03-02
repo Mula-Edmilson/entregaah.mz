@@ -88,22 +88,31 @@ const findBestDriverProfile = async (coordinates) => {
 
 exports.createOrder = asyncHandler(async (req, res) => {
   const data = req.filtered || req.body;
+
+  // ===== EXTRAIR DADOS =====
   const {
-  service_type,
-  client_name,
-  client_phone1,
-  client_phone2,
-  address_text,
-  price,
-  lat,
-  lng,
-  clientId,
-  autoAssign,
-  payment_method // ✅ NOVO
-} = data;
+    service_type,
+    client_name,
+    client_phone1,
+    client_phone2,
+    address_text,
+    price,
+    lat,
+    lng,
+    clientId,
+    autoAssign,
+    payment_method
+  } = data;
+
+  // ===== NORMALIZAÇÃO SEGURA DO PAYMENT =====
+  const normalizedPayment =
+    typeof payment_method === 'string' && payment_method.trim() !== ''
+      ? payment_method.trim()
+      : 'cash';
 
   let imageUrl = null;
 
+  // ===== PROCESSAMENTO DE IMAGEM =====
   if (req.files?.length) {
     const file = req.files[0];
 
@@ -122,11 +131,13 @@ exports.createOrder = asyncHandler(async (req, res) => {
     }
   }
 
+  // ===== COORDENADAS =====
   const coordinates = normalizeCoordinates(lat, lng);
 
   let assignedDriverProfileId = null;
   let orderStatus = ORDER_STATUS.PENDING;
 
+  // ===== AUTO-ATRIBUIÇÃO =====
   if (autoAssign === true || autoAssign === 'true') {
     assignedDriverProfileId = await findBestDriverProfile(coordinates);
     if (assignedDriverProfileId) {
@@ -134,8 +145,10 @@ exports.createOrder = asyncHandler(async (req, res) => {
     }
   }
 
+  // ===== CÓDIGO DE VERIFICAÇÃO =====
   const verificationCode = generateVerificationCode();
 
+  // ===== CRIAÇÃO DO PEDIDO =====
   const order = await Order.create({
     service_type,
     price: Number(price) || 0,
@@ -150,9 +163,10 @@ exports.createOrder = asyncHandler(async (req, res) => {
     created_by_admin: req.user._id,
     assigned_to_driver: assignedDriverProfileId,
     status: orderStatus,
-    payment_method: payment_method || 'cash' // ✅ NOVO
+    payment_method: normalizedPayment // ✅ DEFINITIVO
   });
 
+  // ===== SOCKET.IO =====
   const io = req.app.get('socketio');
 
   if (orderStatus === ORDER_STATUS.ASSIGNED && assignedDriverProfileId) {

@@ -536,6 +536,7 @@
                                         <th>Atribuído a</th>
                                         <th>Descrição</th>
                                         <th>Valor</th>
+                                        <th>Pagamento</th>
                                     </tr>
                                 </thead>
                                 <tbody id="costs-latest-table-body">
@@ -708,6 +709,7 @@
                                     <th>Cliente</th>
                                     <th>Natureza do Pedido</th>
                                     <th>Motorista</th>
+                                    <th>Pagamento</th>
                                     <th>Duração</th>
                                     <th>Código</th>
                                     <th>Acções</th>
@@ -1038,6 +1040,7 @@
                                         <th>ID Pedido</th>
                                         <th>Natureza</th>
                                         <th>Valor (MZN)</th>
+                                        <th>Pagamento</th>
                                     </tr>
                                 </thead>
                                 <tbody id="statement-table-body"></tbody>
@@ -1073,6 +1076,7 @@
     </main>
     
     <!-- Scripts -->
+    <script src="templatemo-glass-admin-script.js"></script>
     <script src="js/common/api.js"></script>
     <script src="js/common/auth.js"></script>
     <script src="js/common/ui.js"></script>
@@ -1081,18 +1085,27 @@
     <script src="js/admin/adminApi.js"></script>
     <script src="js/admin/adminModals.js"></script>
     <script src="js/admin/admin.js"></script>
-    <script src="templatemo-glass-admin-script.js"></script>
+    
 
     <script>
-        // Auth check
-        checkAuth('admin');
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Dashboard carregado — verificando auth...');
 
-        // Mostrar nome do admin
-        const adminName = localStorage.getItem('adminName');
-        if (adminName) {
-            document.getElementById('admin-name').textContent = adminName;
-            document.getElementById('admin-name-header').textContent = adminName;
-        }
-    </script>
+    const ok = checkAuth('admin');
+
+    if (!ok) return;
+
+    // ✅ agora é seguro ler o storage
+    const adminName = localStorage.getItem('adminName');
+
+    if (adminName) {
+        const el1 = document.getElementById('admin-name');
+        const el2 = document.getElementById('admin-name-header');
+
+        if (el1) el1.textContent = adminName;
+        if (el2) el2.textContent = adminName;
+    }
+});
+</script>
 </body>
 </html>
