@@ -369,7 +369,7 @@ async function handleChangePasswordDriver(e) {
     try {
         const response = await fetch(`${API_URL}/api/auth/change-password`, {
             method: 'PUT',
-            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            headers: { ...getAuthHeaders('driver'), 'Content-Type': 'application/json' },
             body: JSON.stringify({ senhaAntiga, senhaNova })
         });
         const data = await response.json();
@@ -495,7 +495,7 @@ async function handleCompleteDelivery(event, orderId) {
     try {
         const response = await fetch(`${API_URL}/api/orders/${orderId}/complete`, {
             method: 'POST',
-            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            headers: { ...getAuthHeaders('driver'), 'Content-Type': 'application/json' },
             body: JSON.stringify({ verification_code })
         });
         const data = await response.json();
