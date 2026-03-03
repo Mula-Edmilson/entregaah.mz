@@ -9,7 +9,7 @@ async function loadExpenses() {
 
   try {
     const response = await fetch(`${API_URL}/api/expenses`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders('admin')
     });
 
     if (response.status === 401) {
@@ -70,7 +70,7 @@ async function handleAddExpense(event) {
     const response = await fetch(`${API_URL}/api/expenses`, {
       method: 'POST',
       headers: {
-        ...getAuthHeaders(),
+        ...getAuthHeaders('admin'),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ category, description, amount, date, employee })
@@ -96,7 +96,7 @@ async function deleteExpense(expenseId) {
   try {
     const response = await fetch(`${API_URL}/api/expenses/${expenseId}`, {
       method: 'DELETE',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders('admin')
     });
 
     const data = await response.json();
@@ -130,8 +130,8 @@ async function loadEmployeesForExpense() {
 
   try {
     const [driversRes, managersRes] = await Promise.all([
-      fetch(`${API_URL}/api/drivers`, { headers: getAuthHeaders() }),
-      fetch(`${API_URL}/api/managers`, { headers: getAuthHeaders() })
+      fetch(`${API_URL}/api/drivers`, { headers: getAuthHeaders('admin') }),
+      fetch(`${API_URL}/api/managers`, { headers: getAuthHeaders('admin') })
     ]);
 
     const driversData = await driversRes.json();
@@ -165,7 +165,7 @@ async function exportFinancialReport() {
     const response = await fetch(
       `${API_URL}/api/admin/export-financial?startDate=${startDate}&endDate=${endDate}`,
       {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders('admin')
       }
     );
 

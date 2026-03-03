@@ -40,85 +40,82 @@ function attachEventListeners() {
     document.getElementById('form-add-cliente').addEventListener('submit', handleAddClient);
     document.getElementById('form-edit-cliente').addEventListener('submit', handleUpdateClient);
     document.getElementById('form-change-password').addEventListener('submit', handleChangePassword);
-    // Navegação Principal (Sidebar)
-document.getElementById('nav-visao-geral').addEventListener('click', (e) => {
-    e.preventDefault();
-    showPage('visao-geral', 'nav-visao-geral', 'Visão Geral');
-});
-document.getElementById('nav-entregas').addEventListener('click', (e) => {
-    e.preventDefault();
-    showPage('entregas-activas', 'nav-entregas', 'Entregas Activas');
-});
-document.getElementById('nav-motoristas').addEventListener('click', (e) => {
-    e.preventDefault();
-    showPage('gestao-motoristas', 'nav-motoristas', 'Gestão de Motoristas');
-});
-document.getElementById('nav-clientes').addEventListener('click', (e) => {
-    e.preventDefault();
-    showPage('gestao-clientes', 'nav-clientes', 'Gestão de Clientes');
-});
 
-// NOVO: custos
-document.getElementById('nav-custos').addEventListener('click', (e) => {
-    e.preventDefault();
-    showPage('custos', 'nav-custos', 'Custos');
-});
-
-// NOVO: cargos
-document.getElementById('nav-cargos').addEventListener('click', (e) => {
-    e.preventDefault();
-    showPage('cargos', 'nav-cargos', 'Cargos');
-});
-
-document.getElementById('nav-historico').addEventListener('click', (e) => {
-    e.preventDefault();
-    showPage('historico', 'nav-historico', 'Histórico');
-});
-document.getElementById('nav-mapa').addEventListener('click', (e) => {
-    e.preventDefault();
-    showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real');
-});
-document.getElementById('nav-config').addEventListener('click', (e) => {
-    e.preventDefault();
-    showPage('configuracoes', 'nav-config', 'Configurações');
-});
-
-
-    // NOVO: formulário de custos (pode não existir em versões antigas)
-    const costForm = document.getElementById('form-add-cost');
-    if (costForm) {
-        costForm.addEventListener('submit', handleAddCost);
-    }
-
-// Botão exportar Excel
-const exportCostsBtn = document.getElementById('btn-export-costs-excel');
-if (exportCostsBtn) {
-    exportCostsBtn.addEventListener('click', handleExportCostsExcel);
-}
     // --- Navegação Principal (Sidebar) ---
-    document.getElementById('nav-visao-geral').addEventListener('click', (e) => { e.preventDefault(); showPage('visao-geral', 'nav-visao-geral', 'Visão Geral'); });
-    document.getElementById('nav-entregas').addEventListener('click', (e) => { e.preventDefault(); showPage('entregas-activas', 'nav-entregas', 'Entregas Activas'); });
-    document.getElementById('nav-motoristas').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-motoristas', 'nav-motoristas', 'Gestão de Motoristas'); });
-    document.getElementById('nav-clientes').addEventListener('click', (e) => { e.preventDefault(); showPage('gestao-clientes', 'nav-clientes', 'Gestão de Clientes'); });
-    document.getElementById('nav-historico').addEventListener('click', (e) => { e.preventDefault(); showPage('historico', 'nav-historico', 'Histórico'); });
-    document.getElementById('nav-mapa').addEventListener('click', (e) => { e.preventDefault(); showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real'); });
+    document.getElementById('nav-visao-geral').addEventListener('click', (e) => {
+        e.preventDefault();
+        showPage('visao-geral', 'nav-visao-geral', 'Visão Geral');
+    });
+    document.getElementById('nav-entregas').addEventListener('click', (e) => {
+        e.preventDefault();
+        showPage('entregas-activas', 'nav-entregas', 'Entregas Activas');
+    });
+    document.getElementById('nav-motoristas').addEventListener('click', (e) => {
+        e.preventDefault();
+        showPage('gestao-motoristas', 'nav-motoristas', 'Gestão de Motoristas');
+    });
+    document.getElementById('nav-clientes').addEventListener('click', (e) => {
+        e.preventDefault();
+        showPage('gestao-clientes', 'nav-clientes', 'Gestão de Clientes');
+    });
+
+    // NOVO: custos
+    document.getElementById('nav-custos').addEventListener('click', (e) => {
+        e.preventDefault();
+        showPage('custos', 'nav-custos', 'Custos');
+    });
+
+    // NOVO: cargos
+    document.getElementById('nav-cargos').addEventListener('click', (e) => {
+        e.preventDefault();
+        showPage('cargos', 'nav-cargos', 'Cargos');
+    });
+
+    document.getElementById('nav-historico').addEventListener('click', (e) => {
+        e.preventDefault();
+        showPage('historico', 'nav-historico', 'Histórico');
+    });
+    document.getElementById('nav-mapa').addEventListener('click', (e) => {
+        e.preventDefault();
+        showPage('mapa-tempo-real', 'nav-mapa', 'Mapa em Tempo Real');
+    });
+    document.getElementById('nav-config').addEventListener('click', (e) => {
+        e.preventDefault();
+        showPage('configuracoes', 'nav-config', 'Configurações');
+    });
 
     // Submenu de Formulários
-    document.getElementById('nav-form-doc').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('doc'); });
-    document.getElementById('nav-form-farma').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('farma'); });
-    document.getElementById('nav-form-carga').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('carga'); });
-    document.getElementById('nav-form-rapido').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('rapido'); });
-    document.getElementById('nav-form-outros').addEventListener('click', (e) => { e.preventDefault(); showServiceForm('outros'); });
-    
-    document.getElementById('nav-config').addEventListener('click', (e) => { e.preventDefault(); showPage('configuracoes', 'nav-config', 'Configurações'); });
+    document.getElementById('nav-form-doc').addEventListener('click', (e) => { 
+        e.preventDefault(); 
+        showServiceForm('doc'); 
+    });
+    document.getElementById('nav-form-farma').addEventListener('click', (e) => { 
+        e.preventDefault(); 
+        showServiceForm('farma'); 
+    });
+    document.getElementById('nav-form-carga').addEventListener('click', (e) => { 
+        e.preventDefault(); 
+        showServiceForm('carga'); 
+    });
+    document.getElementById('nav-form-rapido').addEventListener('click', (e) => { 
+        e.preventDefault(); 
+        showServiceForm('rapido'); 
+    });
+    document.getElementById('nav-form-outros').addEventListener('click', (e) => { 
+        e.preventDefault(); 
+        showServiceForm('outros'); 
+    });
 
     // --- Autenticação ---
-    document.getElementById('admin-logout').addEventListener('click', (e) => { e.preventDefault(); handleLogout('admin'); });
+    document.getElementById('admin-logout').addEventListener('click', (e) => { 
+        e.preventDefault(); 
+        handleLogout('admin'); 
+    });
 
     // --- Modais e Botões (Listeners) ---
     const resetBtn = document.getElementById('btn-reset-chart');
     if (resetBtn) {
-    resetBtn.addEventListener('click', openChartResetModal);
+        resetBtn.addEventListener('click', openChartResetModal);
     }
     document.getElementById('btn-confirm-chart-reset').addEventListener('click', handleChartReset);
     document.getElementById('btn-close-chart-reset').addEventListener('click', closeChartResetModal);
@@ -130,7 +127,7 @@ if (exportCostsBtn) {
 
     // Listeners do Modal de Extrato (Statement)
     document.getElementById('btn-generate-statement').addEventListener('click', handleGenerateStatement);
-    document.getElementById('btn-download-pdf').addEventListener('click', handleDownloadPDF); // (Esta função tem de ser movida)
+    document.getElementById('btn-download-pdf').addEventListener('click', handleDownloadPDF);
     document.querySelectorAll('.btn-set-date').forEach(btn => {
         btn.addEventListener('click', () => setStatementDates(btn.dataset.range));
     });
@@ -140,6 +137,18 @@ if (exportCostsBtn) {
     document.getElementById('btn-close-confirmation-modal').addEventListener('click', closeConfirmationModal);
     document.getElementById('btn-cancel-confirmation-modal').addEventListener('click', closeConfirmationModal);
     
+    // NOVO: formulário de custos (pode não existir em versões antigas)
+    const costForm = document.getElementById('form-add-cost');
+    if (costForm) {
+        costForm.addEventListener('submit', handleAddCost);
+    }
+
+    // Botão exportar Excel
+    const exportCostsBtn = document.getElementById('btn-export-costs-excel');
+    if (exportCostsBtn) {
+        exportCostsBtn.addEventListener('click', handleExportCostsExcel);
+    }
+
     // --- Lógica do Menu Mobile ---
     const menuToggle = document.getElementById('mobile-menu-toggle');
     const mainContent = document.querySelector('.main-content');
@@ -165,7 +174,6 @@ if (exportCostsBtn) {
         });
     });
 }
-
 
 /* --- Lógica de Navegação (Router) --- */
 
@@ -219,11 +227,11 @@ function showPage(pageId, navId, title) {
         case 'mapa-tempo-real':
             initializeLiveMap();
             break;
-            case 'cargos':
-        // opcional: recarregar listas após criar, etc.
-        loadDrivers();
-        loadClients();
-        break;
+        case 'cargos':
+            // opcional: recarregar listas após criar, etc.
+            loadDrivers();
+            loadClients();
+            break;
         case 'configuracoes':
             document.getElementById('form-change-password').reset();
             break;
@@ -254,12 +262,8 @@ function showServiceForm(serviceType) {
     setTimeout(initializeFormMap, 100); // (adminMap.js)
 }
 
-
-/* --- Lógica de Socket.IO --- */
 /* --- Lógica de Socket.IO --- */
 function connectSocket() {
-    // ANTES: const token = getAuthToken(); 
-    // DEPOIS: const token = getAuthToken('admin');
     const token = getAuthToken('admin');
     if (!token) return;
     
@@ -302,7 +306,6 @@ function connectSocket() {
         removeDriverMarker(data);
     });
 }
-
 
 /* --- Lógica Auxiliar (UI Helpers) --- */
 
@@ -354,14 +357,15 @@ function handleDeleteOldHistoryClick() {
     });
 }
 
-
-
+/**
+ * Carrega o perfil do administrador logado.
+ */
 async function loadAdminProfile() {
     try {
         const response = await fetch(`${API_URL}/api/auth/me`, {
             headers: {
                 'Content-Type': 'application/json',
-                ...getAuthHeaders('admin')  // ← SÓ ALTERAR AQUI
+                ...getAuthHeaders('admin')
             }
         });
 

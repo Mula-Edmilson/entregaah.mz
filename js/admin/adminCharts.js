@@ -1,14 +1,15 @@
 /*
  * Ficheiro: js/admin/adminCharts.js
- * (Atualizado com o novo Gráfico Financeiro)
+ * (Atualizado com o novo Gráfico Financeiro e refatorado para remover duplicações)
  */
 
 // --- Variáveis de estado globais para os gráficos ---
 let myServicesChart = null;
 let myDeliveriesStatusChart = null;
-let myFinancialPieChart = null; // (NOVA VARIÁVEL)
+let myFinancialPieChart = null;
+let isServicesChartLoading = false;
 
-// (NOVAS) Cores do tema Minimal
+// Cores do tema Minimal
 const chartColors = {
     primary: 'rgba(59, 130, 246, 0.8)',  // Azul
     primaryLight: 'rgba(59, 130, 246, 0.2)',
@@ -22,7 +23,6 @@ const chartColors = {
     borderColor: '#E5E7EB'
 };
 
-
 /**
  * Destrói as instâncias dos gráficos existentes.
  */
@@ -35,7 +35,6 @@ function destroyCharts() {
         myDeliveriesStatusChart.destroy();
         myDeliveriesStatusChart = null;
     }
-    // (MUDANÇA) Destrói o novo gráfico
     if (myFinancialPieChart) {
         myFinancialPieChart.destroy();
         myFinancialPieChart = null;
@@ -44,65 +43,83 @@ function destroyCharts() {
 
 /**
  * Inicializa o gráfico de barras (Desempenho dos Serviços).
+ * Versão refatorada com proteção contra chamadas concorrentes.
  */
 async function initServicesChart(reset = false) {
-    // ... (Esta função permanece 100% igual) ...
-    const ctx = document.getElementById('servicesChart');
-    if (!ctx) return; 
-    if (myServicesChart) {
-        myServicesChart.destroy();
+    // Previne chamadas concorrentes
+    if (isServicesChartLoading) return;
+    isServicesChartLoading = true;
+
+    const canvas = document.getElementById('servicesChart');
+    if (!canvas) {
+        isServicesChartLoading = false;
+        return;
     }
+
+    const existingChart = Chart.getChart(canvas);
+if (existingChart) {
+    existingChart.destroy();
+}
+
+myServicesChart = null;
+
     let dataValues = [0], adesaoValues = [0], labels = ['A carregar...'];
-    if (reset) {
-        labels = ['N/D'];
-        console.log('SIMULAÇÃO: Resetando dados do gráfico...');
-    } else {
+
+    if (!reset) {
         try {
             const response = await fetch(`${API_URL}/api/stats/services`, { 
-                headers: getAuthHeaders() 
+                headers: getAuthHeaders('admin') 
             });
+
             const data = await response.json();
             if (!response.ok) throw new Error(data.message);
-            if (data.labels.length > 0) {
+
+            if (data.labels && data.labels.length > 0) {
                 labels = data.labels;
-                dataValues = data.dataValues;
-                adesaoValues = data.adesaoValues;
+                dataValues = data.dataValues || [0];
+                adesaoValues = data.adesaoValues || [0];
             } else {
                 labels = ['Nenhum dado'];
             }
+
         } catch (error) {
             console.error('Falha ao carregar estatísticas do gráfico:', error);
             labels = ['Erro ao carregar'];
         }
+    } else {
+        labels = ['N/D'];
+        console.log('SIMULAÇÃO: Resetando dados do gráfico...');
     }
-    const chartData = {
-        labels: labels,
-        datasets: [
-            { 
-                label: 'Nº de Pedidos (Adesão)', 
-                type: 'bar',
-                data: adesaoValues, 
-                backgroundColor: chartColors.primary,
-                borderColor: chartColors.primary,
-                borderWidth: 1,
-                order: 2
-            },
-            { 
-                label: 'Valor Rendido (MZN)', 
-                type: 'line',
-                data: dataValues, 
-                backgroundColor: chartColors.success,
-                borderColor: chartColors.success,
-                borderWidth: 3,
-                fill: false,
-                tension: 0.4,
-                order: 1
-            }
-        ]
-    };
-    myServicesChart = new Chart(ctx, { 
+
+    const ctx = canvas.getContext('2d');
+
+    myServicesChart = new Chart(ctx, {
         type: 'bar',
-        data: chartData, 
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Nº de Pedidos (Adesão)',
+                    type: 'bar',
+                    data: adesaoValues,
+                    backgroundColor: chartColors.primary,
+                    borderColor: chartColors.primary,
+                    borderWidth: 1,
+                    order: 2
+                },
+                {
+                    label: 'Valor Rendido (MZN)',
+                    type: 'line',
+                    data: dataValues,
+                    backgroundColor: chartColors.success,
+                    borderColor: chartColors.success,
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    order: 1
+                }
+            ]
+        },
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -161,18 +178,21 @@ async function initServicesChart(reset = false) {
             }
         }
     });
+
+    isServicesChartLoading = false;
 }
 
 /**
  * Inicializa/Atualiza o gráfico de donut (Entregas Ativas).
  */
 function initDeliveriesStatusChart(pendentes, emTransito) {
-    // ... (Esta função permanece 100% igual) ...
     const ctx = document.getElementById('deliveriesStatusChart');
     if (!ctx) return;
+    
     if (myDeliveriesStatusChart) {
         myDeliveriesStatusChart.destroy();
     }
+    
     const total = pendentes + emTransito;
     const data = {
         labels: [
@@ -193,6 +213,7 @@ function initDeliveriesStatusChart(pendentes, emTransito) {
             borderWidth: 1
         }]
     };
+    
     myDeliveriesStatusChart = new Chart(ctx, {
         type: 'doughnut',
         data: data,
@@ -232,8 +253,6 @@ function initDeliveriesStatusChart(pendentes, emTransito) {
     });
 }
 
-
-// --- (NOVA FUNÇÃO ADICIONADA) ---
 /**
  * Inicializa/Atualiza o gráfico de "pizza" (Divisão Financeira).
  * @param {number} lucroEmpresa - O lucro líquido da empresa.
@@ -241,10 +260,10 @@ function initDeliveriesStatusChart(pendentes, emTransito) {
  */
 function initFinancialPieChart(lucroEmpresa, ganhosMotorista) {
     const ctx = document.getElementById('financialPieChart');
-    if (!ctx) return; // Sai se o elemento não estiver na página
+    if (!ctx) return;
 
     if (myFinancialPieChart) {
-        myFinancialPieChart.destroy(); // Destrói o anterior
+        myFinancialPieChart.destroy();
     }
 
     const total = lucroEmpresa + ganhosMotorista;
@@ -257,8 +276,8 @@ function initFinancialPieChart(lucroEmpresa, ganhosMotorista) {
             label: 'Divisão da Receita',
             data: [lucroEmpresa, ganhosMotorista],
             backgroundColor: [
-                chartColors.primary, // Azul (Lucro)
-                chartColors.success  // Verde (Ganhos Motoristas)
+                chartColors.primary,
+                chartColors.success
             ],
             borderColor: [
                 chartColors.primary,
@@ -290,12 +309,11 @@ function initFinancialPieChart(lucroEmpresa, ganhosMotorista) {
                     borderWidth: 1,
                     callbacks: {
                         label: function(context) {
-                            let label = context.label.split('(')[0].trim() || ''; // Pega só o nome
+                            let label = context.label.split('(')[0].trim() || '';
                             if (label) {
                                 label += ': ';
                             }
                             if (context.parsed !== null) {
-                                // Mostra a percentagem
                                 const percentage = total > 0 ? (context.parsed / total * 100).toFixed(1) : 0;
                                 label += `${percentage}%`;
                             }
@@ -307,4 +325,3 @@ function initFinancialPieChart(lucroEmpresa, ganhosMotorista) {
         }
     });
 }
-// --- FIM DA NOVA FUNÇÃO ---

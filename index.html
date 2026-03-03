@@ -1087,25 +1087,6 @@
     <script src="js/admin/admin.js"></script>
     
 
-    <script>
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('Dashboard carregado — verificando auth...');
-
-    const ok = checkAuth('admin');
-
-    if (!ok) return;
-
-    // ✅ agora é seguro ler o storage
-    const adminName = localStorage.getItem('adminName');
-
-    if (adminName) {
-        const el1 = document.getElementById('admin-name');
-        const el2 = document.getElementById('admin-name-header');
-
-        if (el1) el1.textContent = adminName;
-        if (el2) el2.textContent = adminName;
-    }
-});
-</script>
+    
 </body>
 </html>

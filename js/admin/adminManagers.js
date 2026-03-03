@@ -16,7 +16,7 @@ async function loadManagers() {
 
   try {
     const response = await fetch(`${API_URL}/api/managers`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders('admin')
     });
 
     if (response.status === 401) {
@@ -73,7 +73,7 @@ async function handleAddManager(event) {
     const response = await fetch(`${API_URL}/api/managers`, {
       method: 'POST',
       headers: {
-        ...getAuthHeaders(),
+        ...getAuthHeaders('admin'),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ nome, telefone, email, password })
@@ -99,7 +99,7 @@ async function deleteManager(managerId) {
   try {
     const response = await fetch(`${API_URL}/api/managers/${managerId}`, {
       method: 'DELETE',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders('admin')
     });
 
     const data = await response.json();
@@ -145,7 +145,7 @@ function closeEditManagerModal() {
 async function handleEditManager(managerId) {
   try {
     const res = await fetch(`${API_URL}/api/managers/${managerId}`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders('admin')
     });
     if (res.status === 401) return handleLogout('admin');
 
@@ -186,7 +186,7 @@ async function handleUpdateManager(event) {
     const res = await fetch(`${API_URL}/api/managers/${id}`, {
       method: 'PUT',
       headers: {
-        ...getAuthHeaders(),
+        ...getAuthHeaders('admin'),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
