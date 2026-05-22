@@ -11,16 +11,16 @@ let isServicesChartLoading = false;
 
 // Cores do tema Minimal
 const chartColors = {
-    primary: 'rgba(59, 130, 246, 0.8)',  // Azul
-    primaryLight: 'rgba(59, 130, 246, 0.2)',
-    success: 'rgba(16, 185, 129, 0.8)',  // Verde
-    successLight: 'rgba(16, 185, 129, 0.2)',
-    warning: 'rgba(245, 159, 11, 0.8)', // Amarelo
-    warningLight: 'rgba(245, 159, 11, 0.2)',
+    primary: 'rgba(15, 23, 42, 0.86)',      // Navy corporate
+    primaryLight: 'rgba(15, 23, 42, 0.12)',
+    success: 'rgba(15, 159, 110, 0.86)',    // Verde da marca
+    successLight: 'rgba(15, 159, 110, 0.14)',
+    warning: 'rgba(180, 83, 9, 0.86)',      // Âmbar operacional
+    warningLight: 'rgba(180, 83, 9, 0.14)',
 
-    textColor: '#1E293B',
-    textLight: '#6B7280',
-    borderColor: '#E5E7EB'
+    textColor: '#101827',
+    textLight: '#64748B',
+    borderColor: '#D7DEE8'
 };
 
 function destroyChartInstance(instanceName) {
@@ -36,6 +36,13 @@ function destroyChartByCanvasId(canvasId) {
 
     const existingChart = Chart.getChart(canvas);
     if (existingChart) existingChart.destroy();
+
+    // Evita que o Chart.js mantenha dimensões inline antigas e provoque
+    // crescimento vertical contínuo em páginas com gráficos.
+    canvas.removeAttribute('width');
+    canvas.removeAttribute('height');
+    canvas.style.removeProperty('width');
+    canvas.style.removeProperty('height');
 }
 
 /**
@@ -153,6 +160,8 @@ async function initServicesChart(reset = false) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                resizeDelay: 180,
+                animation: false,
                 interaction: {
                     mode: 'index',
                     intersect: false
@@ -250,7 +259,7 @@ async function initServicesChart(reset = false) {
                 labels: ['Erro ao carregar'],
                 datasets: [{ label: 'Pedidos', data: [0], backgroundColor: chartColors.warning }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { responsive: true, maintainAspectRatio: false, resizeDelay: 180, animation: false }
         });
     } finally {
         isServicesChartLoading = false;
@@ -296,6 +305,8 @@ function initDeliveriesStatusChart(pendentes, emTransito) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            resizeDelay: 180,
+            animation: false,
             cutout: '70%',
             plugins: {
                 legend: {
@@ -370,6 +381,8 @@ function initFinancialPieChart(lucroEmpresa, ganhosMotorista) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            resizeDelay: 180,
+            animation: false,
             cutout: '70%',
             plugins: {
                 legend: {

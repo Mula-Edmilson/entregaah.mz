@@ -167,6 +167,9 @@ function initCostsByCategoryChart(costsByCategory) {
         costsByCategoryChart.destroy();
         costsByCategoryChart = null;
     }
+    if (typeof destroyChartByCanvasId === 'function') {
+        destroyChartByCanvasId('costsByCategoryChart');
+    }
 
     const keys = Object.keys(COST_CATEGORY_LABELS);
     const labels = keys.map(k => COST_CATEGORY_LABELS[k]);
@@ -179,12 +182,16 @@ function initCostsByCategoryChart(costsByCategory) {
             datasets: [{
                 label: 'Despesas (MZN)',
                 data: values,
+                backgroundColor: 'rgba(180, 83, 9, 0.82)',
+                borderColor: '#B45309',
                 borderWidth: 1
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            resizeDelay: 180,
+            animation: false,
             scales: {
                 y: { beginAtZero: true }
             }
@@ -200,6 +207,9 @@ function initRevenueVsCostsChart(labels, revenueData, costsData) {
         revenueVsCostsChart.destroy();
         revenueVsCostsChart = null;
     }
+    if (typeof destroyChartByCanvasId === 'function') {
+        destroyChartByCanvasId('revenueVsCostsChart');
+    }
 
     const safeLabels = Array.isArray(labels) ? labels : [];
     const safeRevenue = Array.isArray(revenueData) ? revenueData : [];
@@ -213,11 +223,17 @@ function initRevenueVsCostsChart(labels, revenueData, costsData) {
                 {
                     label: 'Receita (MZN)',
                     data: safeRevenue,
+                    borderColor: '#0F9F6E',
+                    backgroundColor: 'rgba(15, 159, 110, 0.12)',
+                    pointRadius: 3,
                     tension: 0.3
                 },
                 {
                     label: 'Custos (MZN)',
                     data: safeCosts,
+                    borderColor: '#B45309',
+                    backgroundColor: 'rgba(180, 83, 9, 0.12)',
+                    pointRadius: 3,
                     tension: 0.3
                 }
             ]
@@ -225,6 +241,8 @@ function initRevenueVsCostsChart(labels, revenueData, costsData) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            resizeDelay: 180,
+            animation: false,
             scales: {
                 y: { beginAtZero: true }
             }

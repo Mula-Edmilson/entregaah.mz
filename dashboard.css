@@ -769,3 +769,632 @@
         min-height: 280px;
     }
 }
+
+/* ============================================
+   REFINO CORPORATE SHARP + CONTROLO DE ALTURA
+   Objetivo: layout sério, compacto, sem cantos arredondados,
+   tabelas/gráficos sem crescimento vertical infinito.
+============================================ */
+:root {
+    --emerald: #0f9f6e;
+    --emerald-light: #22c58b;
+    --gold: #b7791f;
+    --gold-light: #d69e2e;
+    --amber: #b45309;
+    --coral: #b91c1c;
+    --slate: #334155;
+    --glass-bg: #ffffff;
+    --glass-border: #d7dee8;
+    --glass-shadow: rgba(15, 23, 42, 0.08);
+    --glass-hover: #f8fafc;
+    --bg-dark: #f3f6fa;
+    --bg-gradient-1: #f3f6fa;
+    --bg-gradient-2: #eef3f8;
+    --bg-gradient-3: #ffffff;
+    --text-primary: #101827;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --border-radius: 0;
+    --border-radius-sm: 0;
+    --card-padding: 14px;
+}
+
+[data-theme="dark"] {
+    --glass-bg: #111827;
+    --glass-border: #263244;
+    --glass-shadow: rgba(0, 0, 0, 0.34);
+    --glass-hover: #162032;
+    --bg-dark: #0b1120;
+    --bg-gradient-1: #0b1120;
+    --bg-gradient-2: #111827;
+    --bg-gradient-3: #172033;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+}
+
+.background {
+    background: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-gradient-2) 55%, var(--bg-gradient-3) 100%) !important;
+}
+
+.background::before,
+.orb {
+    display: none !important;
+}
+
+.dashboard-body,
+.main-content,
+.content-area,
+.content-page {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.main-content {
+    padding: 18px;
+}
+
+.main-header {
+    margin-bottom: 18px;
+}
+
+.page-title {
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.page-breadcrumb,
+.page-subtitle,
+.card-subtitle {
+    font-size: 0.78rem;
+}
+
+.section-title {
+    font-size: 1.08rem;
+    margin: 18px 0 12px;
+}
+
+.glass-card,
+.table-card,
+.chart-container,
+.costs-form-card,
+.costs-list-card,
+.summary-card,
+.modal-content,
+.image-preview,
+.search-container input,
+.form-input,
+.form-group input,
+.form-group select,
+.form-group textarea,
+.btn,
+.btn-action-small,
+.btn-action-assign,
+.nav-btn,
+.admin-profile,
+.user-profile,
+.user-avatar,
+.menu-item a,
+.status,
+.verification-code,
+.table-container-responsive,
+.table-wrapper,
+#map,
+#live-map-container {
+    border-radius: 0 !important;
+}
+
+.glass-card,
+.chart-container,
+.costs-form-card,
+.costs-list-card,
+.table-card,
+.summary-card {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: 0 8px 22px var(--glass-shadow) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.glass-card::before {
+    background: linear-gradient(90deg, var(--emerald), rgba(15, 159, 110, 0.18)) !important;
+    height: 2px !important;
+}
+
+.glass-card:hover {
+    background: var(--glass-bg) !important;
+    border-color: #b8c3d1 !important;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10) !important;
+}
+
+.glass-card-3d,
+.glass-card-3d:hover {
+    transform: none !important;
+}
+
+.sidebar {
+    background: #0f172a !important;
+    border-right: 1px solid #1e293b !important;
+    padding: 16px 12px;
+}
+
+.sidebar .nav-section-title,
+.sidebar .user-role {
+    color: #94a3b8 !important;
+}
+
+.sidebar .menu-item a,
+.sidebar .user-name {
+    color: #dbe4ef !important;
+}
+
+.sidebar .menu-item.active a,
+.sidebar .menu-item a:hover {
+    background: rgba(15, 159, 110, 0.18) !important;
+    color: #ffffff !important;
+    border-left: 3px solid var(--emerald);
+    padding-left: 9px;
+}
+
+.stats-grid {
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.stat-card {
+    padding: 14px !important;
+    border-top-width: 2px !important;
+    min-height: 96px;
+}
+
+.stat-info h3 {
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.035em;
+    margin-bottom: 0.35rem;
+}
+
+.stat-value {
+    font-size: 1.55rem;
+    letter-spacing: -0.04em;
+}
+
+.card-header,
+.table-card .card-header {
+    padding: 14px 16px !important;
+    margin-bottom: 0 !important;
+    background: #ffffff;
+    border-bottom: 1px solid var(--glass-border) !important;
+}
+
+[data-theme="dark"] .card-header,
+[data-theme="dark"] .table-card .card-header {
+    background: #111827;
+}
+
+.card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+}
+
+.btn {
+    min-height: 38px;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    box-shadow: none !important;
+}
+
+.btn-primary,
+.btn-submit {
+    background: #0f9f6e !important;
+    border: 1px solid #0b7f59 !important;
+}
+
+.btn-primary:hover,
+.btn-submit:hover {
+    transform: none !important;
+    filter: brightness(0.96);
+}
+
+.btn-secondary,
+.btn-cancel {
+    background: #f8fafc !important;
+    border: 1px solid var(--glass-border) !important;
+}
+
+.form-group {
+    margin-bottom: 14px;
+}
+
+.form-input,
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 10px 12px !important;
+    font-size: 0.84rem !important;
+    background: #ffffff !important;
+}
+
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select,
+[data-theme="dark"] .form-group textarea {
+    background: #0f172a !important;
+}
+
+.form-section {
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.8rem;
+}
+
+.form-section h3,
+.costs-form-card h3,
+.costs-list-card h3,
+.chart-container h3,
+.chart-header h3 {
+    font-size: 0.92rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.01em;
+}
+
+.charts-grid {
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.chart-container {
+    height: 318px !important;
+    min-height: 318px !important;
+    max-height: 318px !important;
+    padding: 14px !important;
+    overflow: hidden !important;
+    display: flex;
+    flex-direction: column;
+}
+
+#main-chart-container {
+    height: 338px !important;
+    min-height: 338px !important;
+    max-height: 338px !important;
+}
+
+.chart-header {
+    margin-bottom: 8px !important;
+    min-height: 22px;
+}
+
+.chart-container > h3,
+.chart-container .chart-header {
+    flex: 0 0 auto;
+}
+
+.chart-container canvas,
+#servicesChart,
+#deliveriesStatusChart,
+#financialPieChart,
+#costsByCategoryChart,
+#revenueVsCostsChart {
+    display: block !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    height: 236px !important;
+    max-height: 236px !important;
+    flex: 0 0 236px !important;
+}
+
+#main-chart-container canvas,
+#servicesChart {
+    height: 255px !important;
+    max-height: 255px !important;
+    flex-basis: 255px !important;
+}
+
+.table-card {
+    overflow: hidden !important;
+}
+
+.table-card .table-wrapper,
+.costs-list-card .table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    max-height: min(62vh, 620px);
+    overflow: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    scrollbar-gutter: stable;
+    border-top: 0 !important;
+}
+
+.table-card .data-table,
+.table-card .table-motoristas,
+.table-card .table-pedidos,
+.costs-list-card .data-table {
+    width: 100%;
+    min-width: 820px;
+    border-collapse: collapse !important;
+}
+
+.data-table th,
+.table-motoristas th,
+.table-pedidos th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    padding: 10px 14px !important;
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    font-size: 0.68rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #cbd5e1 !important;
+}
+
+[data-theme="dark"] .data-table th,
+[data-theme="dark"] .table-motoristas th,
+[data-theme="dark"] .table-pedidos th {
+    background: #172033 !important;
+    color: #cbd5e1 !important;
+    border-bottom-color: #334155 !important;
+}
+
+.data-table td,
+.table-motoristas td,
+.table-pedidos td {
+    padding: 10px 14px !important;
+    font-size: 0.8rem !important;
+    color: var(--text-secondary) !important;
+    background: transparent;
+    border-bottom: 1px solid #e7edf5 !important;
+    vertical-align: middle;
+}
+
+[data-theme="dark"] .data-table td,
+[data-theme="dark"] .table-motoristas td,
+[data-theme="dark"] .table-pedidos td {
+    border-bottom-color: #263244 !important;
+}
+
+.data-table tbody tr:hover,
+.table-motoristas tbody tr:hover,
+.table-pedidos tbody tr:hover {
+    background: #f8fafc !important;
+}
+
+[data-theme="dark"] .data-table tbody tr:hover,
+[data-theme="dark"] .table-motoristas tbody tr:hover,
+[data-theme="dark"] .table-pedidos tbody tr:hover {
+    background: #162032 !important;
+}
+
+.status {
+    padding: 3px 8px !important;
+    font-size: 0.68rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.02em;
+}
+
+.verification-code {
+    padding: 4px 7px !important;
+    font-size: 0.72rem !important;
+    background: #e8f7f0 !important;
+    color: #0b7f59 !important;
+}
+
+.table-wrapper::-webkit-scrollbar,
+.table-container-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track,
+.table-container-responsive::-webkit-scrollbar-track {
+    background: #eef2f7 !important;
+    border-radius: 0 !important;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb,
+.table-container-responsive::-webkit-scrollbar-thumb {
+    background: #94a3b8 !important;
+    border-radius: 0 !important;
+}
+
+#map,
+#live-map-container {
+    margin: 0.75rem 0 !important;
+    border-color: var(--glass-border) !important;
+}
+
+#live-map-container {
+    height: min(62vh, 560px) !important;
+}
+
+.modal-content {
+    box-shadow: 0 22px 55px rgba(15, 23, 42, 0.22) !important;
+}
+
+@media (max-width: 992px) {
+    .main-content {
+        padding: 14px;
+    }
+
+    .charts-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px;
+    }
+
+    .chart-container,
+    #main-chart-container {
+        height: 306px !important;
+        min-height: 306px !important;
+        max-height: 306px !important;
+    }
+
+    .chart-container canvas,
+    #main-chart-container canvas,
+    #servicesChart,
+    #deliveriesStatusChart,
+    #financialPieChart,
+    #costsByCategoryChart,
+    #revenueVsCostsChart {
+        height: 230px !important;
+        max-height: 230px !important;
+        flex-basis: 230px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        padding: 12px;
+    }
+
+    .main-header {
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+
+    .page-header {
+        width: 100%;
+        gap: 8px;
+    }
+
+    .page-title {
+        font-size: 1.35rem;
+    }
+
+    .page-breadcrumb {
+        flex-basis: 100%;
+        margin-left: 46px;
+        font-size: 0.76rem;
+    }
+
+    .stats-grid {
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .stat-card {
+        min-height: 82px;
+        padding: 12px !important;
+    }
+
+    .stat-value {
+        font-size: 1.42rem;
+    }
+
+    .table-card .card-header,
+    .card-header {
+        padding: 12px !important;
+    }
+
+    .table-card .table-wrapper,
+    .costs-list-card .table-wrapper {
+        max-height: 58dvh;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        padding: 8px !important;
+        background: #f8fafc;
+    }
+
+    [data-theme="dark"] .table-card .table-wrapper,
+    [data-theme="dark"] .costs-list-card .table-wrapper {
+        background: #0f172a;
+    }
+
+    .data-table,
+    .table-motoristas,
+    .table-pedidos {
+        border-spacing: 0 8px !important;
+    }
+
+    .data-table tbody tr,
+    .table-motoristas tbody tr,
+    .table-pedidos tbody tr {
+        border-radius: 0 !important;
+        padding: 8px 10px !important;
+        margin-bottom: 8px !important;
+        box-shadow: none !important;
+        border: 1px solid #d7dee8 !important;
+        background: #ffffff !important;
+    }
+
+    [data-theme="dark"] .data-table tbody tr,
+    [data-theme="dark"] .table-motoristas tbody tr,
+    [data-theme="dark"] .table-pedidos tbody tr {
+        background: #111827 !important;
+        border-color: #263244 !important;
+    }
+
+    .data-table td,
+    .table-motoristas td,
+    .table-pedidos td {
+        padding: 7px 0 !important;
+        font-size: 0.78rem !important;
+        border-bottom: 1px solid #e7edf5 !important;
+    }
+
+    .data-table td::before,
+    .table-motoristas td::before,
+    .table-pedidos td::before {
+        font-size: 0.62rem !important;
+        color: #64748b !important;
+    }
+
+    .btn-action-small,
+    .btn-action,
+    .btn-action-assign,
+    .btn-action-report {
+        min-height: 32px !important;
+        min-width: 32px !important;
+        padding: 6px 9px !important;
+    }
+
+    .chart-container,
+    #main-chart-container {
+        height: 286px !important;
+        min-height: 286px !important;
+        max-height: 286px !important;
+        padding: 12px !important;
+    }
+
+    .chart-container canvas,
+    #main-chart-container canvas,
+    #servicesChart,
+    #deliveriesStatusChart,
+    #financialPieChart,
+    #costsByCategoryChart,
+    #revenueVsCostsChart {
+        height: 210px !important;
+        max-height: 210px !important;
+        flex-basis: 210px !important;
+        min-height: 0 !important;
+    }
+
+    #live-map-container {
+        height: 58dvh !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content {
+        padding: 10px;
+    }
+
+    .page-title {
+        font-size: 1.25rem;
+    }
+
+    .card-title {
+        font-size: 0.95rem;
+    }
+
+    .table-card .table-wrapper,
+    .costs-list-card .table-wrapper {
+        max-height: 56dvh;
+    }
+}

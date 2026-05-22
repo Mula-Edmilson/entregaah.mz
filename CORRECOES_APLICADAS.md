@@ -26,3 +26,15 @@
 ## Validação feita
 - Todos os ficheiros JavaScript principais do frontend e backend passaram em `node --check`.
 - Não foi feito teste de base de dados em produção porque este ambiente não tem as credenciais/MongoDB do projecto.
+
+## Segunda revisão — layout corporate, sharp e controlo de altura
+
+- Corrigido o problema visual das páginas com gráficos/tabelas que criavam sensação de scroll vertical sem fim.
+- Os gráficos agora têm altura fixa e controlada no desktop, tablet e mobile.
+- As tabelas principais passaram a ter área interna com scroll próprio, evitando que a página inteira se estique indefinidamente quando existem muitos registos.
+- Mantido o comportamento mobile em formato de cartões para leitura, mas agora com altura controlada e sem cantos arredondados.
+- Aplicado um visual mais sério/corporate: fundo mais limpo, sidebar navy, cards brancos, bordas sóbrias, sombras leves e paleta operacional verde/navy/âmbar.
+- Removidos cantos arredondados de cards, tabelas, inputs, botões, badges e contentores principais para uma estética sharp/compacta.
+- Reduzidos espaçamentos, tamanhos de fonte e alturas dos cards para um dashboard mais compacto.
+- Gráficos reforçados para limpar dimensões inline antigas do Chart.js antes de recriar instâncias, evitando crescimento cumulativo.
+- Validação feita com `node --check` nos ficheiros JavaScript principais.
