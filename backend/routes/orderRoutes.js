@@ -45,7 +45,12 @@ router.post(
     body('lat').optional({ checkFalsy: true }).isFloat(),
     body('lng').optional({ checkFalsy: true }).isFloat(),
     body('clientId').optional({ checkFalsy: true }).isMongoId(),
-    body('autoAssign').optional({ checkFalsy: true }).isBoolean().toBoolean()
+    body('autoAssign').optional({ checkFalsy: true }).isBoolean().toBoolean(),
+    body('payment_method')
+      .optional({ checkFalsy: true })
+      .trim()
+      .isIn(['cash', 'mpesa', 'emola', 'mkesh', 'bank_transfer'])
+      .withMessage('Método de pagamento inválido.')
   ],
   validateRequest,
   orderController.createOrder

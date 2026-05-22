@@ -9,15 +9,30 @@ exports.getOverviewStats = asyncHandler(async (_req, res) => {
   const end = new Date();
   end.setUTCHours(23, 59, 59, 999);
 
+  const transitStatuses = [
+    ORDER_STATUS.ASSIGNED,
+    ORDER_STATUS.IN_PROGRESS,
+    ORDER_STATUS.PICKUP_IN_PROGRESS,
+    ORDER_STATUS.PICKUP_DONE,
+    ORDER_STATUS.DELIVERY_IN_PROGRESS
+  ];
+
+  const onlineDriverStatuses = [
+    DRIVER_STATUS.ONLINE_FREE,
+    DRIVER_STATUS.ONLINE_BUSY,
+    DRIVER_STATUS.PICKUP,
+    DRIVER_STATUS.DELIVERY
+  ];
+
   const [pendentes, emTransito, concluidasHoje, motoristasOnline] = await Promise.all([
     Order.countDocuments({ status: ORDER_STATUS.PENDING }),
-    Order.countDocuments({ status: ORDER_STATUS.IN_PROGRESS }),
+    Order.countDocuments({ status: { $in: transitStatuses } }),
     Order.countDocuments({
       status: ORDER_STATUS.COMPLETED,
       timestamp_completed: { $gte: start, $lte: end }
     }),
     DriverProfile.countDocuments({
-      status: { $in: [DRIVER_STATUS.ONLINE_FREE, DRIVER_STATUS.ONLINE_BUSY] }
+      status: { $in: onlineDriverStatuses }
     })
   ]);
 
@@ -30,30 +45,41 @@ exports.getOverviewStats = asyncHandler(async (_req, res) => {
 });
 
 exports.getServicePerformanceStats = asyncHandler(async (_req, res) => {
+  const serviceNames = {
+    rapido: 'Delivery Rápido',
+    doc: 'Doc.',
+    farma: 'Farmácia',
+    carga: 'Cargas',
+    outros: 'Outros'
+  };
+
   const stats = await Order.aggregate([
     { $match: { status: ORDER_STATUS.COMPLETED } },
     {
       $group: {
         _id: '$service_type',
-        totalValue: { $sum: '$price' },
+        totalValue: { $sum: { $ifNull: ['$price', 0] } },
         totalOrders: { $sum: 1 }
       }
-    },
-    { $sort: { totalValue: -1 } }
+    }
   ]);
 
-  const serviceNames = {
-    doc: 'Doc.',
-    farma: 'Farmácia',
-    carga: 'Cargas',
-    rapido: 'Delivery Rápido',
-    outros: 'Outros'
-  };
+  const statsByService = stats.reduce((acc, item) => {
+    if (item && item._id) {
+      acc[item._id] = {
+        totalValue: Number(item.totalValue || 0),
+        totalOrders: Number(item.totalOrders || 0)
+      };
+    }
+    return acc;
+  }, {});
+
+  const keys = Object.keys(serviceNames);
 
   res.status(200).json({
-    labels: stats.map((item) => serviceNames[item._id] || item._id),
-    dataValues: stats.map((item) => item.totalValue),
-    adesaoValues: stats.map((item) => item.totalOrders)
+    labels: keys.map((key) => serviceNames[key]),
+    dataValues: keys.map((key) => statsByService[key]?.totalValue || 0),
+    adesaoValues: keys.map((key) => statsByService[key]?.totalOrders || 0)
   });
 });
 

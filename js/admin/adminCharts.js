@@ -17,11 +17,26 @@ const chartColors = {
     successLight: 'rgba(16, 185, 129, 0.2)',
     warning: 'rgba(245, 159, 11, 0.8)', // Amarelo
     warningLight: 'rgba(245, 159, 11, 0.2)',
-    
+
     textColor: '#1E293B',
     textLight: '#6B7280',
     borderColor: '#E5E7EB'
 };
+
+function destroyChartInstance(instanceName) {
+    if (window[instanceName]) {
+        window[instanceName].destroy();
+        window[instanceName] = null;
+    }
+}
+
+function destroyChartByCanvasId(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) existingChart.destroy();
+}
 
 /**
  * Destrói as instâncias dos gráficos existentes.
@@ -39,6 +54,26 @@ function destroyCharts() {
         myFinancialPieChart.destroy();
         myFinancialPieChart = null;
     }
+
+    destroyChartByCanvasId('servicesChart');
+    destroyChartByCanvasId('deliveriesStatusChart');
+    destroyChartByCanvasId('financialPieChart');
+    destroyChartByCanvasId('costsByCategoryChart');
+    destroyChartByCanvasId('revenueVsCostsChart');
+
+    if (typeof costsByCategoryChart !== 'undefined' && costsByCategoryChart) {
+        costsByCategoryChart.destroy();
+        costsByCategoryChart = null;
+    }
+    if (typeof revenueVsCostsChart !== 'undefined' && revenueVsCostsChart) {
+        revenueVsCostsChart.destroy();
+        revenueVsCostsChart = null;
+    }
+}
+
+function normalizeChartNumbers(values, expectedLength) {
+    const safeValues = Array.isArray(values) ? values : [];
+    return Array.from({ length: expectedLength }, (_, index) => Number(safeValues[index] || 0));
 }
 
 /**
@@ -51,135 +86,175 @@ async function initServicesChart(reset = false) {
     isServicesChartLoading = true;
 
     const canvas = document.getElementById('servicesChart');
-    if (!canvas) {
+    if (!canvas || typeof Chart === 'undefined') {
         isServicesChartLoading = false;
         return;
     }
 
-    const existingChart = Chart.getChart(canvas);
-if (existingChart) {
-    existingChart.destroy();
-}
+    destroyChartByCanvasId('servicesChart');
+    myServicesChart = null;
 
-myServicesChart = null;
+    let labels = ['Delivery Rápido', 'Doc.', 'Farmácia', 'Cargas', 'Outros'];
+    let dataValues = [0, 0, 0, 0, 0];
+    let adesaoValues = [0, 0, 0, 0, 0];
 
-    let dataValues = [0], adesaoValues = [0], labels = ['A carregar...'];
-
-    if (!reset) {
-        try {
-            const response = await fetch(`${API_URL}/api/stats/services`, { 
-                headers: getAuthHeaders('admin') 
+    try {
+        if (!reset) {
+            const response = await fetch(`${API_URL}/api/stats/services`, {
+                headers: getAuthHeaders('admin')
             });
 
             const data = await response.json();
             if (!response.ok) throw new Error(data.message);
 
-            if (data.labels && data.labels.length > 0) {
+            if (Array.isArray(data.labels) && data.labels.length > 0) {
                 labels = data.labels;
-                dataValues = data.dataValues || [0];
-                adesaoValues = data.adesaoValues || [0];
-            } else {
-                labels = ['Nenhum dado'];
+                dataValues = normalizeChartNumbers(data.dataValues, labels.length);
+                adesaoValues = normalizeChartNumbers(data.adesaoValues, labels.length);
             }
-
-        } catch (error) {
-            console.error('Falha ao carregar estatísticas do gráfico:', error);
-            labels = ['Erro ao carregar'];
+        } else {
+            labels = ['Delivery Rápido', 'Doc.', 'Farmácia', 'Cargas', 'Outros'];
+            dataValues = [0, 0, 0, 0, 0];
+            adesaoValues = [0, 0, 0, 0, 0];
+            console.log('SIMULAÇÃO: Resetando dados do gráfico...');
         }
-    } else {
-        labels = ['N/D'];
-        console.log('SIMULAÇÃO: Resetando dados do gráfico...');
-    }
 
-    const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d');
 
-    myServicesChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Nº de Pedidos (Adesão)',
-                    type: 'bar',
-                    data: adesaoValues,
-                    backgroundColor: chartColors.primary,
-                    borderColor: chartColors.primary,
-                    borderWidth: 1,
-                    order: 2
-                },
-                {
-                    label: 'Valor Rendido (MZN)',
-                    type: 'line',
-                    data: dataValues,
-                    backgroundColor: chartColors.success,
-                    borderColor: chartColors.success,
-                    borderWidth: 3,
-                    fill: false,
-                    tension: 0.4,
-                    order: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { 
-                y: { 
-                    beginAtZero: true, 
-                    ticks: { 
-                        color: chartColors.textLight,
-                        callback: function(value) { 
-                            if (value >= 1000) return value / 1000 + 'k'; 
-                            return value; 
-                        } 
+        myServicesChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Nº de Pedidos',
+                        type: 'bar',
+                        data: adesaoValues,
+                        backgroundColor: chartColors.primary,
+                        borderColor: chartColors.primary,
+                        borderWidth: 1,
+                        yAxisID: 'yOrders',
+                        order: 2
                     },
-                    grid: {
-                        color: chartColors.borderColor
+                    {
+                        label: 'Valor Rendido (MZN)',
+                        type: 'line',
+                        data: dataValues,
+                        backgroundColor: chartColors.success,
+                        borderColor: chartColors.success,
+                        borderWidth: 3,
+                        fill: false,
+                        tension: 0.35,
+                        yAxisID: 'yRevenue',
+                        order: 1
                     }
-                },
-                x: {
-                    ticks: {
-                        color: chartColors.textLight
-                    },
-                    grid: {
-                        display: false
-                    }
-                }
+                ]
             },
-            plugins: {
-                title: { display: false },
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        color: chartColors.textLight
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    yOrders: {
+                        type: 'linear',
+                        position: 'left',
+                        beginAtZero: true,
+                        ticks: {
+                            color: chartColors.textLight,
+                            precision: 0,
+                            callback: function(value) {
+                                return `${value}`;
+                            }
+                        },
+                        grid: {
+                            color: chartColors.borderColor
+                        },
+                        title: {
+                            display: true,
+                            text: 'Pedidos',
+                            color: chartColors.textLight
+                        }
+                    },
+                    yRevenue: {
+                        type: 'linear',
+                        position: 'right',
+                        beginAtZero: true,
+                        ticks: {
+                            color: chartColors.textLight,
+                            callback: function(value) {
+                                if (value >= 1000) return `${value / 1000}k`;
+                                return value;
+                            }
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'MZN',
+                            color: chartColors.textLight
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: chartColors.textLight,
+                            maxRotation: 30,
+                            minRotation: 0
+                        },
+                        grid: {
+                            display: false
+                        }
                     }
                 },
-                tooltip: { 
-                    backgroundColor: '#FFFFFF',
-                    titleColor: chartColors.textColor,
-                    bodyColor: chartColors.textLight,
-                    borderColor: chartColors.borderColor,
-                    borderWidth: 1,
-                    callbacks: { 
-                        label: function(context) { 
-                            let l = context.dataset.label || ''; 
-                            if (l) l += ': '; 
-                            if (context.parsed.y !== null) { 
-                                if (context.dataset.label.includes('MZN')) {
-                                    l += new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(context.parsed.y); 
+                plugins: {
+                    title: { display: false },
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: chartColors.textLight,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#FFFFFF',
+                        titleColor: chartColors.textColor,
+                        bodyColor: chartColors.textLight,
+                        borderColor: chartColors.borderColor,
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                const value = context.parsed.y;
+                                if (context.dataset.yAxisID === 'yRevenue') {
+                                    label += new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(value || 0);
                                 } else {
-                                    l += context.parsed.y + ' pedidos'; 
+                                    label += `${value || 0} pedidos`;
                                 }
-                            } 
-                            return l; 
-                        } 
-                    } 
+                                return label;
+                            }
+                        }
+                    }
                 }
             }
-        }
-    });
-
-    isServicesChartLoading = false;
+        });
+    } catch (error) {
+        console.error('Falha ao carregar estatísticas do gráfico:', error);
+        const ctx = canvas.getContext('2d');
+        myServicesChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Erro ao carregar'],
+                datasets: [{ label: 'Pedidos', data: [0], backgroundColor: chartColors.warning }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    } finally {
+        isServicesChartLoading = false;
+    }
 }
 
 /**
@@ -187,21 +262,22 @@ myServicesChart = null;
  */
 function initDeliveriesStatusChart(pendentes, emTransito) {
     const ctx = document.getElementById('deliveriesStatusChart');
-    if (!ctx) return;
-    
-    if (myDeliveriesStatusChart) {
-        myDeliveriesStatusChart.destroy();
-    }
-    
-    const total = pendentes + emTransito;
+    if (!ctx || typeof Chart === 'undefined') return;
+
+    destroyChartByCanvasId('deliveriesStatusChart');
+    myDeliveriesStatusChart = null;
+
+    const safePendentes = Number(pendentes || 0);
+    const safeEmTransito = Number(emTransito || 0);
+    const total = safePendentes + safeEmTransito;
     const data = {
         labels: [
-            `Pendentes (${pendentes})`,
-            `Em Trânsito (${emTransito})`
+            `Pendentes (${safePendentes})`,
+            `Em Trânsito (${safeEmTransito})`
         ],
         datasets: [{
             label: 'Entregas Ativas',
-            data: [pendentes, emTransito],
+            data: [safePendentes, safeEmTransito],
             backgroundColor: [
                 chartColors.warning,
                 chartColors.success
@@ -213,7 +289,7 @@ function initDeliveriesStatusChart(pendentes, emTransito) {
             borderWidth: 1
         }]
     };
-    
+
     myDeliveriesStatusChart = new Chart(ctx, {
         type: 'doughnut',
         data: data,
@@ -260,21 +336,22 @@ function initDeliveriesStatusChart(pendentes, emTransito) {
  */
 function initFinancialPieChart(lucroEmpresa, ganhosMotorista) {
     const ctx = document.getElementById('financialPieChart');
-    if (!ctx) return;
+    if (!ctx || typeof Chart === 'undefined') return;
 
-    if (myFinancialPieChart) {
-        myFinancialPieChart.destroy();
-    }
+    destroyChartByCanvasId('financialPieChart');
+    myFinancialPieChart = null;
 
-    const total = lucroEmpresa + ganhosMotorista;
+    const safeLucroEmpresa = Number(lucroEmpresa || 0);
+    const safeGanhosMotorista = Number(ganhosMotorista || 0);
+    const total = safeLucroEmpresa + safeGanhosMotorista;
     const data = {
         labels: [
-            `Lucro da Empresa (MZN ${lucroEmpresa.toFixed(2)})`,
-            `Ganhos de Motoristas (MZN ${ganhosMotorista.toFixed(2)})`
+            `Lucro da Empresa (MZN ${safeLucroEmpresa.toFixed(2)})`,
+            `Ganhos de Motoristas (MZN ${safeGanhosMotorista.toFixed(2)})`
         ],
         datasets: [{
             label: 'Divisão da Receita',
-            data: [lucroEmpresa, ganhosMotorista],
+            data: [safeLucroEmpresa, safeGanhosMotorista],
             backgroundColor: [
                 chartColors.primary,
                 chartColors.success

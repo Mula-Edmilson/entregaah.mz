@@ -230,11 +230,11 @@ async function openHistoryDetailModal(orderId) {
             ${coordsHtml}
             <p><strong>Valor:</strong> ${order.price ? order.price.toFixed(2) + ' MZN' : 'N/D'}</p>
             <p><strong>Natureza:</strong> ${SERVICE_NAMES[order.service_type] || order.service_type}</p>
-            <p><strong>Status:</strong> ${order.status}</p>
+            <p><strong>Status:</strong> ${typeof getOrderStatusLabel === 'function' ? getOrderStatusLabel(order.status) : order.status}</p>
             <p><strong>Código:</strong> ${order.verification_code}</p>
             <p><strong>Motorista:</strong> ${motorista}</p>
             <p><strong>Admin:</strong> ${admin}</p>
-            <p><strong>Criado em:</strong> ${new Date(order.timestamp_created).toLocaleString('pt-MZ')}</p>
+            <p><strong>Criado em:</strong> ${order.createdAt ? new Date(order.createdAt).toLocaleString('pt-MZ') : 'N/D'}</p>
             <p><strong>Iniciado em:</strong> ${order.timestamp_started ? new Date(order.timestamp_started).toLocaleString('pt-MZ') : 'N/D'}</p>
             <p><strong>Concluído em:</strong> ${order.timestamp_completed ? new Date(order.timestamp_completed).toLocaleString('pt-MZ') : 'N/D'}</p>
             <hr style="margin: 0.75rem 0;">
@@ -389,7 +389,7 @@ function populateStatementModal(data, startDate, endDate) {
     tableBody.innerHTML = '';
     
     if (ordersList.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4">Nenhum pedido concluído neste período.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="5">Nenhum pedido concluído neste período.</td></tr>';
     } else {
         ordersList.forEach(order => {
             tableBody.innerHTML += `
@@ -398,6 +398,7 @@ function populateStatementModal(data, startDate, endDate) {
                     <td>#${order._id.slice(-6)}</td>
                     <td>${SERVICE_NAMES[order.service_type] || order.service_type}</td>
                     <td>${order.price.toFixed(2)} MZN</td>
+                    <td>${typeof getPaymentMethodLabel === 'function' ? getPaymentMethodLabel(order.payment_method) : (order.payment_method || '—')}</td>
                 </tr>
             `;
         });

@@ -21,6 +21,13 @@ const driverProfileSchema = new mongoose.Schema(
       min: 0,
       max: 100,
       default: FINANCIAL.DEFAULT_COMMISSION_RATE
+    },
+    lastLocation: {
+      lat: { type: Number },
+      lng: { type: Number },
+      accuracy: { type: Number },
+      speed: { type: Number },
+      updatedAt: { type: Date }
     }
   },
   { timestamps: true }

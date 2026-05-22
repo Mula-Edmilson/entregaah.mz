@@ -1149,3 +1149,31 @@ p { font-size: 0.9rem; color: var(--text-secondary); }
         width: 100%;
     }
 }
+/* Estados operacionais detalhados */
+.status-recolha-em-progresso,
+.status-recolha-concluida,
+.status-entrega-em-progresso,
+.status-em-recolha,
+.status-em-entrega {
+    background: rgba(14, 165, 233, 0.1);
+    color: #0284c7;
+}
+
+.status-recolha-em-progresso::before,
+.status-recolha-concluida::before,
+.status-entrega-em-progresso::before,
+.status-em-recolha::before,
+.status-em-entrega::before {
+    background: #0284c7;
+    box-shadow: 0 0 8px #0284c7;
+}
+
+.status-cancelado {
+    background: rgba(220, 38, 38, 0.1);
+    color: #b91c1c;
+}
+
+.status-cancelado::before {
+    background: #b91c1c;
+    box-shadow: 0 0 8px #b91c1c;
+}

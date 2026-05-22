@@ -39,6 +39,18 @@ router.get(
   driverController.getMyEarnings
 );
 
+
+/**
+ * GET /api/drivers/live-locations
+ * Localizações dos motoristas online para fallback do mapa em tempo real – ADMIN
+ */
+router.get(
+  '/live-locations',
+  protect,
+  admin,
+  driverController.getLiveDriverLocations
+);
+
 /**
  * GET /api/drivers/:id/report
  * Relatório de entregas concluídas de um motorista – ADMIN

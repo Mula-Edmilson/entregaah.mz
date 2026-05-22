@@ -11,14 +11,36 @@
 // --- Variáveis de Estado para os Mapas ---
 
 // 1. Mapa do Formulário
-let map = null; 
-let mapMarker = null; 
+let map = null;
+let mapMarker = null;
 
 // 2. Mapa em Tempo Real
-let liveMap = null; 
-let driverMarkers = {}; // Objeto para guardar os marcadores por ID de motorista
-let freeIcon = null; 
-let busyIcon = null; 
+let liveMap = null;
+let driverMarkers = {}; // Objeto para guardar os marcadores por ID de motorista/perfil
+let liveMapRefreshTimer = null;
+let freeIcon = null;
+let busyIcon = null;
+
+const BUSY_DRIVER_STATUSES = new Set(['online_ocupado', 'em_recolha', 'em_entrega']);
+
+function normalizeDriverMarkerId(data) {
+    return data?.driverId || data?.driverUserId || data?.userId || data?._id;
+}
+
+function isValidMapCoordinate(value) {
+    return value !== null && value !== undefined && Number.isFinite(Number(value));
+}
+
+function getDriverStatusLabel(status = '') {
+    const labels = {
+        online_livre: 'Online livre',
+        online_ocupado: 'Online ocupado',
+        em_recolha: 'Em recolha',
+        em_entrega: 'Em entrega',
+        offline: 'Offline'
+    };
+    return labels[status] || String(status || 'Online').replace(/_/g, ' ');
+}
 
 /**
  * Inicializa os ícones customizados para o mapa em tempo real.
@@ -26,17 +48,17 @@ let busyIcon = null;
  */
 function initializeMapIcons() {
     const iconShadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
-    
-    // Ícone para motorista 'online_livre'
+
+    // Ícone para motorista livre
     freeIcon = L.icon({
         iconUrl: 'https://i.postimg.cc/MK8ty3PJ/car-pin-point.png',
         shadowUrl: iconShadowUrl,
         iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
     });
-    
-    // Ícone para motorista 'online_ocupado'
+
+    // Ícone para motorista ocupado / em recolha / em entrega
     busyIcon = L.icon({
-        iconUrl: 'https://i.postimg.cc/J0bJ0fJj/marker-busy.png', // O seu ícone vermelho
+        iconUrl: 'https://i.postimg.cc/J0bJ0fJj/marker-busy.png',
         shadowUrl: iconShadowUrl,
         iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
     });
@@ -48,37 +70,37 @@ function initializeMapIcons() {
  */
 function initializeFormMap() {
     const maputoCoords = [-25.965, 32.589];
-    
+
     // Destrói qualquer mapa anterior para evitar duplicação
     if (map) {
         destroyFormMap();
     }
-    
+
     try {
         map = L.map('map').setView(maputoCoords, 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
-        
+
         // Marcador arrastável
         mapMarker = L.marker(maputoCoords, {
             draggable: true
         }).addTo(map);
-        
+
         // Atualiza os inputs hidden quando o marcador é arrastado
         mapMarker.on('dragend', (event) => {
             const position = event.target.getLatLng();
             document.getElementById('delivery-lng').value = position.lng;
             document.getElementById('delivery-lat').value = position.lat;
         });
-        
+
         // Define os valores iniciais dos inputs
         document.getElementById('delivery-lng').value = maputoCoords[1];
         document.getElementById('delivery-lat').value = maputoCoords[0];
-        
+
     } catch (error) {
-        console.error("Erro ao inicializar o mapa do formulário:", error);
-        document.getElementById('map').innerHTML = '<p style="padding: 1rem; text-align: center; color: var(--danger-color);">Erro ao carregar o mapa.</p>';
+        console.error('Erro ao inicializar o mapa do formulário:', error);
+        document.getElementById('map').innerHTML = '<p style="padding: 1rem; text-align: center; color: var(--danger);">Erro ao carregar o mapa.</p>';
     }
 }
 
@@ -108,17 +130,24 @@ function initializeLiveMap() {
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(liveMap);
-        
+
         console.log('Mapa em tempo real inicializado.');
 
-        // Pede ao socket (em admin.js) que solicite as localizações atuais
+        // Pede ao socket as localizações atuais.
         if (socket && typeof socket.emit === 'function') {
-            socket.emit('admin_request_all_locations'); 
-            console.log('A pedir ao servidor as localizações ativas...');
+            socket.emit('admin_request_all_locations');
+            console.log('A pedir ao servidor as localizações ativas via Socket.IO...');
         }
 
+        // Fallback profissional: mesmo que um evento Socket.IO falhe, o mapa
+        // consulta periodicamente as últimas localizações persistidas no backend.
+        fetchLiveDriverLocations();
+        liveMapRefreshTimer = setInterval(fetchLiveDriverLocations, 20000);
+
+        setTimeout(() => liveMap?.invalidateSize(), 150);
+
     } catch (error) {
-        console.error("Erro ao inicializar o mapa em tempo real:", error);
+        console.error('Erro ao inicializar o mapa em tempo real:', error);
         document.getElementById('live-map-container').innerHTML = '<p>Erro ao carregar o mapa.</p>';
     }
 }
@@ -128,6 +157,11 @@ function initializeLiveMap() {
  * É chamado pela função showPage() sempre que se sai da página do mapa.
  */
 function destroyLiveMap() {
+    if (liveMapRefreshTimer) {
+        clearInterval(liveMapRefreshTimer);
+        liveMapRefreshTimer = null;
+    }
+
     if (liveMap) {
         liveMap.remove();
         liveMap = null;
@@ -136,6 +170,26 @@ function destroyLiveMap() {
     }
 }
 
+async function fetchLiveDriverLocations() {
+    if (!liveMap) return;
+
+    try {
+        const response = await fetch(`${API_URL}/api/drivers/live-locations`, {
+            headers: getAuthHeaders('admin')
+        });
+
+        if (response.status === 401) {
+            return handleLogout('admin');
+        }
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Erro ao carregar localizações.');
+
+        (data.drivers || []).forEach(updateDriverMarker);
+    } catch (error) {
+        console.warn('Falha ao carregar fallback de localizações do mapa:', error.message || error);
+    }
+}
 
 /* --- Funções de Atualização do Mapa em Tempo Real (Chamadas pelo Socket) --- */
 
@@ -144,12 +198,27 @@ function destroyLiveMap() {
  * @param {object} data - Dados do motorista (driverId, driverName, status, lat, lng).
  */
 function updateDriverMarker(data) {
-    const { driverId, driverName, status, lat, lng } = data;
-    if (!liveMap) return; // Não faz nada se o mapa não estiver visível
+    if (!liveMap || !data) return; // Não faz nada se o mapa não estiver visível
+
+    const driverId = normalizeDriverMarkerId(data);
+    const driverName = data.driverName || data.nome || 'Motorista';
+    const status = data.status || 'online_livre';
+    const lat = Number(data.lat);
+    const lng = Number(data.lng);
+
+    if (!driverId || !isValidMapCoordinate(lat) || !isValidMapCoordinate(lng)) {
+        return;
+    }
 
     const newLatLng = [lat, lng];
-    const popupContent = `<strong>${driverName}</strong><br>Status: ${status.replace('_', ' ')}`;
-    const iconToUse = (status === 'online_ocupado') ? busyIcon : freeIcon;
+    const statusLabel = getDriverStatusLabel(status);
+    const updatedAt = data.updatedAt ? new Date(data.updatedAt) : null;
+    const updatedAtLabel = updatedAt && !Number.isNaN(updatedAt.getTime())
+        ? `<br><small>Última atualização: ${updatedAt.toLocaleTimeString('pt-MZ', { hour: '2-digit', minute: '2-digit' })}</small>`
+        : '';
+
+    const popupContent = `<strong>${driverName}</strong><br>Status: ${statusLabel}${updatedAtLabel}`;
+    const iconToUse = BUSY_DRIVER_STATUSES.has(status) ? busyIcon : freeIcon;
 
     if (driverMarkers[driverId]) {
         // Se o marcador já existe, atualiza a posição, ícone e popup
@@ -159,9 +228,29 @@ function updateDriverMarker(data) {
     } else {
         // Se é um novo motorista, cria o marcador
         driverMarkers[driverId] = L.marker(newLatLng, { icon: iconToUse }).addTo(liveMap);
-        driverMarkers[driverId].bindPopup(popupContent).openPopup();
+        driverMarkers[driverId].bindPopup(popupContent);
         console.log(`Adicionando novo marcador para ${driverName}`);
     }
+}
+
+
+function updateDriverMarkerStatus(data) {
+    const driverId = normalizeDriverMarkerId(data);
+    const status = data?.newStatus || data?.status;
+
+    if (!liveMap || !driverId || !status || !driverMarkers[driverId]) return;
+
+    const marker = driverMarkers[driverId];
+    const currentLatLng = marker.getLatLng();
+
+    updateDriverMarker({
+        driverId,
+        driverName: data.driverName || 'Motorista',
+        status,
+        lat: currentLatLng.lat,
+        lng: currentLatLng.lng,
+        updatedAt: data.updatedAt || new Date().toISOString()
+    });
 }
 
 /**
@@ -169,12 +258,12 @@ function updateDriverMarker(data) {
  * @param {object} data - Dados do motorista (driverId, driverName).
  */
 function removeDriverMarker(data) {
-    const { driverId } = data;
-    if (!liveMap) return;
+    const driverId = normalizeDriverMarkerId(data);
+    if (!liveMap || !driverId) return;
 
     if (driverMarkers[driverId]) {
         liveMap.removeLayer(driverMarkers[driverId]); // Remove do mapa
         delete driverMarkers[driverId]; // Remove do nosso registo
-        console.log(`Removido marcador para ${data.driverName} (desconectado)`);
+        console.log(`Removido marcador para ${data.driverName || 'motorista'} (desconectado)`);
     }
 }

@@ -9,6 +9,35 @@
 
 /* --- Lógica de API (Carregamento de Dados - GET) --- */
 
+
+const PAYMENT_METHOD_LABELS = {
+    cash: '💵 Dinheiro',
+    mpesa: '📱 M-Pesa',
+    emola: '📱 e-Mola',
+    mkesh: '📱 mKesh',
+    bank_transfer: '🏦 Transferência Bancária'
+};
+
+const ORDER_STATUS_LABELS = {
+    pendente: 'Pendente',
+    atribuido: 'Atribuído',
+    em_progresso: 'Em progresso',
+    recolha_em_progresso: 'Em recolha',
+    recolha_concluida: 'Recolha concluída',
+    entrega_em_progresso: 'Em entrega',
+    concluido: 'Concluído',
+    cancelado: 'Cancelado'
+};
+
+function getPaymentMethodLabel(method) {
+    return PAYMENT_METHOD_LABELS[method] || method || '—';
+}
+
+function getOrderStatusLabel(status) {
+    return ORDER_STATUS_LABELS[status] || String(status || 'N/D').replace(/_/g, ' ');
+}
+
+
 async function loadOverviewStats() {
     try {
         const response = await fetch(`${API_URL}/api/stats/overview`, { headers: getAuthHeaders('admin') });
@@ -72,7 +101,7 @@ async function loadCostsDashboardSummary() {
     despesasEl.innerText = '.';
     saldoEl.innerText = '.';
     if (tableBody) {
-        tableBody.innerHTML = '<tr><td colspan="4">A carregar.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="5">A carregar.</td></tr>';
     }
 
     try {
@@ -123,7 +152,7 @@ async function loadCostsDashboardSummary() {
         despesasEl.innerText = formatMZN(0);
         saldoEl.innerText = formatMZN(0);
         if (tableBody) {
-            tableBody.innerHTML = '<tr><td colspan="4">Erro ao carregar custos.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="5">Erro ao carregar custos.</td></tr>';
         }
         initCostsByCategoryChart({});
         initRevenueVsCostsChart([], [], []);
@@ -389,7 +418,7 @@ async function loadActiveDeliveries() {
                     <td>#${order._id.slice(-6)}</td>
                     <td>${order.client_name}</td>
                     <td>${order.client_phone1}</td>
-                    <td><span class="status ${statusClass}">${order.status}</span></td>
+                    <td><span class="status ${statusClass}">${getOrderStatusLabel(order.status)}</span></td>
                     <td>${motoristaNome}</td>
                     <td class="verification-code">${order.verification_code}</td> 
                     <td>${acaoBotao}</td>
@@ -404,7 +433,7 @@ async function loadActiveDeliveries() {
 
 async function loadHistory() {
     const tableBody = document.getElementById('history-orders-table-body');
-    tableBody.innerHTML = '<tr><td colspan="7">A carregar.</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="8">A carregar.</td></tr>';
     try {
         const response = await fetch(`${API_URL}/api/orders/history`, { headers: getAuthHeaders('admin') });
         if (response.status === 401) { return handleLogout('admin'); }
@@ -413,7 +442,7 @@ async function loadHistory() {
 
         tableBody.innerHTML = '';
         if (!data.orders || data.orders.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7">Nenhum histórico encontrado.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8">Nenhum histórico encontrado.</td></tr>';
             return;
         }
 
@@ -431,23 +460,13 @@ async function loadHistory() {
                 const duracao = formatDuration(order.timestamp_started, order.timestamp_completed);
                 duracaoHtml = duracao;
             }
-                const paymentMap = {
-                cash: '💵 Dinheiro',
-                mpesa: '📱 M-Pesa',
-                emola: '📱 e-Mola',
-                mkesh: '📱 mKesh',
-                bank_transfer: '🏦 Transferência'
-              };
-
             tableBody.innerHTML += `
                 <tr class="history-row">
                     <td>#${order._id.slice(-6)}</td>
                     <td>${order.client_name}</td>
                     <td>${serviceName}</td>
                     <td>${motoristaNome}</td>
-                    <td>${
-                      paymentMap[order.payment_method] || order.payment_method || '—'
-                    }</td>
+                    <td>${getPaymentMethodLabel(order.payment_method)}</td>
                     <td>${duracaoHtml}</td>
                     <td class="verification-code">${order.verification_code}</td> 
                     <td><button class="btn-action-small" onclick="openHistoryDetailModal('${order._id}')"><i class="fas fa-eye"></i></button></td>
@@ -456,7 +475,7 @@ async function loadHistory() {
         });
     } catch (error) { 
         console.error('Falha ao carregar histórico:', error);
-        tableBody.innerHTML = '<tr><td colspan="7">Erro ao carregar histórico.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="8">Erro ao carregar histórico.</td></tr>';
     }
 }
 

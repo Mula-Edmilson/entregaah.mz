@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeMapIcons(); // (Vem do adminMap.js)
     connectSocket(); 
     attachEventListeners();
+    installResponsiveTableObserver();
 
     loadAdminProfile(); // 👈 ESTA LINHA
     
@@ -208,9 +209,11 @@ function showPage(pageId, navId, title) {
         case 'visao-geral':
             loadOverviewStats();
             loadFinancialStats();
+            initServicesChart(false);
+            break;
+        case 'custos':
             loadCostsDashboardSummary();
             loadCostAssignmentOptions();
-            initServicesChart(false);
             break;
         case 'gestao-motoristas':
             loadDrivers();
@@ -280,21 +283,40 @@ function connectSocket() {
         return page ? page.id : null;
     };
     
+    function refreshOperationalViews({ includeHistory = false, includeFinancials = false } = {}) {
+        const page = activePage();
+        if (page === 'entregas-activas') loadActiveDeliveries();
+        if (page === 'gestao-motoristas') loadDrivers();
+        if (page === 'historico' && includeHistory) loadHistory();
+        if (page === 'visao-geral') {
+            loadOverviewStats();
+            if (includeFinancials) loadFinancialStats();
+            initServicesChart(false);
+        }
+    }
+
     // Listeners de Socket que atualizam a UI
-    socket.on('delivery_started', (order) => {
-        if (activePage() === 'entregas-activas') loadActiveDeliveries();
-        if (activePage() === 'visao-geral') { loadOverviewStats(); loadFinancialStats(); }
-    });
+    socket.on('order_pending', () => refreshOperationalViews());
+    socket.on('pickup_started', () => refreshOperationalViews());
+    socket.on('pickup_completed', () => refreshOperationalViews());
+    socket.on('delivery_started', () => refreshOperationalViews());
+    socket.on('order_canceled', () => refreshOperationalViews({ includeHistory: true }));
     
-    socket.on('delivery_completed', (order) => {
-        if (activePage() === 'entregas-activas') loadActiveDeliveries();
-        if (activePage() === 'historico') loadHistory();
-        if (activePage() === 'visao-geral') { loadOverviewStats(); loadFinancialStats(); }
+    socket.on('delivery_completed', () => {
+        refreshOperationalViews({ includeHistory: true, includeFinancials: true });
     });
     
     socket.on('driver_status_changed', (data) => {
-         if (activePage() === 'gestao-motoristas') loadDrivers();
-         if (activePage() === 'visao-geral') loadOverviewStats();
+        refreshOperationalViews();
+
+        if (activePage() === 'mapa-tempo-real') {
+            if (typeof updateDriverMarkerStatus === 'function') {
+                updateDriverMarkerStatus(data);
+            }
+            if (typeof fetchLiveDriverLocations === 'function') {
+                fetchLiveDriverLocations();
+            }
+        }
     });
 
     // Listeners do Mapa em Tempo Real (chamam funções do adminMap.js)
@@ -384,4 +406,49 @@ async function loadAdminProfile() {
         console.error('Erro ao carregar perfil do admin:', error);
         handleLogout('admin');
     }
+}
+
+/**
+ * Converte tabelas tradicionais em cartões legíveis no mobile.
+ * A função mantém o layout desktop intacto e apenas injeta data-label nos TDs,
+ * permitindo ao CSS mostrar cada linha como um cartão em ecrãs pequenos.
+ */
+function enhanceResponsiveTable(table) {
+    if (!table) return;
+
+    const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    if (!headers.length) return;
+
+    table.querySelectorAll('tbody tr').forEach(row => {
+        Array.from(row.children).forEach((cell, index) => {
+            if (cell.tagName !== 'TD') return;
+            if (cell.hasAttribute('colspan')) return;
+            cell.setAttribute('data-label', headers[index] || '');
+        });
+    });
+}
+
+function enhanceAllResponsiveTables(root = document) {
+    root.querySelectorAll('table').forEach(enhanceResponsiveTable);
+}
+
+function installResponsiveTableObserver() {
+    enhanceAllResponsiveTables();
+
+    const target = document.querySelector('.content-area') || document.body;
+    let scheduled = false;
+
+    const observer = new MutationObserver(() => {
+        if (scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(() => {
+            enhanceAllResponsiveTables(target);
+            scheduled = false;
+        });
+    });
+
+    observer.observe(target, {
+        childList: true,
+        subtree: true
+    });
 }

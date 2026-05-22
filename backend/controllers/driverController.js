@@ -109,6 +109,41 @@ exports.getAllDriversForAvailability = asyncHandler(async (_req, res) => {
   return res.status(200).json({ drivers });
 });
 
+
+exports.getLiveDriverLocations = asyncHandler(async (_req, res) => {
+  const onlineStatuses = [
+    DRIVER_STATUS.ONLINE_FREE,
+    DRIVER_STATUS.ONLINE_BUSY,
+    DRIVER_STATUS.PICKUP,
+    DRIVER_STATUS.DELIVERY
+  ];
+
+  const profiles = await DriverProfile.find({
+    status: { $in: onlineStatuses },
+    'lastLocation.lat': { $exists: true, $ne: null },
+    'lastLocation.lng': { $exists: true, $ne: null }
+  })
+    .populate('user', 'nome telefone role')
+    .lean();
+
+  const drivers = profiles
+    .filter((profile) => profile.user && profile.user.role === 'driver')
+    .map((profile) => ({
+      driverId: profile._id,
+      driverUserId: profile.user._id,
+      driverName: profile.user.nome,
+      telefone: profile.user.telefone,
+      status: profile.status,
+      lat: profile.lastLocation.lat,
+      lng: profile.lastLocation.lng,
+      accuracy: profile.lastLocation.accuracy,
+      speed: profile.lastLocation.speed,
+      updatedAt: profile.lastLocation.updatedAt
+    }));
+
+  res.status(200).json({ drivers });
+});
+
 exports.getDriverReport = asyncHandler(async (req, res) => {
   const { id } = req.params;
 

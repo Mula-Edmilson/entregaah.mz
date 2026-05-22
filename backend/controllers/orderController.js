@@ -100,14 +100,18 @@ exports.createOrder = asyncHandler(async (req, res) => {
     lat,
     lng,
     clientId,
-    autoAssign,
-    payment_method
+    autoAssign
   } = data;
 
   // ===== NORMALIZAÇÃO SEGURA DO PAYMENT =====
+  // Nota importante: validateRequest() usa matchedData(); por isso mantemos
+  // também o fallback para req.body, garantindo que o método escolhido no
+  // formulário nunca volta silenciosamente para "cash".
+  const rawPaymentMethod = data.payment_method ?? req.body?.payment_method;
+  const allowedPaymentMethods = new Set(['cash', 'mpesa', 'emola', 'mkesh', 'bank_transfer']);
   const normalizedPayment =
-    typeof payment_method === 'string' && payment_method.trim() !== ''
-      ? payment_method.trim()
+    typeof rawPaymentMethod === 'string' && allowedPaymentMethods.has(rawPaymentMethod.trim())
+      ? rawPaymentMethod.trim()
       : 'cash';
 
   let imageUrl = null;
@@ -175,7 +179,8 @@ exports.createOrder = asyncHandler(async (req, res) => {
       io.to(assignedProfile.user.toString()).emit('nova_entrega_atribuida', {
         orderId: order._id,
         clientName: order.client_name,
-        serviceType: order.service_type
+        serviceType: order.service_type,
+        paymentMethod: order.payment_method
       });
     }
   } else {
@@ -230,7 +235,8 @@ exports.assignOrder = asyncHandler(async (req, res) => {
   io.to(newDriverProfile.user.toString()).emit('nova_entrega_atribuida', {
     orderId: order._id,
     clientName: order.client_name,
-    serviceType: order.service_type
+    serviceType: order.service_type,
+    paymentMethod: order.payment_method
   });
 
   res.status(200).json({ message: 'Encomenda atribuída com sucesso.', order });
